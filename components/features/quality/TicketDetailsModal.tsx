@@ -40,6 +40,7 @@ export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, 
 
     setIsProcessing(true);
     try {
+      console.log('Atualizando ticket:', ticket.id, 'para status:', status, 'com nota:', resolutionNote);
       await adminService.updateTicketStatus(user, ticket.id, status, resolutionNote);
       onTicketUpdated(); // Notifica o componente pai
       onClose();
@@ -59,6 +60,7 @@ export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, 
 
     setIsProcessing(true);
     try {
+        console.log('Escalonando ticket:', ticket.id, 'motivo:', escalationReason);
         await adminService.escalateTicketToAdmin(user, ticket.id, escalationReason);
         onTicketUpdated(); // Notifica o componente pai
         onClose();

@@ -91,9 +91,10 @@ export const SupabaseAdminService: IAdminService = {
     },
 
     getClients: async (filters, page = 1, pageSize = 20): Promise<PaginatedResponse<ClientOrganization>> => {
+        console.log(`[SupabaseAdminService] getClients called with filters: ${JSON.stringify(filters)}, page: ${page}, pageSize: ${pageSize}`);
         let query = supabase
             .from('organizations')
-            .select('*', { count: 'exact' });
+            .select('*, pending_docs, compliance_score', { count: 'exact' }); // Adicionado pending_docs e compliance_score
         
         if (filters?.search) {
             query = query.or(`name.ilike.%${filters.search}%,cnpj.ilike.%${filters.search}%`);
@@ -111,16 +112,21 @@ export const SupabaseAdminService: IAdminService = {
             .order('name');
         
         if (error) {
-            console.error("Erro Supabase getClients:", error);
+            console.error("[SupabaseAdminService] Erro ao carregar organizações:", error.message);
+            // Throwing the error here will be caught by the calling component
             throw new Error(`Falha ao carregar organizações: ${error.message}`);
         }
+
+        console.log(`[SupabaseAdminService] Fetched ${count} clients. Data:`, data);
 
         const items = (data || []).map(c => ({
             id: c.id,
             name: c.name || 'Empresa sem Nome',
             cnpj: c.cnpj || '00.000.000/0000-00',
             status: (c.status || 'ACTIVE') as any,
-            contractDate: c.contract_date || new Date().toISOString().split('T')[0]
+            contractDate: c.contract_date || new Date().toISOString().split('T')[0],
+            pendingDocs: c.pending_docs, // Mapeado
+            complianceScore: c.compliance_score // Mapeado
         }));
 
         return {
@@ -137,7 +143,9 @@ export const SupabaseAdminService: IAdminService = {
             name: data.name,
             cnpj: data.cnpj,
             status: data.status,
-            contract_date: data.contractDate
+            contract_date: data.contractDate,
+            pending_docs: data.pendingDocs, // Incluído
+            compliance_score: data.complianceScore // Incluído
         };
 
         let query;
@@ -155,7 +163,9 @@ export const SupabaseAdminService: IAdminService = {
             name: client.name,
             cnpj: client.cnpj,
             status: client.status as any,
-            contractDate: client.contract_date
+            contractDate: client.contract_date,
+            pendingDocs: client.pending_docs,
+            complianceScore: client.compliance_score
         };
     },
 
@@ -201,8 +211,8 @@ export const SupabaseAdminService: IAdminService = {
             .eq('user_id', user.id);
         
         if (filters?.status && filters.status !== 'ALL') {
-            // Use ilike for case-insensitive status matching
-            query = query.ilike('status', filters.status);
+            // Use eq for enum columns
+            query = query.eq('status', filters.status);
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -247,8 +257,8 @@ export const SupabaseAdminService: IAdminService = {
         }
 
         if (filters?.status && filters.status !== 'ALL') {
-            // Use ilike for case-insensitive status matching
-            query = query.ilike('status', filters.status);
+            // Use eq for enum columns
+            query = query.eq('status', filters.status);
         }
 
         const { data, error } = await query;

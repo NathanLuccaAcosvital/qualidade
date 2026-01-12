@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { FileExplorer, FileExplorerHandle } from '../components/features/files/FileExplorer.tsx';
@@ -33,7 +34,7 @@ const Quality: React.FC = () => {
 
   const [selectedClient, setSelectedClient] = useState<ClientOrganization | null>(null);
   // const [inboxTickets, setInboxTickets] = useState<SupportTicket[]>([]); // Removido: Gerenciado pelo QualityServiceDesk
-  const [stats, setStats] = useState({ pendingDocs: 0, openQualityTickets: 0 }); // Adicionado openQualityTickets
+  const [stats, setStats] = useState<{ pendingDocs: number; openQualityTickets: number; totalActiveClients: number }>({ pendingDocs: 0, openQualityTickets: 0, totalActiveClients: 0 }); // Adicionado totalActiveClients
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -66,19 +67,21 @@ const Quality: React.FC = () => {
       setCurrentFolderId(null);
   }, [activeView]);
 
-  // Carregamento de dados básicos
+  // Carregamento de dados básicos (agora inclui totalActiveClients)
   useEffect(() => {
       const loadBaseData = async () => {
           if (user) {
               setIsLoading(true);
               try {
-                  const [globalStats, qualityInbox] = await Promise.all([
+                  const [globalStats, qualityInbox, activeClientsRes] = await Promise.all([
                       fileService.getDashboardStats(user),
-                      adminService.getQualityInbox() // Carrega tickets da caixa de entrada da qualidade
+                      adminService.getQualityInbox(), // Carrega tickets da caixa de entrada da qualidade
+                      adminService.getClients({status: 'ACTIVE'}, 1, 1) // Busca apenas a contagem total de clientes ativos
                   ]);
                   setStats({ 
                       pendingDocs: globalStats.pendingValue || 0,
-                      openQualityTickets: qualityInbox.filter(t => t.status !== 'RESOLVED').length
+                      openQualityTickets: qualityInbox.filter(t => t.status !== 'RESOLVED').length,
+                      totalActiveClients: activeClientsRes.total || 0 // Armazena a contagem total de clientes ativos
                   });
               } catch (err) {
                   console.error("Erro ao carregar dados de qualidade:", err);
@@ -98,12 +101,16 @@ const Quality: React.FC = () => {
           setIsLoading(true);
           try {
               const res = await adminService.getClients({ search: clientSearch, status: clientStatus }, 1, CLIENTS_PER_PAGE);
+              console.log("[Quality.tsx] loadFirstClients - Response:", res);
               setClients(res.items);
               setTotalClientsCount(res.total);
               setHasMoreClients(res.hasMore);
               setClientsPage(1);
-          } catch (err) {
-              console.error("Erro ao carregar clientes:", err);
+          } catch (err: any) {
+              console.error("[Quality.tsx] Erro ao carregar clientes na primeira vez:", err.message);
+              setClients([]); // Clear clients on error
+              setTotalClientsCount(0);
+              setHasMoreClients(false);
           } finally {
               setIsLoading(false);
           }
@@ -120,11 +127,13 @@ const Quality: React.FC = () => {
       try {
           const nextPage = clientsPage + 1;
           const res = await adminService.getClients({ search: clientSearch, status: clientStatus }, nextPage, CLIENTS_PER_PAGE);
+          console.log("[Quality.tsx] handleLoadMoreClients - Response:", res);
           setClients(prev => [...prev, ...res.items]);
           setHasMoreClients(res.hasMore);
           setClientsPage(nextPage);
-      } catch (err) {
-          console.error("Erro ao carregar mais clientes:", err);
+      } catch (err: any) {
+          console.error("[Quality.tsx] Erro ao carregar mais clientes:", err.message);
+          setHasMoreClients(false); // Stop trying to load more if there's an error
       } finally {
           setIsLoadingMore(false);
       }
@@ -456,7 +465,7 @@ const Quality: React.FC = () => {
                 <div className="h-full flex flex-col">
                     {activeView === 'overview' && (
                         <QualityOverviewCards 
-                            totalClients={totalClientsCount || stats.pendingDocs + 50} 
+                            totalClients={stats.totalActiveClients} 
                             totalPendingDocs={stats.pendingDocs} 
                             totalOpenTickets={stats.openQualityTickets} // Utiliza a contagem do estado
                             totalInbox={stats.openQualityTickets} // Utiliza a contagem do estado

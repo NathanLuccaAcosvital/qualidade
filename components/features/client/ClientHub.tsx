@@ -47,27 +47,19 @@ export const ClientHub: React.FC<ClientHubProps> = ({
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [sortKey, setSortKey] = useState<SortKey>('NAME');
 
-    // Simulação de dados analíticos para Auditoria (Em prod viria do backend)
-    const clientsWithStats = useMemo(() => {
-        return clients.map(c => ({
-            ...c,
-            pendingDocs: Math.floor(Math.random() * 5), // Mock: Pendências reais
-            complianceScore: 85 + Math.floor(Math.random() * 15), // Mock: % Saúde
-            lastAnalysis: '24/10/2023'
-        }));
-    }, [clients]);
-
+    // Remove a simulação de dados analíticos. Agora, 'clients' deve vir do backend com esses dados.
     const sortedClients = useMemo(() => {
-        return [...clientsWithStats].sort((a, b) => {
+        return [...clients].sort((a, b) => { // Usa 'clients' diretamente
             if (sortKey === 'NAME') return a.name.localeCompare(b.name);
-            if (sortKey === 'PENDING') return b.pendingDocs - a.pendingDocs;
+            // Assume 0 se pendingDocs ou complianceScore não estiverem definidos
+            if (sortKey === 'PENDING') return (b.pendingDocs || 0) - (a.pendingDocs || 0); 
             if (sortKey === 'NEWEST') return new Date(b.contractDate).getTime() - new Date(a.contractDate).getTime();
             return 0;
         });
-    }, [clientsWithStats, sortKey]);
+    }, [clients, sortKey]);
 
     const clientGroups = useMemo(() => {
-        const groups: Record<string, typeof clientsWithStats[0][]> = {};
+        const groups: Record<string, typeof clients[0][]> = {};
         sortedClients.forEach(c => {
             const letter = c.name.charAt(0).toUpperCase();
             if (!groups[letter]) groups[letter] = [];
@@ -76,12 +68,15 @@ export const ClientHub: React.FC<ClientHubProps> = ({
         return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
     }, [sortedClients]);
 
-    const renderHealthBadge = (score: number, pending: number) => {
-        if (pending > 0) {
+    const renderHealthBadge = (score?: number, pending?: number) => {
+        const actualPending = pending || 0;
+        const actualScore = score || 0;
+
+        if (actualPending > 0) {
             return (
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 text-orange-600 rounded-lg border border-orange-100 animate-pulse">
                     <AlertCircle size={12} />
-                    <span className="text-[10px] font-black uppercase">{pending} Pendências</span>
+                    <span className="text-[10px] font-black uppercase">{actualPending} Pendências</span>
                 </div>
             );
         }
@@ -184,7 +179,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                         <div 
                                             key={c.id} 
                                             onClick={() => onSelectClient(c)} 
-                                            className={`bg-white p-5 rounded-2xl border ${c.pendingDocs > 0 ? 'border-orange-200 bg-orange-50/10' : 'border-slate-200'} hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all group relative overflow-hidden`}
+                                            className={`bg-white p-5 rounded-2xl border ${c.pendingDocs && c.pendingDocs > 0 ? 'border-orange-200 bg-orange-50/10' : 'border-slate-200'} hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all group relative overflow-hidden`}
                                         >
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className={`p-3 rounded-xl transition-all shadow-sm ${
@@ -244,16 +239,16 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                             <div className="flex items-center gap-3">
                                                 <div className="flex-1 h-1.5 bg-slate-100 rounded-full max-w-[100px] overflow-hidden">
                                                     <div 
-                                                        className={`h-full rounded-full transition-all duration-1000 ${c.complianceScore > 95 ? 'bg-emerald-500' : 'bg-orange-500'}`} 
-                                                        style={{ width: `${c.complianceScore}%` }} 
+                                                        className={`h-full rounded-full transition-all duration-1000 ${c.complianceScore && c.complianceScore > 95 ? 'bg-emerald-500' : 'bg-orange-500'}`} 
+                                                        style={{ width: `${c.complianceScore || 0}%` }} 
                                                     />
                                                 </div>
-                                                <span className="text-xs font-black text-slate-600">{c.complianceScore}%</span>
+                                                <span className="text-xs font-black text-slate-600">{c.complianceScore || 0}%</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center">
-                                                {c.pendingDocs > 0 ? (
+                                                {c.pendingDocs && c.pendingDocs > 0 ? (
                                                     <span className="px-2 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-md text-[10px] font-black uppercase">
                                                         {c.pendingDocs} Críticas
                                                     </span>
@@ -264,7 +259,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{c.lastAnalysis}</td>
+                                        <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{'N/A'}</td> {/* `lastAnalysis` is still mocked, leaving as N/A */}
                                         <td className="px-6 py-4 text-right">
                                             <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all inline" />
                                         </td>
@@ -283,7 +278,6 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                             disabled={isLoadingMore}
                             className="flex items-center gap-3 bg-white border border-slate-200 px-8 py-3 rounded-2xl text-slate-600 font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm group active:scale-95 disabled:opacity-50"
                         >
-                            {isLoadingMore ? <Loader2 size={18} className="animate-spin" /> : <ArrowDownCircle size={18} />}
                             {isLoadingMore ? 'Carregando Chunks...' : 'Auditar mais clientes'}
                         </button>
                     ) : (

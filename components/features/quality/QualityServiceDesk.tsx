@@ -28,6 +28,9 @@ export const QualityServiceDesk: React.FC<QualityServiceDeskProps> = ({ refreshT
     setIsLoading(true);
     try {
       const fetchedTickets = await adminService.getQualityInbox({ search: searchTerm, status: statusFilter });
+      console.log('Fetching tickets with searchTerm:', searchTerm, 'statusFilter:', statusFilter);
+      console.log('Fetched tickets (raw):', fetchedTickets);
+
       // Sort by creation date, most recent first. Also, open/in-progress tickets first.
       const sortedTickets = fetchedTickets.sort((a, b) => {
         const statusOrder = { 'OPEN': 1, 'IN_PROGRESS': 2, 'RESOLVED': 3 };
