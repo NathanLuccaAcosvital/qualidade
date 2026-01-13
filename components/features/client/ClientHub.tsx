@@ -1,6 +1,4 @@
-
-
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { 
     Search, 
     Users, 
@@ -16,7 +14,8 @@ import {
     Filter,
     UserCheck
 } from 'lucide-react';
-import { ClientOrganization } from '../../../types.ts';
+// Fix: Corrected import path for `ClientOrganization`
+import { ClientOrganization } from '../../../types/index';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 interface ClientHubProps {
@@ -30,10 +29,9 @@ interface ClientHubProps {
     isLoadingMore: boolean;
     hasMore: boolean;
     onLoadMore: () => void;
+    viewMode: 'grid' | 'list'; // NOVO: Prop para o modo de visualização
+    sortKey: 'NAME' | 'PENDING' | 'NEWEST' | 'LAST_ANALYSIS'; // NOVO: Prop para a chave de ordenação
 }
-
-type ViewMode = 'grid' | 'list';
-type SortKey = 'NAME' | 'PENDING' | 'NEWEST' | 'LAST_ANALYSIS'; // Adicionado 'LAST_ANALYSIS'
 
 export const ClientHub: React.FC<ClientHubProps> = ({ 
     clients, 
@@ -45,13 +43,14 @@ export const ClientHub: React.FC<ClientHubProps> = ({
     isLoading,
     isLoadingMore,
     hasMore,
-    onLoadMore
+    onLoadMore,
+    viewMode, // Removido setViewMode
+    sortKey // Removido setSortKey
 }) => {
     const { t } = useTranslation(); // Use the hook
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
-    const [sortKey, setSortKey] = useState<SortKey>('NAME');
 
     // Remove a simulação de dados analíticos. Agora, 'clients' deve vir do backend com esses dados.
+    // clients já está vindo pré-filtrado e pré-ordenado do hook useQualityClientManagement
     const sortedClients = useMemo(() => {
         if (!clients) return []; // Defensive check: return empty array if clients is null/undefined
         return [...clients].sort((a, b) => { // Usa 'clients' diretamente
@@ -107,78 +106,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
 
     return (
         <div className="flex flex-col h-full gap-4 animate-in fade-in duration-300" role="main" aria-label={t('quality.b2bPortfolio')}>
-            {/* Barra de Auditoria e Controles */}
-            {/* Mantida a barra de busca e filtros, movida os botões de ação para a Quality.tsx */}
-            <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col xl:flex-row justify-between items-center gap-4 hidden"> {/* Hidden, as moved to parent */}
-                <div className="relative w-full max-w-xl">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
-                    <input 
-                        type="text" 
-                        placeholder={t('quality.searchClient')} 
-                        className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" 
-                        value={clientSearch} 
-                        onChange={e => setClientSearch(e.target.value)} 
-                        aria-label={t('quality.searchClient')}
-                    />
-                </div>
-                
-                <div className="flex items-center gap-4 w-full xl:w-auto">
-                    {/* Toggle de View */}
-                    <div className="flex bg-slate-100 p-1 rounded-xl shadow-inner" role="group" aria-label={t('files.viewOptions')}>
-                        <button 
-                            onClick={() => setViewMode('list')}
-                            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                            aria-label={t('files.listView')}
-                            aria-pressed={viewMode === 'list'}
-                        >
-                            <List size={18} aria-hidden="true" />
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                            aria-label={t('files.gridView')}
-                            aria-pressed={viewMode === 'grid'}
-                        >
-                            <LayoutGrid size={18} aria-hidden="true" />
-                        </button>
-                    </div>
-
-                    <div className="h-8 w-px bg-slate-200 hidden xl:block" aria-hidden="true" />
-
-                    {/* Ordenação por Criticidade */}
-                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl flex-1 xl:flex-none">
-                        <select 
-                            value={sortKey}
-                            onChange={(e) => setSortKey(e.target.value as SortKey)}
-                            className="bg-transparent border-none text-xs font-bold text-slate-600 px-3 py-1.5 focus:ring-0 cursor-pointer"
-                            aria-label={t('files.sortBy')}
-                        >
-                            <option value="NAME">{t('files.sort.nameAsc')}</option>
-                            <option value="PENDING">{t('dashboard.criticalPendencies')}</option>
-                            <option value="LAST_ANALYSIS">{t('dashboard.lastAnalysis')} ({t('files.sort.dateNew')})</option>
-                            <option value="NEWEST">{t('dashboard.recent')}</option>
-                        </select>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl" role="group" aria-label={t('common.filterByStatus')}>
-                        {(['ALL', 'ACTIVE'] as const).map(status => (
-                            <button
-                                key={status}
-                                onClick={() => setClientStatus(status)}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                                    clientStatus === status 
-                                    ? 'bg-white text-slate-900 shadow-sm' 
-                                    : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                                aria-pressed={clientStatus === status}
-                                aria-label={status === 'ALL' ? t('dashboard.allClients') : t('dashboard.activeClients')}
-                            >
-                                {status === 'ALL' ? t('dashboard.allClients') : t('dashboard.activeClients')}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            {/* Removida a barra de auditoria e controles, agora na ClientList.tsx */}
             
             {/* Lista com Infinite Scroll */}
             <div className="flex-1 overflow-y-auto pb-10 custom-scrollbar">
@@ -189,6 +117,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                     </div>
                 ) : sortedClients.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200" role="status">
+                        {/* Fix: Changed UsersIcon to Users from lucide-react */}
                         <Users size={48} className="mb-4 opacity-20" aria-hidden="true" />
                         <p className="font-medium">{t('dashboard.noRecordsFound')}</p>
                     </div>
@@ -214,6 +143,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                                 <div className={`p-3 rounded-xl transition-all shadow-sm ${
                                                     c.status === 'ACTIVE' ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white' : 'bg-slate-50 text-slate-400'
                                                 }`}>
+                                                    {/* Fix: Changed UsersIcon to Users from lucide-react */}
                                                     <Users size={24} aria-hidden="true"/>
                                                 </div>
                                                 {renderHealthBadge(c.complianceScore, c.pendingDocs)}

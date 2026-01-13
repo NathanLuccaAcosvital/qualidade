@@ -1,10 +1,10 @@
-
-import { FileNode, User, FileType, LibraryFilters, AuditLog, BreadcrumbItem, UserRole } from '../../types.ts';
+// Fix: Updated import path for 'types' module to explicitly include '/index'
+import { FileNode, User, FileType, LibraryFilters, AuditLog, BreadcrumbItem, UserRole, FileMetadata } from '../../types/index'; // Atualizado
 import { IFileService, PaginatedResponse } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
-import { SupabaseAdminService } from './supabaseAdminService.ts'; // Importe para buscar dados do cliente
+// Fix: Import withAuditLog from the correct path
+import { withAuditLog } from '../utils/auditLogWrapper.ts';
 
-// Helper interno para buscar quais IDs da lista atual são favoritos do usuário
 const _fetchUserFavorites = async (userId: string, fileIds: string[]): Promise<Set<string>> => {
     if (fileIds.length === 0) return new Set();
     
@@ -17,7 +17,6 @@ const _fetchUserFavorites = async (userId: string, fileIds: string[]): Promise<S
     return new Set((data || []).map(f => f.file_id));
 };
 
-// Gerador de IP e Localização simulados/básicos para frontend
 const _getSimulatedIp = () => {
     const segments = Array.from({ length: 4 }, () => Math.floor(Math.random() * 256));
     return segments.join('.');
@@ -27,13 +26,12 @@ const _getDeviceAndLocation = () => {
     let device = 'Desktop';
     if (/Mobi|Android/i.test(userAgent)) device = 'Mobile';
     if (/Tablet|iPad/i.test(userAgent)) device = 'Tablet';
-    // Em um ambiente real, a localização viria de um serviço de geolocalização de IP
     const location = 'Unknown / Browser inferred'; 
     return { userAgent, device, location };
 };
 
-// Função interna para logar ações de auditoria
-const _logAction = async (
+// Exporta logAction para ser usado pelo wrapper withAuditLog
+export const logAction = async (
     user: User | null, 
     action: string, 
     target: string, 
@@ -45,7 +43,7 @@ const _logAction = async (
     try {
         const { userAgent, device, location } = _getDeviceAndLocation();
         const ip = _getSimulatedIp();
-        const requestId = crypto.randomUUID(); // Gerar um UUID para requestId
+        const requestId = crypto.randomUUID();
 
         await supabase.from('audit_logs').insert({
             user_id: user?.id || null,
@@ -70,8 +68,7 @@ const _logAction = async (
     }
 };
 
-// Helper para verificar responsabilidade e ajustar log
-const _checkResponsibilityAndLog = async (
+const checkResponsibilityAndLog = async (
     user: User, 
     fileOwnerId: string, 
     action: string, 
@@ -81,7 +78,6 @@ const _checkResponsibilityAndLog = async (
     initialMetadata: Record<string, any> = {}
 ) => {
     let finalSeverity = initialSeverity;
-    // Fix: Explicitly declare metadata as a mutable object with Record<string, any> type
     let metadata: Record<string, any> = { ...initialMetadata, fileOwnerId };
 
     if (fileOwnerId) {
@@ -98,20 +94,16 @@ const _checkResponsibilityAndLog = async (
             metadata.responsibleAnalystId = clientOrg.quality_analyst_id;
             
             if (user.role === UserRole.QUALITY && user.id !== clientOrg.quality_analyst_id) {
-                // Analista de qualidade acessando/modificando arquivo de cliente não atribuído
                 finalSeverity = 'WARNING';
                 metadata.accessedByNonResponsibleAnalyst = true;
                 console.warn(`WARNING: Quality Analyst ${user.name} (${user.id}) accessed/modified file of client ${clientOrg.name} (${fileOwnerId}) not assigned to them (responsible: ${clientOrg.quality_analyst_id}).`);
             } else if (user.role === UserRole.ADMIN && user.id !== clientOrg.quality_analyst_id) {
-                // Admin acessando/modificando arquivo de cliente com analista de qualidade atribuído (diferente do admin)
-                // Mantém INFO ou ajusta se houver uma política mais rigorosa para admins
                 metadata.accessedByAdminNotAssignedAnalyst = true;
-                // finalSeverity = 'INFO'; // Admins are allowed, so keep info but add metadata
             }
         }
     }
     
-    await _logAction(user, action, fileName, 'DATA', finalSeverity, initialStatus, metadata);
+    await logAction(user, action, fileName, 'DATA', finalSeverity, initialStatus, metadata);
 };
 
 
@@ -128,7 +120,6 @@ export const SupabaseFileService: IFileService = {
         }
 
         if (user.role === 'CLIENT') {
-            // Replaced user.clientId with user.organizationId
             if (!user.organizationId) throw new Error("Usuário cliente sem organização vinculada.");
             query = query.eq('owner_id', user.organizationId).eq('metadata->>status', 'APPROVED');
         }
@@ -140,7 +131,6 @@ export const SupabaseFileService: IFileService = {
         if (error) throw error;
         
         const files = data || [];
-        // Busca quais desses arquivos são favoritos
         const favSet = await _fetchUserFavorites(user.id, files.map(f => f.id));
 
         return {
@@ -169,7 +159,6 @@ export const SupabaseFileService: IFileService = {
             .order('updated_at', { ascending: false });
             
         if (user.role === 'CLIENT') {
-            // Replaced user.clientId with user.organizationId
             if (!user.organizationId) return [];
             query = query.eq('owner_id', user.organizationId).eq('metadata->>status', 'APPROVED');
         }
@@ -201,21 +190,19 @@ export const SupabaseFileService: IFileService = {
             .single();
             
         if (fetchError || !file) {
-            await _logAction(user, 'FILE_DOWNLOAD', `ID: ${fileId}`, 'DATA', 'ERROR', 'FAILURE', { reason: "File not found or access denied" });
+            await logAction(user, 'FILE_DOWNLOAD', `ID: ${fileId}`, 'DATA', 'ERROR', 'FAILURE', { reason: "File not found or access denied" });
             throw new Error("Documento não encontrado.");
         }
         
-        // Replaced user.clientId with user.organizationId
         if (user.role === 'CLIENT' && file.owner_id !== user.organizationId) {
-            await _logAction(user, 'FILE_DOWNLOAD', file.name, 'SECURITY', 'WARNING', 'FAILURE', { reason: "Acesso negado: Este documento pertence a outra organização." });
+            await logAction(user, 'FILE_DOWNLOAD', file.name, 'SECURITY', 'WARNING', 'FAILURE', { reason: "Acesso negado: Este documento pertence a outra organização." });
             throw new Error("Acesso negado: Este documento pertence a outra organização.");
         }
 
-        // NOVO: Verificação de responsabilidade para logs de auditoria
         if (user.role === UserRole.QUALITY || user.role === UserRole.ADMIN) {
-             await _checkResponsibilityAndLog(user, file.owner_id, 'FILE_DOWNLOAD', file.name);
+             await checkResponsibilityAndLog(user, file.owner_id, 'FILE_DOWNLOAD', file.name);
         } else {
-             await _logAction(user, 'FILE_DOWNLOAD', file.name, 'DATA', 'INFO', 'SUCCESS');
+             await logAction(user, 'FILE_DOWNLOAD', file.name, 'DATA', 'INFO', 'SUCCESS');
         }
 
         const path = file.storage_path || `${file.owner_id}/${file.name}`;
@@ -225,7 +212,7 @@ export const SupabaseFileService: IFileService = {
             .createSignedUrl(path, 3600);
         
         if (error) {
-            await _logAction(user, 'FILE_DOWNLOAD', file.name, 'SYSTEM', 'ERROR', 'FAILURE', { reason: error.message });
+            await logAction(user, 'FILE_DOWNLOAD', file.name, 'SYSTEM', 'ERROR', 'FAILURE', { reason: error.message });
             throw error;
         }
 
@@ -244,7 +231,6 @@ export const SupabaseFileService: IFileService = {
             .eq('metadata->>status', 'PENDING');
 
         if (user.role === 'CLIENT') {
-            // Replaced user.clientId with user.organizationId
             if (user.organizationId) {
                 queryTotal = queryTotal.eq('owner_id', user.organizationId).eq('metadata->>status', 'APPROVED');
                 queryPending = queryPending.eq('owner_id', user.organizationId);
@@ -272,9 +258,8 @@ export const SupabaseFileService: IFileService = {
         let query = supabase.from('files').select('*', { count: 'exact' }).neq('type', 'FOLDER');
         
         if (user.role === 'CLIENT') {
-            // Replaced user.clientId with user.organizationId
             if (user.organizationId) query = query.eq('owner_id', user.organizationId);
-            query = query.eq('metadata->>status', 'APPROVED');
+            query = query.eq('metadata->>status', 'APPROVED'); // Clients only see APPROVED files in library
         }
         
         if (filters.search) query = query.ilike('name', `%${filters.search}%`);
@@ -299,7 +284,8 @@ export const SupabaseFileService: IFileService = {
                 updatedAt: new Date(f.updated_at).toLocaleDateString(),
                 ownerId: f.owner_id,
                 metadata: f.metadata || {},
-                isFavorite: favSet.has(f.id)
+                isFavorite: favSet.has(f.id),
+                storage_path: f.storage_path // Ensure storage_path is returned
             })),
             total: count || 0,
             hasMore: (count || 0) > to + 1
@@ -307,9 +293,8 @@ export const SupabaseFileService: IFileService = {
     },
 
     createFolder: async (user: User, parentId: string | null, name: string, ownerId?: string): Promise<FileNode | null> => {
-        // Replaced user.clientId with user.organizationId
         const targetOwnerId = user.role === 'CLIENT' ? user.organizationId : ownerId;
-        try {
+        const serviceCall = async () => {
             const { data, error } = await supabase.from('files').insert({
                 parent_id: parentId,
                 name,
@@ -318,14 +303,6 @@ export const SupabaseFileService: IFileService = {
                 updated_at: new Date().toISOString()
             }).select().single();
             if (error) throw error;
-
-            // NOVO: Verificação de responsabilidade para logs de auditoria
-            if (user.role === UserRole.QUALITY || user.role === UserRole.ADMIN) {
-                await _checkResponsibilityAndLog(user, targetOwnerId || '', 'FOLDER_CREATED', name);
-            } else {
-                await _logAction(user, 'FOLDER_CREATED', name, 'DATA', 'INFO', 'SUCCESS', { parentId, ownerId: targetOwnerId });
-            }
-
             return {
                 id: data.id,
                 parentId: data.parent_id,
@@ -335,27 +312,30 @@ export const SupabaseFileService: IFileService = {
                 ownerId: data.owner_id,
                 metadata: {}
             };
-        } catch (e: any) {
-            await _logAction(user, 'FOLDER_CREATED', name, 'DATA', 'ERROR', 'FAILURE', { reason: e.message, parentId, ownerId: targetOwnerId });
-            throw e;
-        }
+        };
+
+        // Fix: Call withAuditLog
+        return await withAuditLog(user, 'FOLDER_CREATED', {
+            target: name, 
+            category: 'DATA', 
+            metadata: { parentId, ownerId: targetOwnerId }
+        }, serviceCall);
     },
 
     uploadFile: async (user: User, fileData: Partial<FileNode> & { fileBlob?: Blob }, ownerId: string): Promise<FileNode> => {
         if (!fileData.fileBlob || !fileData.name) {
-            await _logAction(user, 'FILE_UPLOAD', fileData.name || 'Unknown', 'DATA', 'ERROR', 'FAILURE', { reason: "File data incomplete" });
             throw new Error("Dados do arquivo incompletos para upload.");
         }
         const storagePath = `${ownerId}/${fileData.name}`;
         
-        try {
+        const serviceCall = async () => {
             const { error: storageError } = await supabase.storage.from('certificates').upload(storagePath, fileData.fileBlob, { cacheControl: '3600', upsert: true });
             if (storageError) throw storageError;
 
             const { data, error: dbError } = await supabase.from('files').insert({
                 parent_id: fileData.parentId || null,
                 name: fileData.name,
-                type: FileType.PDF, // Assumindo PDF para uploads manuais, ajustar se necessário
+                type: FileType.PDF, // Assume PDF for certificates
                 size: `${(fileData.fileBlob.size / (1024 * 1024)).toFixed(2)} MB`,
                 owner_id: ownerId,
                 storage_path: storagePath,
@@ -364,13 +344,6 @@ export const SupabaseFileService: IFileService = {
                 updated_at: new Date().toISOString()
             }).select().single();
             if (dbError) throw dbError;
-
-            // NOVO: Verificação de responsabilidade para logs de auditoria
-            if (user.role === UserRole.QUALITY || user.role === UserRole.ADMIN) {
-                await _checkResponsibilityAndLog(user, ownerId, 'FILE_UPLOAD', fileData.name, 'INFO', 'SUCCESS', { parentId: fileData.parentId, status: fileData.metadata?.status || 'PENDING' });
-            } else {
-                await _logAction(user, 'FILE_UPLOAD', fileData.name, 'DATA', 'INFO', 'SUCCESS', { ownerId, parentId: fileData.parentId, status: fileData.metadata?.status || 'PENDING' });
-            }
 
             return {
                 id: data.id,
@@ -381,51 +354,51 @@ export const SupabaseFileService: IFileService = {
                 updatedAt: new Date(data.updated_at).toLocaleDateString(),
                 ownerId: data.owner_id,
                 metadata: data.metadata,
-                isFavorite: false
+                isFavorite: false,
+                storage_path: data.storage_path
             };
-        } catch (e: any) {
-            await _logAction(user, 'FILE_UPLOAD', fileData.name, 'DATA', 'ERROR', 'FAILURE', { reason: e.message, ownerId, parentId: fileData.parentId });
-            throw e;
-        }
+        };
+
+        // Fix: Call withAuditLog
+        return await withAuditLog(user, 'FILE_UPLOAD', {
+            target: fileData.name, 
+            category: 'DATA', 
+            metadata: { ownerId, parentId: fileData.parentId, status: fileData.metadata?.status || 'PENDING' }
+        }, serviceCall);
     },
 
     deleteFile: async (user: User, fileId: string): Promise<void> => {
         let fileName = `ID: ${fileId}`;
         let fileOwnerId: string | null = null;
-        try {
+        const serviceCall = async () => {
             const { data: file, error: fetchError } = await supabase.from('files').select('name, storage_path, owner_id').eq('id', fileId).single();
             if (fetchError || !file) throw new Error("File not found.");
 
             fileName = file.name;
             fileOwnerId = file.owner_id;
 
-            // Replaced user.clientId with user.organizationId
             if (user.role === 'CLIENT' && file.owner_id !== user.organizationId) {
-                await _logAction(user, 'FILE_DELETE', fileName, 'SECURITY', 'WARNING', 'FAILURE', { reason: "Attempted to delete another client's file" });
                 throw new Error("Não permitido excluir arquivos de terceiros.");
             }
             
             if (file.storage_path) await supabase.storage.from('certificates').remove([file.storage_path]);
             await supabase.from('files').delete().eq('id', fileId);
+        };
 
-            // NOVO: Verificação de responsabilidade para logs de auditoria
-            if (user.role === UserRole.QUALITY || user.role === UserRole.ADMIN) {
-                await _checkResponsibilityAndLog(user, fileOwnerId, 'FILE_DELETE', fileName, 'INFO', 'SUCCESS');
-            } else {
-                await _logAction(user, 'FILE_DELETE', fileName, 'DATA', 'INFO', 'SUCCESS', { fileOwnerId });
-            }
-
-        } catch (e: any) {
-            await _logAction(user, 'FILE_DELETE', fileName, 'DATA', 'ERROR', 'FAILURE', { reason: e.message, fileOwnerId });
-            throw e;
-        }
+        // Fix: Call withAuditLog
+        await withAuditLog(user, 'FILE_DELETE', {
+            target: fileName, 
+            category: 'DATA', 
+            initialSeverity: user.role === 'CLIENT' ? 'WARNING' : 'INFO', // If client tried, it's already a WARNING
+            metadata: { fileOwnerId }
+        }, serviceCall);
     },
 
     updateFile: async (user: User, fileId: string, updates: Partial<FileNode>): Promise<void> => {
         let fileName = `ID: ${fileId}`;
         let oldMetadata: any = {};
         let fileOwnerId: string | null = null;
-        try {
+        const serviceCall = async () => {
             const { data: currentFile, error: fetchError } = await supabase.from('files').select('name, metadata, owner_id').eq('id', fileId).single();
             if (fetchError || !currentFile) throw new Error("File not found.");
             
@@ -439,26 +412,18 @@ export const SupabaseFileService: IFileService = {
                 metadata: updates.metadata,
                 updated_at: new Date().toISOString()
             }).eq('id', fileId);
+        };
 
-            const newMetadata = updates.metadata;
-            const changes = { old: oldMetadata, new: newMetadata, updates };
-            
-            // NOVO: Verificação de responsabilidade para logs de auditoria
-            if (user.role === UserRole.QUALITY || user.role === UserRole.ADMIN) {
-                await _checkResponsibilityAndLog(user, fileOwnerId, 'FILE_UPDATE', fileName, 'INFO', 'SUCCESS', { fileId, changes });
-            } else {
-                await _logAction(user, 'FILE_UPDATE', fileName, 'DATA', 'INFO', 'SUCCESS', { fileId, changes });
-            }
-
-        } catch (e: any) {
-            await _logAction(user, 'FILE_UPDATE', fileName, 'DATA', 'ERROR', 'FAILURE', { reason: e.message, fileId, updates, oldMetadata });
-            throw e;
-        }
+        // Fix: Call withAuditLog
+        await withAuditLog(user, 'FILE_UPDATE', {
+            target: fileName, 
+            category: 'DATA', 
+            metadata: { fileId, changes: { old: oldMetadata, new: updates.metadata, updates }, fileOwnerId }
+        }, serviceCall);
     },
 
     searchFiles: async (user: User, query: string, page = 1, pageSize = 20): Promise<PaginatedResponse<FileNode>> => {
         let q = supabase.from('files').select('*', { count: 'exact' }).ilike('name', `%${query}%`);
-        // Replaced user.clientId with user.organizationId
         if (user.role === 'CLIENT' && user.organizationId) {
             q = q.eq('owner_id', user.organizationId).eq('metadata->>status', 'APPROVED');
         }
@@ -480,7 +445,8 @@ export const SupabaseFileService: IFileService = {
                 updatedAt: new Date(f.updated_at).toLocaleDateString(),
                 ownerId: f.owner_id,
                 metadata: f.metadata || {},
-                isFavorite: favSet.has(f.id)
+                isFavorite: favSet.has(f.id),
+                storage_path: f.storage_path // Ensure storage_path is returned
             })),
             total: count || 0,
             hasMore: (count || 0) > to + 1
@@ -488,7 +454,6 @@ export const SupabaseFileService: IFileService = {
     },
 
     getBreadcrumbs: async (folderId: string | null): Promise<BreadcrumbItem[]> => {
-        // Fix: Return the translation key for the root breadcrumb instead of hardcoding "Início"
         if (!folderId) return [{ id: 'root', name: 'common.home' }];
         
         try {
@@ -508,11 +473,9 @@ export const SupabaseFileService: IFileService = {
                 currentId = data.parent_id;
             }
             
-            // Fix: Return the translation key for the root breadcrumb on error as well
             crumbs.unshift({ id: 'root', name: 'common.home' });
             return crumbs;
         } catch (e) {
-            // Fix: Return the translation key for the root breadcrumb on error as well
             return [{ id: 'root', name: 'common.home' }];
         }
     },
@@ -521,15 +484,14 @@ export const SupabaseFileService: IFileService = {
         let isFavorite = false;
         let fileName = `ID: ${fileId}`;
         let fileOwnerId: string | null = null;
-        try {
-            // Fetch file name and owner for logging
+
+        const serviceCall = async () => {
             const { data: fileData, error: fileError } = await supabase.from('files').select('name, owner_id').eq('id', fileId).single();
             if (fileData) {
                 fileName = fileData.name;
                 fileOwnerId = fileData.owner_id;
             }
 
-            // Verifica se já existe
             const { data } = await supabase
                 .from('file_favorites')
                 .select('id')
@@ -538,34 +500,27 @@ export const SupabaseFileService: IFileService = {
                 .single();
 
             if (data) {
-                // Se existe, remove (toggle OFF)
                 await supabase.from('file_favorites').delete().eq('id', data.id);
                 isFavorite = false;
             } else {
-                // Se não existe, cria (toggle ON)
                 await supabase.from('file_favorites').insert({
                     user_id: user.id,
                     file_id: fileId
                 });
                 isFavorite = true;
             }
-            
-            // NOVO: Verificação de responsabilidade para logs de auditoria
-            if (user.role === UserRole.QUALITY || user.role === UserRole.ADMIN) {
-                await _checkResponsibilityAndLog(user, fileOwnerId || '', 'FILE_FAVORITE_TOGGLE', fileName, 'INFO', 'SUCCESS', { isFavorite });
-            } else {
-                await _logAction(user, 'FILE_FAVORITE_TOGGLE', fileName, 'DATA', 'INFO', 'SUCCESS', { isFavorite });
-            }
-
             return isFavorite;
-        } catch (e: any) {
-            await _logAction(user, 'FILE_FAVORITE_TOGGLE', fileName, 'DATA', 'ERROR', 'FAILURE', { isFavorite, reason: e.message });
-            throw e;
-        }
+        };
+
+        // Fix: Call withAuditLog
+        return await withAuditLog(user, 'FILE_FAVORITE_TOGGLE', {
+            target: fileName, 
+            category: 'DATA', 
+            metadata: { isFavorite, fileOwnerId }
+        }, serviceCall);
     },
 
     getFavorites: async (user: User): Promise<FileNode[]> => {
-        // Busca os favoritos do usuário com JOIN na tabela de arquivos
         const { data, error } = await supabase
             .from('file_favorites')
             .select(`
@@ -576,10 +531,9 @@ export const SupabaseFileService: IFileService = {
         
         if (error) throw error;
         
-        // Mapeia o resultado do JOIN para o formato FileNode
         return (data || [])
-            .map((item: any) => item.files) // Extrai o objeto file
-            .filter((f: any) => f !== null) // Remove nulos (caso arquivo tenha sido deletado)
+            .map((item: any) => item.files)
+            .filter((f: any) => f !== null)
             .map((f: any) => ({
                 id: f.id,
                 parentId: f.parent_id,
@@ -589,7 +543,8 @@ export const SupabaseFileService: IFileService = {
                 updatedAt: new Date(f.updated_at).toLocaleDateString(),
                 ownerId: f.owner_id,
                 metadata: f.metadata || {},
-                isFavorite: true // Já sabemos que é favorito pois veio desta query
+                isFavorite: true,
+                storage_path: f.storage_path // Ensure storage_path is returned
             }));
     },
 
@@ -597,8 +552,6 @@ export const SupabaseFileService: IFileService = {
         if (!ownerId) return [];
         const { data, error } = await supabase.from('files').select('*').eq('owner_id', ownerId);
         if (error) throw error;
-        // Nota: Neste método específico, não estamos injetando isFavorite para manter performance,
-        // mas pode ser adicionado se necessário no contexto de Admin.
         return (data || []).map(f => ({
             id: f.id,
             parentId: f.parent_id,
@@ -608,12 +561,12 @@ export const SupabaseFileService: IFileService = {
             updatedAt: new Date(f.updated_at).toLocaleDateString(),
             ownerId: f.owner_id,
             metadata: f.metadata || {},
-            isFavorite: false
+            isFavorite: false,
+            storage_path: f.storage_path // Ensure storage_path is returned
         }));
     },
 
-    // A função logAction é agora o _logAction interno. Este é um alias para chamadas externas que não foram migradas.
-    logAction: _logAction,
+    logAction: logAction, // Exporta a função directamente
 
     getAuditLogs: async (user: User): Promise<AuditLog[]> => {
         if (user.role !== 'ADMIN') throw new Error("Acesso negado.");
@@ -625,14 +578,9 @@ export const SupabaseFileService: IFileService = {
         }));
     },
 
-    getQualityAuditLogs: async (user: User, filters?: { search?: string; severity?: AuditLog['severity'] | 'ALL' }): Promise<AuditLog[]> => {
-        // Esta função é destinada à perspectiva de um Analista de Qualidade.
-        // Mesmo que um Admin a chame, ele verá logs relacionados às suas próprias ações
-        // e ações em clientes para os quais ele é explicitamente o 'quality_analyst_id'.
-
+    getQualityAuditLogs: async (user: User, filters?: { search?: string; severity?: AuditLog['severity'] | 'ALL' }) => {
         let responsibleClientIds: string[] = [];
         
-        // Encontra todos os IDs de organizações de clientes onde o usuário atual é o analista de qualidade responsável
         const { data: clientsData, error: clientsError } = await supabase
             .from('organizations')
             .select('id')
@@ -648,17 +596,9 @@ export const SupabaseFileService: IFileService = {
             .from('audit_logs')
             .select('*, profiles(full_name, role)');
 
-        // Constrói a condição OR: logs pelo próprio usuário OU logs relacionados aos clientes responsáveis
-        let orConditions: string[] = [`user_id.eq.${user.id}`]; // Sempre inclui as próprias ações
+        let orConditions: string[] = [`user_id.eq.${user.id}`];
 
         if (responsibleClientIds.length > 0) {
-            // Logs onde fileOwnerId (para arquivos) ou clientId (para registros de clientes) 
-            // corresponde a um ID de cliente responsável.
-            // Usamos `contains` para verificar se o ID está presente em um array, 
-            // caso o `metadata->>fileOwnerId` ou `metadata->>clientId` possa ser um array de IDs.
-            // Se eles são strings simples, `.eq` é mais apropriado, mas `contains` oferece flexibilidade.
-            // Para strings simples, faremos múltiplos `.eq` ou `in`.
-
             const fileOwnerIdConditions = responsibleClientIds.map(id => `metadata->>fileOwnerId.eq."${id}"`).join(',');
             const clientIdConditions = responsibleClientIds.map(id => `metadata->>clientId.eq."${id}"`).join(',');
             

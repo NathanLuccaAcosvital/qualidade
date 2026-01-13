@@ -8,14 +8,18 @@ import { AuthMiddleware } from './middlewares/AuthMiddleware';
 import { RoleMiddleware } from './middlewares/RoleMiddleware';
 import { MaintenanceMiddleware } from './middlewares/MaintenanceMiddleware';
 import { useAuth } from './context/authContext.tsx';
-import { UserRole } from './types';
+import { UserRole } from './types/index';
 
 // --- Lazy Load Pages ---
 const Login = React.lazy(() => import('./pages/Login'));
 const SignUp = React.lazy(() => import('./pages/SignUp'));
+// Fix: Ensure Dashboard is correctly imported as a default export, or adjust if it's named. Assuming default.
 const Dashboard = React.lazy(() => import('./pages/Dashboard')); // View Cliente
-const Quality = React.lazy(() => import('./pages/Quality'));     // View Qualidade
-const Admin = React.lazy(() => import('./pages/Admin'));         // View Admin
+// Fix: Updated lazy import for QualityPage to correctly handle its named export
+const QualityPage = React.lazy(() => import('./pages/QualityPage').then(module => ({ default: module.QualityPage })));     // View Qualidade (Renomeado)
+const AdminPage = React.lazy(() => import('./pages/AdminPage'));         // View Admin (Renomeado)
+// Fix: Updated lazy import for FileInspection to correctly handle its named export
+const FileInspection = React.lazy(() => import('./features/quality/views/FileInspection.tsx').then(module => ({ default: module.FileInspection }))); // NOVO: View de Inspeção de Arquivos
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
@@ -84,24 +88,23 @@ export const AppRoutes: React.FC = () => {
         {/* Rotas Protegidas */}
         <Route element={<MaintenanceMiddleware />}> 
             <Route element={<AuthMiddleware />}>
-                {/* Removed redundant <MainLayout> wrapper. Each page component (Dashboard, Quality, Admin)
-                    already renders the <Layout> component with its specific 'title' prop internally. */}
-                    
-                    {/* Role 3: Cliente (Dashboard) */}
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    
-                    {/* Role 2: Qualidade (Acesso também para Admin) */}
-                    <Route element={<RoleMiddleware allowedRoles={[UserRole.QUALITY, UserRole.ADMIN]} />}>
-                        <Route path="/quality" element={<Quality />} />
-                    </Route>
+                {/* Role 3: Cliente (Dashboard) */}
+                <Route path="/dashboard" element={<Dashboard />} />
+                
+                {/* Role 2: Qualidade (Acesso também para Admin) */}
+                <Route element={<RoleMiddleware allowedRoles={[UserRole.QUALITY, UserRole.ADMIN]} />}>
+                    <Route path="/quality" element={<QualityPage />} />
+                    {/* NOVO: Rota aninhada para inspeção de arquivos */}
+                    <Route path="/quality/inspect/:fileId" element={<FileInspection />} />
+                </Route>
 
-                    {/* Role 1: Admin (Exclusivo) */}
-                    <Route element={<RoleMiddleware allowedRoles={[UserRole.ADMIN]} />}>
-                        <Route path="/admin" element={<Admin />} />
-                    </Route>
+                {/* Role 1: Admin (Exclusivo) - Rotas Aninhadas */}
+                <Route element={<RoleMiddleware allowedRoles={[UserRole.ADMIN]} />}>
+                    <Route path="/admin" element={<AdminPage />} /> {/* AdminPage is now the parent */}
+                </Route>
 
-                    {/* Root Redirect Inteligente */}
-                    <Route path="/" element={<RootRedirect />} />
+                {/* Root Redirect Inteligente */}
+                <Route path="/" element={<RootRedirect />} />
                 
             </Route>
         </Route>

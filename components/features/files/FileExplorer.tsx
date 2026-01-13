@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef, forwardRef, type ForwardedRef } from 'react'; 
 import { 
   Folder, 
@@ -28,12 +27,13 @@ import {
   Loader2,
   AlertCircle,
   Hourglass,
-  FolderPlus
+  FolderPlus,
+  FileUp // NOVO: Importar FileUp para o botão de upload
 } from 'lucide-react';
 import { useAuth } from '../../../context/authContext.tsx'; 
 import { useTranslation } from 'react-i18next';
 import { fileService } from '../../../lib/services/index.ts';
-import { FileNode, FileType, BreadcrumbItem, FileMetadata, UserRole } from '../../../types.ts';
+import { FileNode, FileType, BreadcrumbItem, FileMetadata, UserRole } from '../../../types/index';
 import { useToast } from '../../../context/notificationContext.tsx';
 import { PaginatedResponse } from '../../../lib/services/interfaces.ts';
 
@@ -54,7 +54,7 @@ interface FileExplorerProps {
   currentFolderId?: string | null; 
   onNavigate?: (folderId: string | null) => void; 
   onDeleteFile?: (file: FileNode) => void; // Apenas para Admin ou casos específicos
-  onSetStatusToPending?: (file: FileNode) => void;
+  onSetStatusToPending?: (file: FileNode) => Promise<void>; // Ação para definir status como pendente
   onEdit?: (file: FileNode) => void; // Edição de metadados de arquivo
   onUploadClick?: (currentFolderId: string | null) => void; 
   onFileSelect?: (file: FileNode | null) => void; 
@@ -75,7 +75,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   initialFolderId = null,
   currentFolderId: controlledFolderId,
   onNavigate,
-  onDeleteFile, // REMOVIDO: Será tratado fora para Quality
+  onDeleteFile, 
   onSetStatusToPending,
   onEdit,
   onUploadClick,
@@ -104,6 +104,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list'); 
+  // Fix: Removed 'new' keyword when calling useState
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   
   const [sortBy, setSortBy] = useState<SortOption>('DATE_NEW');
@@ -142,8 +143,17 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
       try {
           let result: PaginatedResponse<FileNode> = { items: [], hasMore: false, total: 0 };
 
-          if (externalFiles) {
-            result = { items: externalFiles, hasMore: false, total: externalFiles.length };
+          if (flatMode && externalFiles) { // If externalFiles are provided and flatMode is active
+            // When externalFiles are provided, we should filter them here based on search and status,
+            // as they are not fetched dynamically.
+            let filteredExternal = externalFiles;
+            if (effectiveSearchQuery) {
+                filteredExternal = filteredExternal.filter(f => f.name.toLowerCase().includes(effectiveSearchQuery.toLowerCase()) || f.metadata?.batchNumber?.toLowerCase().includes(effectiveSearchQuery.toLowerCase()) || f.metadata?.invoiceNumber?.toLowerCase().includes(effectiveSearchQuery.toLowerCase()));
+            }
+            if (effectiveFilterStatus !== 'ALL') {
+                filteredExternal = filteredExternal.filter(f => f.metadata?.status === effectiveFilterStatus);
+            }
+            result = { items: filteredExternal, hasMore: false, total: filteredExternal.length };
           } else if (effectiveSearchQuery || effectiveFilterStatus !== 'ALL') {
             result = await fileService.getLibraryFiles(user, { search: effectiveSearchQuery, status: effectiveFilterStatus }, currentPage);
           } else {
@@ -163,7 +173,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
           if (resetPage) setLoading(false);
           else setLoadingMore(false);
       }
-  }, [user, page, activeFolderId, externalFiles, effectiveSearchQuery, effectiveFilterStatus, t, showToast]);
+  }, [user, page, activeFolderId, externalFiles, effectiveSearchQuery, effectiveFilterStatus, t, showToast, flatMode]);
 
   const fetchBreadcrumbs = useCallback(async () => {
       if (!user || flatMode) return;
@@ -326,10 +336,20 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   const filteredAndSortedFiles: { [key: string]: FileNode[] } = useMemo(() => {
     let currentFiles = externalFiles || files;
     
-    if (effectiveFilterStatus !== 'ALL') {
+    // Apply internal search if externalSearchQuery is not provided or empty, and internalSearchQuery exists
+    if (externalSearchQuery === undefined && internalSearchQuery) {
+        currentFiles = currentFiles.filter(f => 
+            f.name.toLowerCase().includes(internalSearchQuery.toLowerCase()) ||
+            f.metadata?.batchNumber?.toLowerCase().includes(internalSearchQuery.toLowerCase()) ||
+            f.metadata?.invoiceNumber?.toLowerCase().includes(effectiveSearchQuery.toLowerCase())
+        );
+    }
+    // Apply external filter status if provided
+    else if (effectiveFilterStatus !== 'ALL' && externalSearchQuery === undefined) {
         currentFiles = currentFiles.filter(f => f.metadata?.status === effectiveFilterStatus);
     }
-    
+    // If external search is active, the results are already pre-filtered by the parent component (e.g. Dashboard)
+
     const sorted = [...currentFiles].sort((a, b) => {
         if (a.type === FileType.FOLDER && b.type !== FileType.FOLDER) return -1;
         if (a.type !== FileType.FOLDER && b.type === FileType.FOLDER) return 1;
@@ -368,7 +388,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   }
 
     return groups;
-  }, [files, externalFiles, sortBy, groupBy, effectiveFilterStatus, t, user?.role]);
+  }, [files, externalFiles, sortBy, groupBy, effectiveFilterStatus, t, user?.role, internalSearchQuery, externalSearchQuery]);
 
   return (
     <div className={`flex flex-col h-full bg-white rounded-2xl ${!autoHeight ? 'flex-1' : ''}`} role="region" aria-label={t('menu.library')}>
@@ -413,10 +433,21 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
                 {onCreateFolder && (
                     <button 
                         onClick={() => onCreateFolder(activeFolderId)}
-                        className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg active:scale-95"
+                        className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                         aria-label={t('quality.createFolder')}
                     >
                         <FolderPlus size={16} aria-hidden="true" /> {t('quality.createFolder')}
+                    </button>
+                )}
+
+                {/* NOVO: Botão de Upload, visível se `allowUpload` for true e `onUploadClick` for fornecido */}
+                {allowUpload && onUploadClick && (
+                    <button
+                        onClick={() => onUploadClick(activeFolderId)}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
+                        aria-label={t('common.upload')}
+                    >
+                        <FileUp size={16} aria-hidden="true" /> {t('common.upload')}
                     </button>
                 )}
 
@@ -650,89 +681,3 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
                                                   <Star size={18} fill={file.isFavorite ? 'currentColor' : 'none'} strokeWidth={file.isFavorite ? 2.5 : 2} aria-hidden="true" />
                                               </button>
                                           )}
-                                      </div>
-                                      
-                                      <p className="text-sm font-bold text-slate-800 truncate w-full pr-8">{file.name}</p>
-                                      <div className="flex items-center gap-2 text-slate-400 text-xs mt-auto w-full">
-                                          <Clock size={12} aria-hidden="true" />
-                                          <span>{file.updatedAt}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between w-full mt-2">
-                                          {renderStatusBadge(file.metadata?.status)}
-                                          {allowUpload && file.type !== FileType.FOLDER && (
-                                              <button 
-                                                  onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
-                                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                                                  aria-label={t('common.download')}
-                                              >
-                                                  <Download size={16} aria-hidden="true" />
-                                              </button>
-                                          )}
-                                          {(file.type !== FileType.FOLDER && (onDeleteFile || onSetStatusToPending || onEdit)) && (
-                                              <div className="relative">
-                                                  <button
-                                                      onClick={(e) => { e.stopPropagation(); handleActionClick(file.id); }}
-                                                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                                                      aria-label={t('common.moreActions')}
-                                                      aria-haspopup="true"
-                                                      aria-expanded={activeActionId === file.id}
-                                                  >
-                                                      <MoreVertical size={16} aria-hidden="true" />
-                                                  </button>
-                                                  {activeActionId === file.id && (
-                                                      <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-lg border border-slate-100 z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200" role="menu" aria-orientation="vertical">
-                                                          {onEdit && (
-                                                              <button
-                                                                  onClick={(e) => { e.stopPropagation(); onEdit(file); setActiveActionId(null); }}
-                                                                  className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-                                                                  role="menuitem"
-                                                              >
-                                                                  <Edit2 size={14} aria-hidden="true" className="text-blue-500" /> {t('common.edit')}
-                                                              </button>
-                                                          )}
-                                                          {onSetStatusToPending && file.metadata?.status !== 'PENDING' && (
-                                                              <button
-                                                                  onClick={(e) => { e.stopPropagation(); onSetStatusToPending(file); setActiveActionId(null); }}
-                                                                  className="w-full text-left px-4 py-3 text-xs font-bold text-orange-600 hover:bg-orange-50 flex items-center gap-2 transition-colors"
-                                                                  role="menuitem"
-                                                              >
-                                                                  <Hourglass size={14} aria-hidden="true" /> {t('quality.markAsPending')}
-                                                              </button>
-                                                          )}
-                                                          {onDeleteFile && (
-                                                              <button
-                                                                  onClick={(e) => { e.stopPropagation(); onDeleteFile(file); setActiveActionId(null); }}
-                                                                  className="w-full text-left px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-                                                                  role="menuitem"
-                                                              >
-                                                                  <Trash2 size={14} aria-hidden="true" /> {t('common.delete')}
-                                                              </button>
-                                                          )}
-                                                      </div>
-                                                  )}
-                                              </div>
-                                          )}
-                                      </div>
-                                  </div>
-                              ))}
-                          </div>
-                      )}
-                  </div>
-              ))}
-
-              {hasMore && !externalFiles && (
-                  <div ref={lastElementRef} className="py-8 flex justify-center">
-                      {loadingMore ? (
-                          <Loader2 size={24} className="animate-spin text-blue-500" aria-hidden="true" />
-                      ) : (
-                          <button onClick={() => setPage(prevPage => prevPage + 1)} className="px-6 py-2 bg-blue-500 text-white rounded-full text-sm font-bold hover:bg-blue-600 transition-all">
-                              {t('common.loading')}...
-                          </button>
-                      )}
-                  </div>
-              )}
-          </div>
-      )}
-    </div>
-  );
-});

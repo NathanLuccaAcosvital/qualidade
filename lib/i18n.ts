@@ -1,4 +1,3 @@
-
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -56,7 +55,8 @@ const resources = {
         statusActive: "Ativo",
         statusBlocked: "Bloqueado",
         statusInactive: "Inativo",
-        home: "Início" // Adicionado para uso genérico de 'home' como breadcrumb
+        home: "Início", // Adicionado para uso genérico de 'home' como breadcrumb
+        uploaded: "Enviado", // NOVO
       },
       files: {
         name: "Nome do Arquivo",
@@ -198,6 +198,7 @@ const resources = {
         activeClients: "Ativos",
         allClients: "Todos",
         contractDate: "Data do Contrato",
+        fileStatusTimeline: "Timeline do Status do Arquivo", // NOVO
       },
       login: {
         welcomeBack: "Acesso Restrito",
@@ -229,8 +230,8 @@ const resources = {
           settings: "Configurações"
         },
         settings: {
-          techSupport: "Suporte N3 Infra",
-          externalTeam: "Equipe Externa"
+          // REMOVIDO: techSupport: "Suporte N3 Infra",
+          // REMOVIDO: externalTeam: "Equipe Externa"
         },
         users: {
           createTitle: "Novo Acesso",
@@ -265,8 +266,8 @@ const resources = {
             ip: "Endereço IP",
             severity: "Severidade"
           },
-          pendingTicketsSubtext: "Pendentes de Resposta", // This will be removed, but the reference in AdminStats still uses it
-          logsLast24hSubtext: "Logs nas últimas 24h"
+          activeClientsSummary: "{{count}} ativos",
+          logsLast24hSummary: "{{count}} logs nas últimas 24h"
         },
         clients: {
           createTitle: "Nova Organização",
@@ -394,30 +395,30 @@ const resources = {
         documentApprovedTitle: "Documento Aprovado",
         documentRejectedTitle: "Documento Recusado",
         documentInspectedMessage: "O documento '{{fileName}}' (lote: {{batchNumber}}) foi inspecionado.",
-        markAsPending: "Marcar como Pendente", // NEW TRANSLATION
-        confirmSetPending: "Tem certeza que deseja marcar {{fileName}} como pendente?", // NEW TRANSLATION
-        fileSetPendingSuccess: "Arquivo {{fileName}} marcado como pendente com sucesso!", // NEW TRANSLATION
-        errorSettingPending: "Erro ao marcar arquivo como pendente.", // NEW TRANSLATION
-        alreadyPending: "O arquivo já está com status 'Pendente'.", // NEW TRANSLATION
-        selectClient: "Selecione um cliente para fazer o upload do arquivo.", // NEW TRANSLATION (Adjusted for client-only upload)
-        newClientUser: "Novo Usuário Cliente", // NOVO
-        newCompany: "Nova Empresa", // NOVO
-        createFolder: "Nova Pasta", // NOVO
-        createFolderTitle: "Criar Nova Pasta", // NOVO
-        folderName: "Nome da Pasta", // NOVO
-        createFolderButton: "Criar Pasta", // NOVO
-        folderCreatedSuccess: "Pasta '{{folderName}}' criada com sucesso!", // NOVO
-        errorCreatingFolder: "Erro ao criar pasta: {{message}}", // NOVO
-        confirmActionTitle: "Confirmar Ação de Segurança", // NOVO
-        confirmEmailLabel: "E-mail para Confirmação", // NOVO
-        confirmPasswordLabel: "Senha para Confirmação", // NOVO
-        invalidConfirmationCredentials: "Credenciais de confirmação inválidas ou não correspondem ao usuário atual.", // NOVO
-        emailMismatchError: "O e-mail de confirmação não corresponde à sua conta atual.", // NOVO
-        myAuditLog: "Meu Log de Auditoria", // NOVO
-        allActivities: "Todas as Atividades", // NOVO
-        noQualityLogsFound: "Nenhum log de auditoria encontrado para sua carteira.", // NOVO
+        markAsPending: "Marcar como Pendente",
+        confirmSetPending: "Tem certeza que deseja marcar {{fileName}} como pendente?",
+        fileSetPendingSuccess: "Arquivo {{fileName}} marcado como pendente com sucesso!",
+        errorSettingPending: "Erro ao marcar arquivo como pendente.",
+        alreadyPending: "O arquivo já está com status 'Pendente'.",
+        selectClient: "Selecione um cliente para fazer o upload do arquivo.",
+        newClientUser: "Novo Usuário Cliente",
+        newCompany: "Nova Empresa",
+        createFolder: "Nova Pasta",
+        createFolderTitle: "Criar Nova Pasta",
+        folderName: "Nome da Pasta",
+        createFolderButton: "Criar Pasta",
+        folderCreatedSuccess: "Pasta '{{folderName}}' criada com sucesso!",
+        errorCreatingFolder: "Erro ao criar pasta: {{message}}",
+        confirmActionTitle: "Confirmar Ação de Segurança",
+        confirmEmailLabel: "E-mail para Confirmação",
+        confirmPasswordLabel: "Senha para Confirmação",
+        invalidConfirmationCredentials: "Credenciais de confirmação inválidas ou não correspondem ao usuário atual.",
+        emailMismatchError: "O e-mail de confirmação não corresponde à sua conta atual.",
+        myAuditLog: "Meu Log de Auditoria",
+        allActivities: "Todas as Atividades",
+        noQualityLogsFound: "Nenhum log de auditoria encontrado para sua carteira.",
       },
-      maintenanceSchedule: { // NOVO
+      maintenanceSchedule: {
         title: "Agendar Manutenção",
         eventTitle: "Título do Evento",
         date: "Data",
@@ -490,7 +491,8 @@ const resources = {
         statusActive: "Active",
         statusBlocked: "Blocked",
         statusInactive: "Inactive",
-        home: "Home" // Adicionado para uso genérico de 'home' como breadcrumb
+        home: "Home", // Adicionado para uso genérico de 'home' como breadcrumb
+        uploaded: "Uploaded", // NOVO
       },
       files: {
         name: "File Name",
@@ -632,6 +634,7 @@ const resources = {
         activeClients: "Active",
         allClients: "All",
         contractDate: "Contract Date",
+        fileStatusTimeline: "File Status Timeline", // NOVO
       },
       login: {
         welcomeBack: "Restricted Access",
@@ -663,8 +666,8 @@ const resources = {
           settings: "Settings"
         },
         settings: {
-          techSupport: "L3 Infra Support",
-          externalTeam: "External Team"
+          // REMOVIDO: techSupport: "L3 Infra Support",
+          // REMOVIDO: externalTeam: "External Team"
         },
         users: {
           createTitle: "New Access",
@@ -699,8 +702,8 @@ const resources = {
             ip: "IP Address",
             severity: "Severity"
           },
-          pendingTicketsSubtext: "Pending Response",
-          logsLast24hSubtext: "Logs in the last 24h"
+          activeClientsSummary: "{{count}} active",
+          logsLast24hSummary: "{{count}} logs in the last 24h"
         },
         clients: {
           createTitle: "New Organization",
@@ -823,35 +826,35 @@ const resources = {
         upToDate: "Up to Date",
         lastUpdate: "Last update",
         errorLoadingQualityData: "Error loading quality portal data.",
-        errorLoadingClients: "Error loading clients: {{message}}",
+        errorLoadingClients: "Error loading clients: {{message}",
         errorLoadingMoreClients: "Error loading more clients: {{message}",
         documentApprovedTitle: "Document Approved",
         documentRejectedTitle: "Document Rejected",
         documentInspectedMessage: "Document '{{fileName}}' (batch: {{batchNumber}}) has been inspected.",
-        markAsPending: "Mark as Pending", // NEW TRANSLATION
-        confirmSetPending: "Are you sure you want to mark {{fileName}} as pending?", // NEW TRANSLATION
-        fileSetPendingSuccess: "File {{fileName}} marked as pending successfully!", // NEW TRANSLATION
-        errorSettingPending: "Error marking file as pending.", // NEW TRANSLATION
-        alreadyPending: "The file is already 'Pending'.", // NEW TRANSLATION
-        selectClient: "Select a client to upload the file.", // NEW TRANSLATION (Adjusted for client-only upload)
-        newClientUser: "New Client User", // NOVO
-        newCompany: "New Company", // NOVO
-        createFolder: "New Folder", // NOVO
-        createFolderTitle: "Create New Folder", // NOVO
-        folderName: "Folder Name", // NOVO
-        createFolderButton: "Create Folder", // NOVO
-        folderCreatedSuccess: "Folder '{{folderName}}' created successfully!", // NOVO
-        errorCreatingFolder: "Error creating folder: {{message}}", // NOVO
-        confirmActionTitle: "Confirm Security Action", // NOVO
-        confirmEmailLabel: "Confirmation Email", // NOVO
-        confirmPasswordLabel: "Confirmation Password", // NOVO
-        invalidConfirmationCredentials: "Invalid confirmation credentials or they do not match the current user.", // NOVO
-        emailMismatchError: "The confirmation email does not match your current account.", // NOVO
-        myAuditLog: "My Audit Log", // NOVO
-        allActivities: "All Activities", // NOVO
-        noQualityLogsFound: "No audit logs found for your portfolio.", // NOVO
+        markAsPending: "Mark as Pending",
+        confirmSetPending: "Are you sure you want to mark {{fileName}} as pending?",
+        fileSetPendingSuccess: "File {{fileName}} marked as pending successfully!",
+        errorSettingPending: "Error marking file as pending.",
+        alreadyPending: "The file is already 'Pending'.",
+        selectClient: "Select a client to upload the file.",
+        newClientUser: "New Client User",
+        newCompany: "New Company",
+        createFolder: "New Folder",
+        createFolderTitle: "Create New Folder",
+        folderName: "Folder Name",
+        createFolderButton: "Create Folder",
+        folderCreatedSuccess: "Folder '{{folderName}}' created successfully!",
+        errorCreatingFolder: "Error creating folder: {{message}",
+        confirmActionTitle: "Confirm Security Action",
+        confirmEmailLabel: "Confirmation Email",
+        confirmPasswordLabel: "Confirmation Password",
+        invalidConfirmationCredentials: "Invalid confirmation credentials or they do not match the current user.",
+        emailMismatchError: "The confirmation email does not match your current account.",
+        myAuditLog: "My Audit Log",
+        allActivities: "All Activities",
+        noQualityLogsFound: "No audit logs found for your portfolio.",
       },
-      maintenanceSchedule: { // NOVO
+      maintenanceSchedule: {
         title: "Schedule Maintenance",
         eventTitle: "Event Title",
         date: "Date",
@@ -924,7 +927,8 @@ const resources = {
         statusActive: "Activo",
         statusBlocked: "Bloqueado",
         statusInactive: "Inactivo",
-        home: "Inicio" // Adicionado para uso genérico de 'home' como breadcrumb
+        home: "Inicio", // Adicionado para uso genérico de 'home' como breadcrumb
+        uploaded: "Subido", // NOVO
       },
       files: {
         name: "Nombre del Archivo",
@@ -1042,7 +1046,7 @@ const resources = {
         },
         kpi: {
           libraryLabel: "Biblioteca",
-          activeDocsSubtext: "Docs. Activos",
+          activeDocsSubtext: "Active Docs",
           pendingLabel: "Pendientes",
           awaitingSubtext: "Esperando",
         },
@@ -1066,6 +1070,7 @@ const resources = {
         activeClients: "Activos",
         allClients: "Todos",
         contractDate: "Fecha de Contrato",
+        fileStatusTimeline: "Línea de Tiempo del Estado del Archivo", // NOVO
       },
       login: {
         welcomeBack: "Acceso Restringido",
@@ -1097,8 +1102,8 @@ const resources = {
           settings: "Configuración"
         },
         settings: {
-          techSupport: "Soporte L3 Infra",
-          externalTeam: "Equipo Externo"
+          // REMOVIDO: techSupport: "Soporte L3 Infra",
+          // REMOVIDO: externalTeam: "Equipo Externo"
         },
         users: {
           createTitle: "Nuevo Acceso",
@@ -1133,8 +1138,8 @@ const resources = {
             ip: "Dirección IP",
             severity: "Severidad"
           },
-          pendingTicketsSubtext: "Pendientes de Respuesta",
-          logsLast24hSubtext: "Registros en las últimas 24h"
+          activeClientsSummary: "{{count}} activos",
+          logsLast24hSummary: "{{count}} registros en las últimas 24h"
         },
         clients: {
           createTitle: "Nueva Organización",
@@ -1262,30 +1267,30 @@ const resources = {
         documentApprovedTitle: "Document Approved",
         documentRejectedTitle: "Document Rejected",
         documentInspectedMessage: "Document '{{fileName}}' (batch: {{batchNumber}}) has been inspected.",
-        markAsPending: "Mark as Pending", // NEW TRANSLATION
-        confirmSetPending: "Are you sure you want to mark {{fileName}} as pending?", // NEW TRANSLATION
-        fileSetPendingSuccess: "File {{fileName}} marked as pending successfully!", // NEW TRANSLATION
-        errorSettingPending: "Error marking file as pending.", // NEW TRANSLATION
-        alreadyPending: "The file is already 'Pending'.", // NEW TRANSLATION
-        selectClient: "Select a client to upload the file.", // NEW TRANSLATION (Adjusted for client-only upload)
-        newClientUser: "New Client User", // NOVO
-        newCompany: "New Company", // NOVO
-        createFolder: "New Folder", // NOVO
-        createFolderTitle: "Create New Folder", // NOVO
-        folderName: "Folder Name", // NOVO
-        createFolderButton: "Create Folder", // NOVO
-        folderCreatedSuccess: "Folder '{{folderName}}' created successfully!", // NOVO
-        errorCreatingFolder: "Error creating folder: {{message}}", // NOVO
-        confirmActionTitle: "Confirm Security Action", // NOVO
-        confirmEmailLabel: "Confirmation Email", // NOVO
-        confirmPasswordLabel: "Confirmation Password", // NOVO
-        invalidConfirmationCredentials: "Invalid confirmation credentials or they do not match the current user.", // NOVO
-        emailMismatchError: "The confirmation email does not match your current account.", // NOVO
-        myAuditLog: "My Audit Log", // NOVO
-        allActivities: "All Activities", // NOVO
-        noQualityLogsFound: "No audit logs found for your portfolio.", // NOVO
+        markAsPending: "Mark as Pending",
+        confirmSetPending: "Are you sure you want to mark {{fileName}} as pending?",
+        fileSetPendingSuccess: "File {{fileName}} marked as pending successfully!",
+        errorSettingPending: "Error marking file as pending.",
+        alreadyPending: "The file is already 'Pending'.",
+        selectClient: "Select a client to upload the file.",
+        newClientUser: "New Client User",
+        newCompany: "New Company",
+        createFolder: "New Folder",
+        createFolderTitle: "Create New Folder",
+        folderName: "Folder Name",
+        createFolderButton: "Create Folder",
+        folderCreatedSuccess: "Folder '{{folderName}}' created successfully!",
+        errorCreatingFolder: "Error creating folder: {{message}",
+        confirmActionTitle: "Confirm Security Action",
+        confirmEmailLabel: "Confirmation Email",
+        confirmPasswordLabel: "Confirmation Password",
+        invalidConfirmationCredentials: "Invalid confirmation credentials or they do not match the current user.",
+        emailMismatchError: "The confirmation email does not match your current account.",
+        myAuditLog: "My Audit Log",
+        allActivities: "All Activities",
+        noQualityLogsFound: "No audit logs found for your portfolio.",
       },
-      maintenanceSchedule: { // NOVO
+      maintenanceSchedule: {
         title: "Schedule Maintenance",
         eventTitle: "Event Title",
         date: "Date",

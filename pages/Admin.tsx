@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { fileService, adminService, userService } from '../lib/services/index.ts';
-// Fix: Import NetworkPort from types.ts
-import { UserRole, AuditLog, User, ClientOrganization, SystemStatus, NetworkPort, MaintenanceEvent } from '../types.ts';
-import { AdminStatsData } from '../lib/services/interfaces.ts';
+// Fix: Updated import path for 'types' module to explicitly include '/index'
+import { UserRole, AuditLog, User, ClientOrganization, SystemStatus, NetworkPort, MaintenanceEvent } from '../types/index'; // Atualizado
+import { AdminStatsData } from '../lib/services/interfaces.ts'; // Mantido, pois são interfaces específicas dos serviços
 import { useAuth } from '../context/authContext.tsx';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '../context/notificationContext.tsx'; // Importado
+import { useToast } from '../context/notificationContext.tsx';
 import { 
   Building2, Search, UserPlus, X, Edit2, Trash2, Mail, ExternalLink, Clock, CheckCircle2, AlertCircle, Loader2, Settings, ShieldCheck, Server, RefreshCw, UserCheck, CalendarClock
 } from 'lucide-react';
@@ -17,23 +16,23 @@ import {
 import { AdminStats } from '../components/features/admin/AdminStats.tsx';
 import { AuditLogsTable } from '../components/features/admin/AuditLogsTable.tsx';
 import { UserList } from '../components/features/admin/UserList.tsx';
-import { UserModal, ClientModal, ScheduleMaintenanceModal } from '../components/features/admin/modals/AdminModals.tsx'; // NOVO: Importa ScheduleMaintenanceModal
+import { UserModal, ClientModal, ScheduleMaintenanceModal } from '../components/features/admin/modals/AdminModals.tsx';
 
 const Admin: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as any) || 'overview';
-  const { showToast } = useToast(); // Hook useToast
+  const { showToast } = useToast();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [ports, setPorts] = useState<NetworkPort[]>([]); // Keep this, it's for system info
+  const [ports, setPorts] = useState<NetworkPort[]>([]);
   const [isInvestigationModalOpen, setIsInvestigationModalOpen] = useState(false);
   const [investigationData, setInvestigationData] = useState<{ targetLog: AuditLog | null; relatedLogs: AuditLog[]; riskScore: number; }>({ targetLog: null, relatedLogs: [], riskScore: 0 });
 
   const [usersList, setUsersList] = useState<User[]>([]);
   const [clientsList, setClientsList] = useState<ClientOrganization[]>([]);
-  const [qualityAnalysts, setQualityAnalysts] = useState<User[]>([]); // NOVO: Estado para analistas de qualidade
+  const [qualityAnalysts, setQualityAnalysts] = useState<User[]>([]);
   const [adminStats, setAdminStats] = useState<AdminStatsData | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({ mode: 'ONLINE' });
   const [isLoading, setIsLoading] = useState(true);
@@ -51,9 +50,9 @@ const Admin: React.FC = () => {
     email: '', 
     password: '', 
     role: UserRole.CLIENT, 
-    organizationId: '', // ALTERADO: clientId para organizationId
+    organizationId: '',
     department: '',
-    status: 'ACTIVE', // NOVO: Adiciona campo de status
+    status: 'ACTIVE',
   });
 
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -63,10 +62,9 @@ const Admin: React.FC = () => {
     cnpj: '', 
     contractDate: '', 
     status: 'ACTIVE',
-    qualityAnalystId: '', // NOVO: Campo para o ID do analista responsável
+    qualityAnalystId: '',
   });
 
-  // NOVO: Estado para o modal de agendamento de manutenção
   const [isScheduleMaintenanceModalOpen, setIsScheduleMaintenanceModalOpen] = useState(false);
 
   useEffect(() => { loadData(); }, [user, activeTab]);
@@ -88,7 +86,7 @@ const Admin: React.FC = () => {
           console.log("[Admin.tsx] adminService.getClients() result:", clients);
           console.log("[Admin.tsx] userService.getUsersByRole(QUALITY) result:", qAnalysts);
           
-          setUsersList(users); // Usa users diretamente, sem spread desnecessário
+          setUsersList(users);
           setClientsList(clients.items);
           setPorts(networkPorts);
           setAdminStats(stats);
@@ -100,16 +98,16 @@ const Admin: React.FC = () => {
               setLogs(auditLogs);
               console.log("[Admin.tsx] fileService.getAuditLogs() result:", auditLogs);
           }
-      } catch (err: any) { // Captura o erro para logar detalhes
-          console.error("[Admin.tsx] Erro ao carregar dados administrativos:", err.message); // ALTERADO: logar err.message
-          showToast(`Erro ao carregar dados administrativos: ${err.message}`, 'error'); // Exibe a mensagem de erro
+      } catch (err: any) {
+          console.error("[Admin.tsx] Erro ao carregar dados administrativos:", err.message);
+          showToast(`Erro ao carregar dados administrativos: ${err.message}`, 'error');
       } finally { setIsLoading(false); }
   };
 
   const filteredUsers = useMemo(() => {
       if (!usersList) return [];
       return usersList.filter(u => {
-          const matchesSearch = (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || "").toLowerCase().includes(searchTerm.toLowerCase()) || (u.organizationName || "").toLowerCase().includes(searchTerm.toLowerCase()); // ALTERADO: Inclui organizationName na busca
+          const matchesSearch = (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || "").toLowerCase().includes(searchTerm.toLowerCase()) || (u.organizationName || "").toLowerCase().includes(searchTerm.toLowerCase());
           const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
           const matchesStatus = statusFilter === 'ALL' || u.status === statusFilter;
           return matchesSearch && matchesRole && matchesStatus;
@@ -118,7 +116,6 @@ const Admin: React.FC = () => {
 
   const filteredClients = useMemo(() => clientsList.filter(c => {
       const term = searchTerm.toLowerCase();
-      // Inclui o nome do analista na busca
       return (c.name || "").toLowerCase().includes(term) || 
              (c.cnpj || "").includes(term) || 
              (c.qualityAnalystName || "").toLowerCase().includes(term); 
@@ -135,19 +132,19 @@ const Admin: React.FC = () => {
       setIsSaving(true);
       try {
           if (!editingUser) {
-              await userService.signUp(formData.email, formData.password, formData.name, formData.organizationId || undefined, formData.department); // ALTERADO: formData.clientId para formData.organizationId
+              await userService.signUp(formData.email, formData.password, formData.name, formData.organizationId || undefined, formData.department);
               showToast("Usuário criado com sucesso!", 'success');
           } else {
               const userPayload: User = { 
                   id: editingUser.id, name: formData.name, email: formData.email, role: formData.role as UserRole, 
-                  organizationId: (formData.role === UserRole.CLIENT && formData.organizationId) ? formData.organizationId : undefined, // ALTERADO: clientId para organizationId
+                  organizationId: (formData.role === UserRole.CLIENT && formData.organizationId) ? formData.organizationId : undefined,
                   status: formData.status as any, department: formData.department, lastLogin: editingUser?.lastLogin || 'Nunca' 
               };
               await userService.saveUser(userPayload);
               showToast("Usuário atualizado com sucesso!", 'success');
           }
           setIsUserModalOpen(false); setEditingUser(null); setSearchTerm('');
-          loadData(); // Recarrega os dados imediatamente
+          loadData();
           setIsSaving(false);
       } catch (err: any) {
           showToast(`Erro ao salvar usuário: ${err.message}`, 'error');
@@ -166,13 +163,13 @@ const Admin: React.FC = () => {
             cnpj: clientFormData.cnpj, 
             contractDate: clientFormData.contractDate, 
             status: clientFormData.status as any,
-            qualityAnalystId: clientFormData.qualityAnalystId, // NOVO: Atribui o ID do analista
-            qualityAnalystName: selectedAnalyst?.name, // NOVO: Atribui o nome do analista para o frontend
+            qualityAnalystId: clientFormData.qualityAnalystId,
+            qualityAnalystName: selectedAnalyst?.name,
         };
         await adminService.saveClient(user, clientPayload);
         showToast("Empresa salva com sucesso!", 'success');
         setIsClientModalOpen(false); setEditingClient(null); 
-        loadData(); // Recarrega os dados imediatamente
+        loadData();
         setIsSaving(false);
       } catch (err: any) {
         showToast(`Erro ao salvar empresa: ${err.message}`, 'error');
@@ -189,9 +186,9 @@ const Admin: React.FC = () => {
   const openUserModal = (u?: User) => {
       if (u) { 
         setEditingUser(u); 
-        setFormData({ name: u.name, email: u.email, password: '', role: u.role, organizationId: u.organizationId || '', status: u.status || 'ACTIVE', department: u.department || '' }); // ALTERADO: Inclui status
+        setFormData({ name: u.name, email: u.email, password: '', role: u.role, organizationId: u.organizationId || '', status: u.status || 'ACTIVE', department: u.department || '' });
       } else { 
-        setFormData({ name: '', email: '', password: '', role: UserRole.CLIENT, organizationId: '', status: 'ACTIVE', department: '' }); // ALTERADO: clientId para organizationId, inclui status
+        setFormData({ name: '', email: '', password: '', role: UserRole.CLIENT, organizationId: '', status: 'ACTIVE', department: '' });
         setEditingUser(null); 
       }
       setIsUserModalOpen(true);
@@ -205,7 +202,7 @@ const Admin: React.FC = () => {
               cnpj: c.cnpj, 
               contractDate: c.contractDate, 
               status: c.status,
-              qualityAnalystId: c.qualityAnalystId || '', // NOVO: Carrega o ID do analista
+              qualityAnalystId: c.qualityAnalystId || '',
           }); 
       } else { 
           setClientFormData({ 
@@ -213,7 +210,7 @@ const Admin: React.FC = () => {
               cnpj: '', 
               contractDate: new Date().toISOString().split('T')[0], 
               status: 'ACTIVE',
-              qualityAnalystId: '', // NOVO: Vazio por padrão para novo cliente
+              qualityAnalystId: '',
           }); 
           setEditingClient(null); 
       }
@@ -234,7 +231,6 @@ const Admin: React.FC = () => {
       }
   };
 
-  // NOVO: Função para agendar manutenção
   const handleScheduleMaintenance = async (eventData: Partial<MaintenanceEvent> & { scheduledTime: string }) => {
     if (!user) return;
     setIsSaving(true);
@@ -242,7 +238,6 @@ const Admin: React.FC = () => {
         const [year, month, day] = eventData.scheduledDate?.split('-') || [];
         const [hours, minutes] = eventData.scheduledTime?.split(':') || [];
         
-        // Cria um objeto Date para o início da manutenção
         const scheduledStart = new Date(
             parseInt(year), 
             parseInt(month) - 1, 
@@ -251,30 +246,28 @@ const Admin: React.FC = () => {
             parseInt(minutes)
         );
         
-        // Calcula o fim da manutenção
         const scheduledEnd = new Date(scheduledStart.getTime() + (eventData.durationMinutes || 0) * 60 * 1000);
 
         const newMaintenanceEvent: Partial<MaintenanceEvent> = {
             title: eventData.title,
-            scheduledDate: scheduledStart.toISOString(), // Usar ISO string para persistência
+            scheduledDate: scheduledStart.toISOString(),
             durationMinutes: eventData.durationMinutes,
             description: eventData.description,
-            status: 'SCHEDULED' // Sempre agendado inicialmente
+            status: 'SCHEDULED'
         };
 
         await adminService.scheduleMaintenance(user, newMaintenanceEvent);
         
-        // Atualiza o status global do sistema para refletir a manutenção agendada
         await adminService.updateSystemStatus(user, {
             mode: 'SCHEDULED',
-            message: eventData.description, // Usar a descrição do evento como mensagem do sistema
+            message: eventData.description,
             scheduledStart: scheduledStart.toISOString(),
             scheduledEnd: scheduledEnd.toISOString()
         });
 
         showToast(t('maintenanceSchedule.scheduledSuccess', { title: eventData.title }), 'success');
         setIsScheduleMaintenanceModalOpen(false);
-        loadData(); // Recarrega os dados para pegar o novo status do sistema
+        loadData();
     } catch (err: any) {
         showToast(t('maintenanceSchedule.scheduledError', { message: err.message }), 'error');
     } finally {
@@ -323,7 +316,7 @@ const Admin: React.FC = () => {
                           <tr>
                               <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Empresa</th>
                               <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">CNPJ</th>
-                              <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Analista Qual.</th> {/* NOVO */}
+                              <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Analista Qual.</th>
                               <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Início Contrato</th>
                               <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Status</th>
                               <th className="px-6 py-4 text-right"></th>
@@ -334,7 +327,7 @@ const Admin: React.FC = () => {
                               <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                                   <td className="px-6 py-4 flex items-center gap-3"><Building2 size={16} className="text-blue-500"/><p className="font-semibold text-slate-900 text-sm">{c.name}</p></td>
                                   <td className="px-6 py-4 text-sm text-slate-500 font-mono">{c.cnpj}</td>
-                                  <td className="px-6 py-4 text-sm text-slate-700 flex items-center gap-2"> {/* NOVO */}
+                                  <td className="px-6 py-4 text-sm text-slate-700 flex items-center gap-2">
                                     <UserCheck size={14} className="text-emerald-500" />
                                     {c.qualityAnalystName || t('common.na')}
                                   </td>
@@ -350,7 +343,7 @@ const Admin: React.FC = () => {
 
           {activeTab === 'settings' && (
               <div className="space-y-6 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-1 gap-6"> {/* Alterado para md:grid-cols-1 */}
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Server size={20} className="text-blue-600" /> Controle de Disponibilidade</h3>
                           <p className="text-sm text-slate-500">Altere o estado global do portal para manutenções programadas ou críticas.</p>
@@ -369,7 +362,6 @@ const Admin: React.FC = () => {
                               >
                                   <Settings size={18} /> Entrar em Manutenção
                               </button>
-                              {/* NOVO: Botão para agendar manutenção */}
                               <button 
                                 onClick={() => setIsScheduleMaintenanceModalOpen(true)}
                                 className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200"
@@ -385,7 +377,7 @@ const Admin: React.FC = () => {
           {activeTab === 'logs' && <AuditLogsTable logs={filteredLogs} severityFilter={severityFilter} onSeverityChange={setSeverityFilter} onInvestigate={handleOpenInvestigation} />}
       </div>
 
-      <UserModal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} onSave={handleSaveUser} editingUser={editingUser} formData={formData} setFormData={setFormData} organizations={clientsList} /> {/* ALTERADO: clients para organizations */}
+      <UserModal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} onSave={handleSaveUser} editingUser={editingUser} formData={formData} setFormData={setFormData} organizations={clientsList} />
       <ClientModal 
         isOpen={isClientModalOpen} 
         onClose={() => setIsClientModalOpen(false)} 
@@ -394,8 +386,8 @@ const Admin: React.FC = () => {
         clientFormData={clientFormData} 
         setClientFormData={setClientFormData} 
         qualityAnalysts={qualityAnalysts} 
+        onDelete={undefined}
       />
-      {/* NOVO: Modal de Agendamento de Manutenção */}
       <ScheduleMaintenanceModal 
         isOpen={isScheduleMaintenanceModalOpen}
         onClose={() => setIsScheduleMaintenanceModalOpen(false)}

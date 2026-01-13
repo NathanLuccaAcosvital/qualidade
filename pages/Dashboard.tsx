@@ -2,45 +2,59 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { FileExplorer } from '../components/features/files/FileExplorer.tsx';
+import { FilePreviewModal } from '../components/features/files/FilePreviewModal.tsx'; // Import FilePreviewModal
 import { useAuth } from '../context/authContext.tsx';
 import { fileService, adminService } from '../lib/services/index.ts';
-import { DashboardStatsData } from '../lib/services/interfaces.ts';
-import { FileNode, LibraryFilters, SystemStatus, FileType } from '../types.ts';
+import { DashboardStatsData } from '../lib/services/interfaces.ts'; // Mantido, pois são interfaces específicas dos serviços
+import { FileNode, LibraryFilters, SystemStatus, FileType, FileMetadata } from '../types/index'; // Atualizado
 import { useTranslation } from 'react-i18next';
-import { 
-    Search, ArrowRight, CheckCircle2, Plus, Clock, 
-    FileText, ChevronRight, CalendarDays, FileCheck, Server, AlertTriangle, 
-    CalendarClock, Star, History, Inbox, ExternalLink, Filter, AlertCircle, Loader2
+// Fix: Import useToast and X icon
+import { useToast } from '../context/notificationContext.tsx';
+import {
+    Search, ArrowRight, CheckCircle2, Plus, Clock,
+    FileText, ChevronRight, CalendarDays, FileCheck, Server, AlertTriangle,
+    CalendarClock, Star, History, Inbox, ExternalLink, Filter, AlertCircle, Loader2, FileUp, X
 } from 'lucide-react';
+
+// Shared Modals (can be moved to a client-specific modals file if more grow)
+// The Upload modal UI is generic, but its logic should be tied to the client's dashboard behavior.
+// We'll define a local UploadModal for Dashboard for now.
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  
+  // Fix: Use the useToast hook
+  const { showToast } = useToast();
+
   const queryParams = new URLSearchParams(location.search);
-  const currentView = queryParams.get('view') || 'home'; 
+  const currentView = queryParams.get('view') || 'home';
 
   const [quickSearch, setQuickSearch] = useState('');
-  // NOVO: Estado para termo de busca da biblioteca (passado para FileExplorer)
   const [dashboardSearchTerm, setDashboardSearchTerm] = useState('');
-  // NOVO: Estado para filtro de status da biblioteca (passado para FileExplorer)
-  const [dashboardFilterStatus, setDashboardFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL'); // Adicionado 'REJECTED'
+  const [dashboardFilterStatus, setDashboardFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
 
-  const [stats, setStats] = useState<DashboardStatsData>({ 
-      mainValue: 0, subValue: 0, pendingValue: 0, 
-      status: 'REGULAR', mainLabel: '', subLabel: '', activeClients: 0 
+  const [stats, setStats] = useState<DashboardStatsData>({
+      mainValue: 0, subValue: 0, pendingValue: 0,
+      status: 'REGULAR', mainLabel: '', subLabel: '', activeClients: 0
   });
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({ mode: 'ONLINE' });
-
-  const [viewFiles, setViewFiles] = useState<FileNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // REMOVIDO: filters não é mais usado diretamente aqui para carregar dados, 
-  // mas o dashboardSearchTerm e dashboardFilterStatus controlam a FileExplorer da view 'files'.
+  const [isProcessing, setIsProcessing] = useState(false); // For upload/other actions
+  const [refreshFileExplorerKey, setRefreshFileExplorerKey] = useState(0); // To force FileExplorer refresh
 
-  // Função para buscar dados globais do dashboard (KPIs e status do sistema)
+  // --- Upload Modal State (for Client Dashboard) ---
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadData, setUploadData] = useState<Partial<FileMetadata>>({
+      status: 'PENDING', // Client uploads are initially PENDING
+      productName: '',
+      batchNumber: '',
+      invoiceNumber: ''
+  });
+  const [selectedFileBlob, setSelectedFileBlob] = useState<File | null>(null);
+  const [previewFile, setPreviewFile] = useState<FileNode | null>(null); // For FilePreviewModal
+
   const fetchDashboardStats = useCallback(async () => {
       if (!user) return;
       try {
@@ -53,14 +67,11 @@ const Dashboard: React.FC = () => {
       }
   }, [user]);
 
-  // Função para buscar arquivos de views específicas (Favoritos e Recentes)
   const fetchSpecificViewFiles = useCallback(async () => {
       if (!user) return;
 
-      // Somente busca para as views de favoritos ou recentes
       if (currentView !== 'favorites' && currentView !== 'recent') {
-          setViewFiles([]); // Limpa dados de view anterior se não for relevante
-          return;
+          return; // No need to fetch here if not these views
       }
 
       setIsLoading(true);
@@ -69,17 +80,19 @@ const Dashboard: React.FC = () => {
           if (currentView === 'favorites') {
               results = await fileService.getFavorites(user);
           } else if (currentView === 'recent') {
-              results = await fileService.getRecentFiles(user, 50); 
+              results = await fileService.getRecentFiles(user, 50);
           }
-          setViewFiles(results || []);
+          // The FileExplorer component will handle its own internal state,
+          // so we don't need a `viewFiles` state here directly.
+          // We trigger a refresh of FileExplorer instead.
+          setRefreshFileExplorerKey(prev => prev + 1);
       } catch (err) {
           console.error(`Erro ao carregar dados para a visão ${currentView}:`, err);
       } finally {
           setIsLoading(false);
       }
-  }, [user, currentView]); // Depende apenas de user e currentView
+  }, [user, currentView]);
 
-  // Efeitos para cada função de busca
   useEffect(() => {
       fetchDashboardStats();
   }, [fetchDashboardStats]);
@@ -87,6 +100,40 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
       fetchSpecificViewFiles();
   }, [fetchSpecificViewFiles]);
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFileBlob || !user || !user.organizationId) return;
+
+    setIsProcessing(true);
+    try {
+      await fileService.uploadFile(user, {
+        name: selectedFileBlob.name,
+        parentId: null, // Client uploads to root of their organization's accessible files
+        metadata: uploadData as any,
+        fileBlob: selectedFileBlob
+      } as any, user.organizationId); // Owner is the client's organization
+
+      showToast(t('quality.documentUploadedSuccess'), 'success');
+      setIsUploadModalOpen(false);
+      setSelectedFileBlob(null);
+      setUploadData({ status: 'PENDING', productName: '', batchNumber: '', invoiceNumber: '' });
+      setRefreshFileExplorerKey(prev => prev + 1); // Refresh FileExplorer
+      fetchDashboardStats(); // Refresh dashboard stats to update pending count
+    } catch (err: any) {
+      console.error("Erro no upload do arquivo:", err);
+      const errorMessage = err.message || t('quality.errorUploadingFile', { message: 'Erro desconhecido' });
+      showToast(t('quality.errorUploadingFile', { message: errorMessage }), 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const openUploadModal = () => {
+    setIsUploadModalOpen(true);
+    setUploadData({ status: 'PENDING', productName: '', batchNumber: '', invoiceNumber: '' });
+    setSelectedFileBlob(null);
+  };
 
   const getGreeting = () => {
       const hour = new Date().getHours();
@@ -106,8 +153,8 @@ const Dashboard: React.FC = () => {
       };
       const colors = getKpiColors(color);
       return (
-          <div 
-            onClick={onClick} 
+          <div
+            onClick={onClick}
             className="relative overflow-hidden bg-white p-5 rounded-2xl border border-slate-100 shadow-sm cursor-pointer group transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
             role="button"
             aria-label={`${label}: ${value} ${subtext}`}
@@ -123,7 +170,6 @@ const Dashboard: React.FC = () => {
       );
   };
 
-  // RENDER: HOME VIEW
   if (currentView === 'home') {
       return (
         <Layout title={t('menu.dashboard')}>
@@ -146,19 +192,19 @@ const Dashboard: React.FC = () => {
                                     placeholder={t('dashboard.searchPlaceholder')}
                                     value={quickSearch}
                                     onChange={(e) => setQuickSearch(e.target.value)}
-                                    onKeyDown={(e) => { 
-                                        if (e.key === 'Enter' && quickSearch) { 
-                                            setDashboardSearchTerm(quickSearch); // Define o termo de busca para a biblioteca
-                                            navigate('/dashboard?view=files'); 
-                                        } 
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && quickSearch) {
+                                            setDashboardSearchTerm(quickSearch);
+                                            navigate('/dashboard?view=files');
+                                        }
                                     }}
                                     aria-label={t('dashboard.searchPlaceholder')}
                                 />
-                                <button 
-                                  onClick={() => { 
-                                      setDashboardSearchTerm(quickSearch); // Define o termo de busca para a biblioteca
-                                      navigate('/dashboard?view=files'); 
-                                  }} 
+                                <button
+                                  onClick={() => {
+                                      setDashboardSearchTerm(quickSearch);
+                                      navigate('/dashboard?view=files');
+                                  }}
                                   className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-md"
                                   aria-label={t('common.search')}
                                 >
@@ -178,8 +224,8 @@ const Dashboard: React.FC = () => {
                     <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2" aria-label={t('dashboard.libraryHeader')}>
                       <FileCheck size={20} className="text-blue-500" aria-hidden="true" /> {t('dashboard.libraryHeader')}
                     </h3>
-                    <button 
-                      onClick={() => navigate('/dashboard?view=files')} 
+                    <button
+                      onClick={() => navigate('/dashboard?view=files')}
                       className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors"
                       aria-label={t('dashboard.exploreAll')}
                     >
@@ -187,7 +233,6 @@ const Dashboard: React.FC = () => {
                     </button>
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[500px] flex flex-col" role="region" aria-label={t('dashboard.libraryHeader')}>
-                    {/* FileExplorer para a visualização geral de documentos no home, não afetado pela busca rápida */}
                     <FileExplorer allowUpload={false} hideToolbar={false} />
                   </div>
               </div>
@@ -196,12 +241,97 @@ const Dashboard: React.FC = () => {
       );
   }
 
-  // NOVO RENDER: FILES VIEW (Biblioteca)
   if (currentView === 'files') {
       return (
           <Layout title={t('menu.library')}>
+              <FilePreviewModal file={previewFile} isOpen={!!previewFile} onClose={() => setPreviewFile(null)} />
+
+              {isProcessing && (
+                <div className="fixed top-4 right-1/2 translate-x-1/2 z-[110] bg-slate-900 text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold animate-bounce">
+                  <Loader2 size={14} className="animate-spin" /> {t('common.updatingDatabase')}
+                </div>
+              )}
+
+              {/* Upload Modal (for Client Dashboard) */}
+              {isUploadModalOpen && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+                  <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 flex flex-col">
+                    <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                      <h3 id="upload-modal-title" className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <FileUp size={20} className="text-blue-600" aria-hidden="true" /> {t('quality.sendNewCertificate')}
+                      </h3>
+                      <button onClick={() => setIsUploadModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors" aria-label={t('common.close')}><X size={20} aria-hidden="true" /></button>
+                    </div>
+
+                    <form onSubmit={handleUpload} className="p-6 space-y-4">
+                      <div className="space-y-1">
+                        <label htmlFor="upload-file" className="text-xs font-bold text-slate-500 uppercase">{t('quality.pdfImageFile')}</label>
+                        <input
+                          id="upload-file"
+                          type="file"
+                          accept="application/pdf,image/*"
+                          required
+                          onChange={e => setSelectedFileBlob(e.target.files?.[0] || null)}
+                          className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                          aria-label={t('quality.pdfImageFile')}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label htmlFor="upload-product" className="text-xs font-bold text-slate-500 uppercase">{t('quality.product')}</label>
+                          <input
+                            id="upload-product"
+                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder={t('quality.productPlaceholder')}
+                            value={uploadData.productName}
+                            onChange={e => setUploadData({ ...uploadData, productName: e.target.value })}
+                            aria-label={t('quality.product')}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="upload-batch" className="text-xs font-bold text-slate-500 uppercase">{t('quality.batchNumber')}</label>
+                          <input
+                            id="upload-batch"
+                            required
+                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                            placeholder="L-998"
+                            value={uploadData.batchNumber}
+                            onChange={e => setUploadData({ ...uploadData, batchNumber: e.target.value })}
+                            aria-label={t('quality.batchNumber')}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label htmlFor="upload-invoice" className="text-xs font-bold text-slate-500 uppercase">{t('quality.invoiceNumber')}</label>
+                        <input
+                          id="upload-invoice"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="NF-000123"
+                          value={uploadData.invoiceNumber}
+                          onChange={e => setUploadData({ ...uploadData, invoiceNumber: e.target.value })}
+                          aria-label={t('quality.invoiceNumber')}
+                        />
+                      </div>
+
+                      <div className="pt-4 flex gap-3">
+                        <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all" aria-label={t('common.cancel')}>{t('common.cancel')}</button>
+                        <button
+                          type="submit"
+                          disabled={isProcessing}
+                          className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                          aria-label={t('quality.uploadFile')}
+                        >
+                          {isProcessing ? <Loader2 className="animate-spin" size={18} aria-hidden="true" /> : t('quality.uploadFile')}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500" role="region" aria-label={t('menu.library')}>
-                  {/* Barra de Busca e Filtro customizada para a view 'files' */}
                   <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                       <div className="relative group w-full md:w-auto flex-1 max-w-xl">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} aria-hidden="true" />
@@ -214,34 +344,44 @@ const Dashboard: React.FC = () => {
                               aria-label={t('dashboard.searchPlaceholder')}
                           />
                       </div>
-                      {/* Filtro por Status para a Biblioteca */}
-                      <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl" role="group" aria-label={t('common.filterByStatus')}>
-                          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
-                              <button
-                                  key={status}
-                                  onClick={() => setDashboardFilterStatus(status)}
-                                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                                      dashboardFilterStatus === status 
-                                      ? 'bg-white text-slate-900 shadow-sm' 
-                                      : 'text-slate-500 hover:text-slate-700'
-                                  }`}
-                                  aria-pressed={dashboardFilterStatus === status}
-                                  aria-label={status === 'ALL' ? t('common.all') : t(`files.groups.${status.toLowerCase()}`)}
-                              >
-                                  {status === 'ALL' ? t('common.all') : t(`files.groups.${status.toLowerCase()}`)}
-                              </button>
-                          ))}
+                      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                        <button
+                            onClick={openUploadModal}
+                            className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
+                            aria-label={t('quality.sendNewCertificate')}
+                        >
+                            <FileUp size={16} aria-hidden="true" /> {t('common.upload')}
+                        </button>
+                        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl" role="group" aria-label={t('common.filterByStatus')}>
+                            {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
+                                <button
+                                    key={status}
+                                    onClick={() => setDashboardFilterStatus(status)}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                                        dashboardFilterStatus === status
+                                        ? 'bg-white text-slate-900 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                                    aria-pressed={dashboardFilterStatus === status}
+                                    aria-label={status === 'ALL' ? t('common.all') : t(`files.groups.${status.toLowerCase()}`)}
+                                >
+                                    {status === 'ALL' ? t('common.all') : t(`files.groups.${status.toLowerCase()}`)}
+                                </button>
+                            ))}
+                        </div>
                       </div>
                   </div>
 
                   <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[calc(100vh-280px)]">
-                      {/* FileExplorer para a visualização 'files', recebendo search e filtros externos */}
                       <FileExplorer
-                          allowUpload={false}
-                          hideToolbar={true} // Oculta a toolbar interna do FileExplorer
-                          externalSearchQuery={dashboardSearchTerm} // Passa o termo de busca
-                          filterStatus={dashboardFilterStatus} // Passa o filtro de status
-                          // onRefresh não é necessário aqui, pois a mudança de props já dispara a busca
+                          allowUpload={true} // Allow uploads from client dashboard
+                          hideToolbar={true}
+                          externalSearchQuery={dashboardSearchTerm}
+                          filterStatus={dashboardFilterStatus}
+                          onRefresh={() => { fetchDashboardStats(); setRefreshFileExplorerKey(prev => prev + 1); }}
+                          onUploadClick={openUploadModal} // Trigger local upload modal
+                          onFileSelect={setPreviewFile} // Show file in preview modal
+                          refreshKey={refreshFileExplorerKey} // Pass refresh key
                       />
                   </div>
               </div>
@@ -249,16 +389,17 @@ const Dashboard: React.FC = () => {
       );
   }
 
-  // RENDER: FAVORITES & RECENT (FLAT FILE VIEW)
   const isFlatView = currentView === 'favorites' || currentView === 'recent';
   const viewTitle = currentView === 'favorites' ? t('dashboard.favoritesTitle') : t('dashboard.recentTitle');
   const ViewIcon = currentView === 'favorites' ? Star : History;
-  const EmptyViewIcon = currentView === 'favorites' ? Star : History; // Icon for empty state
+  const EmptyViewIcon = currentView === 'favorites' ? Star : History;
   const emptySubtext = currentView === 'favorites' ? t('dashboard.emptyFlatView.subtextFavorites') : t('dashboard.emptyFlatView.subtextRecent');
 
 
   return (
     <Layout title={viewTitle}>
+        <FilePreviewModal file={previewFile} isOpen={!!previewFile} onClose={() => setPreviewFile(null)} /> {/* Ensure Preview Modal is available */}
+
         <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500" role="region" aria-label={viewTitle}>
             {isFlatView && (
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -279,25 +420,21 @@ const Dashboard: React.FC = () => {
                       <Loader2 size={40} className="animate-spin text-blue-500" aria-hidden="true"/>
                       <p className="font-bold text-xs uppercase tracking-widest">{t('common.loading')}</p>
                     </div>
-                ) : (viewFiles.length === 0 && isFlatView) ? ( // Check for empty externalFiles in flat view
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 bg-white rounded-b-2xl" role="status">
-                        <EmptyViewIcon size={48} className="mb-3 opacity-20" aria-hidden="true"/>
-                        <p className="font-medium">{t('dashboard.emptyFlatView.message')}</p>
-                        <p className="text-xs text-slate-400">{emptySubtext}</p>
-                    </div>
-                ) : (
-                    <FileExplorer 
-                        allowUpload={false} 
-                        externalFiles={viewFiles} 
-                        flatMode={true} 
-                        onRefresh={fetchSpecificViewFiles} // Usa a função específica para refresh
-                        hideToolbar={currentView === 'recent' || currentView === 'favorites'} 
+                ) : ( (currentView === 'favorites' || currentView === 'recent') && (
+                    <FileExplorer
+                        allowUpload={false}
+                        externalFiles={[]} // Pass an empty array; files are filtered by status and search terms within FE.
+                        flatMode={true}
+                        onRefresh={fetchSpecificViewFiles}
+                        hideToolbar={true}
+                        externalSearchQuery={dashboardSearchTerm} // Pass external search query
+                        filterStatus={dashboardFilterStatus} // Pass external filter status
+                        onFileSelect={setPreviewFile} // Show file in preview modal
+                        refreshKey={refreshFileExplorerKey} // Pass refresh key
                     />
-                )}
+                ))}
             </div>
         </div>
     </Layout>
   );
 };
-
-export default Dashboard;

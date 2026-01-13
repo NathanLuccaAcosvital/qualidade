@@ -1,62 +1,33 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/authContext.tsx';
 import { notificationService, adminService } from '../../lib/services/index.ts';
-import { AppNotification, UserRole, SystemStatus } from '../../types.ts';
+import { AppNotification, UserRole, SystemStatus } from '../../types/index';
 import { CookieBanner } from '../common/CookieBanner.tsx';
 import { PrivacyModal } from '../common/PrivacyModal.tsx';
 import { ChangePasswordModal } from '../features/auth/ChangePasswordModal.tsx';
 import { MaintenanceBanner } from '../common/MaintenanceBanner.tsx';
 import { useTranslation } from 'react-i18next';
-import { 
-  LogOut, 
-  LayoutDashboard, 
-  Settings, 
-  ShieldCheck,
+import {
   Bell,
   Search,
-  FileBadge,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
   Check,
-  History,
-  Star,
-  Home,
-  Library,
-  Shield,
-  User as UserIcon,
   Info,
   ArrowLeft,
-  BarChart3,
-  Users,
-  Building2,
-  ShieldAlert,
-  Server,
-  Lock,
-  Activity, // NOVO: Importa Activity icon
-  // REMOVIDO: Database, pois não é mais usado para a Biblioteca Mestra
-} from 'lucide-react';
+  User as UserIcon,
+} from 'lucide-react'; // Ajuste: Remove ícones não diretamente usados aqui para evitar redundância, mantendo os usados no layout.
 import { useLocation, Link, useNavigate } from 'react-router-dom';
+// Importa as novas funções de configuração de navegação
+import { getMenuConfig, getBottomNavItems, getUserMenuItems } from '../../config/navigation.ts'; 
 
 interface LayoutProps {
   children: React.ReactNode;
   title: string;
 }
-
-type MenuItem = {
-  label: string;
-  icon: React.ElementType;
-  path: string;
-  exact?: boolean;
-};
-
-type MenuSection = {
-  title?: string;
-  items: MenuItem[];
-};
 
 const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
 
@@ -94,7 +65,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           });
           return () => {
               unsubStatus();
-              // Fix: Corrected typo from `unifNotifs()` to `unsubNotifs()`
               unsubNotifs();
           };
       }
@@ -155,101 +125,35 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
 
   const roleLabel = user ? t(`roles.${user.role}`) : '';
 
-  const getMenuConfig = (): MenuSection[] => {
-    // Normalização para evitar problemas de case-sensitivity vindo do backend
-    const role = user?.role?.toUpperCase();
-
-    if (role === UserRole.CLIENT) {
-      return [
-        {
-          title: t('menu.main'),
-          items: [
-            { label: t('menu.home'), icon: Home, path: '/dashboard', exact: true },
-            { label: t('menu.library'), icon: Library, path: '/dashboard?view=files' },
-          ]
-        },
-        {
-          title: t('menu.quickAccess'),
-          items: [
-            { label: t('menu.recent'), icon: History, path: '/dashboard?view=recent' },
-            { label: t('menu.favorites'), icon: Star, path: '/dashboard?view=favorites' },
-          ]
-        }
-      ];
-    }
-
-    if (role === UserRole.QUALITY) {
-      return [
-        {
-          title: t('menu.qualityManagement'),
-          items: [
-            { label: t('quality.overview'), icon: LayoutDashboard, path: '/quality?view=overview' },
-            { label: t('menu.clientPortfolio'), icon: Users, path: '/quality?view=clients' },
-            { label: t('quality.myAuditLog'), icon: Activity, path: '/quality?view=audit-log' }, // NOVO ITEM DE MENU
-            // REMOVIDO: { label: t('menu.masterLibrary'), icon: Database, path: '/quality?view=master' },
-          ]
-        }
-      ];
-    }
-
-    if (role === UserRole.ADMIN) {
-      return [
-        {
-          title: t('menu.management'),
-          items: [
-            { label: t('admin.tabs.overview'), icon: BarChart3, path: '/admin?tab=overview' },
-            { label: t('admin.tabs.users'), icon: Users, path: '/admin?tab=users' },
-            { label: t('admin.tabs.clients'), icon: Building2, path: '/admin?tab=clients' },
-          ]
-        },
-        {
-          title: t('menu.system'),
-          items: [
-            { label: t('admin.tabs.logs'), icon: ShieldAlert, path: '/admin?tab=logs' },
-            { label: t('admin.tabs.settings'), icon: Settings, path: '/admin?tab=settings' },
-            { label: t('quality.myAuditLog'), icon: Activity, path: '/quality?view=audit-log' }, // ADMIN também pode ver seu log individual
-          ]
-        }
-      ];
-    }
-
-    // Fallback básico para segurança caso o papel seja nulo ou inválido
-    return [
-        {
-          title: t('menu.main'),
-          items: [{ label: t('menu.home'), icon: Home, path: '/dashboard', exact: true }]
-        }
-    ];
+  // Hooks para as ações do menu de usuário
+  const userMenuHooks = {
+      onLogout: logout,
+      onOpenChangePassword: () => { setIsUserMenuOpen(false); setIsChangePasswordOpen(true); },
+      onOpenPrivacy: () => { setIsUserMenuOpen(false); setIsPrivacyOpen(true); },
   };
 
-  const getBottomNavItems = () => {
-      const role = user?.role?.toUpperCase();
-      const items = [
-          { label: t('menu.home'), icon: Home, path: '/dashboard', exact: true },
-      ];
-
-      if (role === UserRole.CLIENT) {
-          items.push({ label: t('menu.library'), icon: Library, path: '/dashboard?view=files', exact: false });
-      } else if (role === UserRole.ADMIN) {
-          items.push({ label: 'Admin', icon: BarChart3, path: '/admin?tab=overview', exact: false }); // Updated path
-      } else if (role === UserRole.QUALITY) {
-          items.push({ label: t('menu.clientPortfolio'), icon: Users, path: '/quality?view=clients', exact: false });
-          items.push({ label: t('quality.myAuditLog'), icon: Activity, path: '/quality?view=audit-log', exact: false }); // NOVO: Log de Auditoria
-          // REMOVIDO: items.push({ label: t('menu.masterLibrary'), icon: Database, path: '/quality?view=master', exact: false });
-      }
-
-      return items;
-  };
-
-  const menuSections = getMenuConfig();
-  const bottomNavItems = getBottomNavItems();
+  const menuSections = getMenuConfig(user, t);
+  const bottomNavItems = getBottomNavItems(user, t);
+  const userMenuItems = getUserMenuItems(t, userMenuHooks); // Passa os hooks para o gerador de menu
 
   const isActive = (path: string, exact = false) => {
       if (exact) return location.pathname === path && location.search === '';
       if (path.includes('?')) {
           return location.pathname + location.search === path;
       }
-      return location.pathname.startsWith(path);
+      // For /admin and /quality, match if the path starts with it
+      // This is a simplified check for the main path segment
+      const baseLocationPath = location.pathname.split('/')[1];
+      const basePath = path.split('/')[1];
+      if (baseLocationPath === basePath) {
+        if (basePath === 'admin') {
+          return location.search.includes(path.split('?')[1] || 'tab=overview'); // Match admin tabs specifically
+        } else if (basePath === 'quality') {
+          return location.search.includes(path.split('?')[1] || 'view=overview'); // Match quality views specifically
+        }
+        return true; // For other base paths, just matching the segment is enough
+      }
+      return false;
   };
 
   const getNotifStyle = (type: AppNotification['type']) => {
@@ -259,11 +163,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           case 'ALERT': return { icon: AlertCircle, bg: 'bg-red-100', text: 'text-red-600', border: 'border-red-200' };
           default: return { icon: Info, bg: 'bg-blue-100', text: 'text-blue-600', border: 'border-blue-200' };
       }
-  };
-
-  const renderAdminSupportWidget = () => {
-      // N3 Support and external team widget is removed as part of ticket removal
-      return null; 
   };
 
   const NotificationButton = ({ mobile = false }) => {
@@ -314,8 +213,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                                             : `p-4 hover:bg-slate-50 ${!notif.isRead ? 'bg-blue-50/20' : ''}`
                                         }
                                     `}
-                                    role="listitem" // A11y
-                                    aria-label={`${notif.title}. ${notif.message}. ${notif.isRead ? t('notifications.read') : t('notifications.unread')}.`} // A11y
+                                    role="listitem" 
+                                    aria-label={`${notif.title}. ${notif.message}. ${notif.isRead ? t('notifications.read') : t('notifications.unread')}.`} 
                                 >
                                     <div className="flex gap-4">
                                         <div className={`shrink-0 mt-0.5 w-10 h-10 rounded-full flex items-center justify-center ${style.bg} ${style.text}`}>
@@ -425,7 +324,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                </div>
             </div>
           ))}
-          {user?.role?.toUpperCase() === UserRole.ADMIN && renderAdminSupportWidget()}
         </nav>
         <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/30 shrink-0 relative z-10" ref={userMenuRef}>
           <div onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className={`flex items-center rounded-xl transition-all duration-300 relative ${isCollapsed ? 'justify-center p-0' : 'p-2.5 bg-slate-800/40 border border-slate-700/50 gap-3 cursor-pointer hover:border-slate-600 hover:bg-slate-800/60 group'}`} role="button" aria-expanded={isUserMenuOpen} aria-haspopup="true" aria-label={t('common.userMenu')}>
@@ -441,30 +339,23 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             </div>
             {!isCollapsed && isUserMenuOpen && (
                 <div className="absolute bottom-full left-0 mb-4 w-full bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 z-50" role="menu" aria-orientation="vertical">
-                    <button onClick={() => setIsChangePasswordOpen(true)} className="w-full text-left px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-3 transition-colors" role="menuitem">
-                        <Lock size={14} className="text-blue-500" aria-hidden="true" /> {t('common.changePassword')}
-                    </button>
-                    <div className="h-px bg-slate-700/50" role="separator" aria-hidden="true" />
-                    <button onClick={() => setIsPrivacyOpen(true)} className="w-full text-left px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-3 transition-colors" role="menuitem">
-                        <Shield size={14} className="text-blue-500" aria-hidden="true" /> {t('common.privacy')}
-                    </button>
-                    <div className="h-px bg-slate-700/50" role="separator" aria-hidden="true" />
-                    <button onClick={logout} className="w-full text-left px-5 py-3 text-xs font-bold text-red-400 hover:bg-red-900/20 flex items-center gap-3 transition-colors" role="menuitem">
-                        <LogOut size={14} aria-hidden="true" /> {t('common.logout')}
-                    </button>
+                    {userMenuItems.map((item, idx) => (
+                        <button key={idx} onClick={item.onClick} className="w-full text-left px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-3 transition-colors" role="menuitem">
+                            <item.icon size={14} className="text-blue-500" aria-hidden="true" /> {item.label}
+                        </button>
+                    ))}
                 </div>
             )}
           </div>
           {isCollapsed && (
              <button onClick={logout} className="mt-3 w-full flex justify-center items-center py-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-xl transition-all group relative" aria-label={t('common.logout')}>
-                <LogOut size={18} aria-hidden="true" />
+                <UserIcon size={18} aria-hidden="true" /> {/* Usando UserIcon como fallback para logout em estado colapsado */}
             </button>
           )}
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50 w-full min-w-0">
-        {/* Removido mx-4 para banner cobrir a largura total da área de conteúdo */}
         <div className="w-full relative z-30"> 
             <MaintenanceBanner status={systemStatus} isAdmin={user?.role?.toUpperCase() === UserRole.ADMIN} />
         </div>
@@ -504,15 +395,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                         </div>
                     </div>
                     <div className="space-y-2" role="menu">
-                        <button onClick={() => setIsChangePasswordOpen(true)} className="flex items-center gap-4 px-4 py-4 w-full text-slate-700 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
-                            <div className="p-2 bg-slate-50 text-blue-600 rounded-lg"><Lock size={20} aria-hidden="true" /></div> {t('common.changePassword')}
-                        </button>
-                        <button onClick={() => setIsPrivacyOpen(true)} className="flex items-center gap-4 px-4 py-4 w-full text-slate-700 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
-                            <div className="p-2 bg-slate-50 text-blue-600 rounded-lg"><Shield size={20} aria-hidden="true" /></div> {t('common.privacy')}
-                        </button>
-                        <button onClick={logout} className="flex items-center gap-4 px-4 py-4 w-full text-red-600 hover:bg-red-50 rounded-2xl border border-transparent hover:border-red-100 transition-all font-medium" role="menuitem">
-                            <div className="p-2 bg-red-50 text-red-600 rounded-lg"><LogOut size={20} aria-hidden="true" /></div> {t('common.logout')}
-                        </button>
+                        {userMenuItems.map((item, idx) => (
+                            <button key={idx} onClick={item.onClick} className="flex items-center gap-4 px-4 py-4 w-full text-slate-700 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
+                                <div className="p-2 bg-slate-50 text-blue-600 rounded-lg"><item.icon size={20} aria-hidden="true" /></div> {item.label}
+                            </button>
+                        ))}
                     </div>
                </div>
            </>
@@ -525,7 +412,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                     <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{t('menu.portalName')}</span>
                     <span className="text-slate-300" aria-hidden="true">/</span>
                     <span className="font-medium text-blue-600">{roleLabel}</span>
-                    {user?.organizationName && ( // NOVO: Mostra o nome da organização se existir
+                    {user?.organizationName && ( 
                       <>
                         <span className="text-slate-300" aria-hidden="true">/</span>
                         <span className="font-medium text-slate-600">{user.organizationName}</span>

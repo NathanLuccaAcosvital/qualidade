@@ -1,5 +1,5 @@
-
-import { AppNotification, User } from '../../types.ts';
+// Fix: Updated import path for 'types' module to explicitly include '/index'
+import { AppNotification, User } from '../../types/index'; // Atualizado
 import { INotificationService } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
 

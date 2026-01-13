@@ -1,8 +1,7 @@
-
-
 import React, { useState } from 'react';
 import { AlertTriangle, Hammer, X, CalendarClock, Info } from 'lucide-react';
-import { SystemStatus } from '../../types.ts';
+// Fix: Updated import path for 'types' module to explicitly include '/index'
+import { SystemStatus } from '../../types/index'; // Atualizado
 
 interface MaintenanceBannerProps {
     status: SystemStatus;
@@ -14,9 +13,8 @@ export const MaintenanceBanner: React.FC<MaintenanceBannerProps> = ({ status, is
 
     if (status.mode === 'ONLINE' || !isVisible) return null;
 
-    // Common Glassmorphism Base Styles - Removed mx-4 for full width
     const containerClasses = "top-0 left-0 right-0 rounded-b-xl relative z-30 overflow-hidden shadow-lg animate-in slide-in-from-top-4 duration-500 group";
-    const glassContentClasses = "relative px-3 py-1.5 rounded-b-[10px] flex items-center justify-between backdrop-blur-md border-t border-white/20"; // Adjust rounded corners
+    const glassContentClasses = "relative px-3 py-1.5 rounded-b-[10px] flex items-center justify-between backdrop-blur-md border-t border-white/20";
 
     if (status.mode === 'MAINTENANCE') {
         if (!isAdmin) return null;
@@ -54,9 +52,7 @@ export const MaintenanceBanner: React.FC<MaintenanceBannerProps> = ({ status, is
 
         return (
             <div className={`${containerClasses} shadow-orange-500/20`}>
-                {/* Sensational Gradient Background */}
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 opacity-95" />
-                {/* Subtle Texture/Shine */}
                 <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
                 
                 <div className={`${glassContentClasses} bg-orange-500/10 border-white/20`}>

@@ -1,11 +1,10 @@
-
-
 import { IAdminService, AdminStatsData, PaginatedResponse } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
-import { SystemStatus, ClientOrganization, UserRole, MaintenanceEvent } from '../../types.ts';
-import { SupabaseFileService } from './supabaseFileService.ts'; // Import for logAction
-
-const _logAction = SupabaseFileService.logAction; // Access the internal logAction
+// Fix: Updated import path for 'types' module to explicitly include '/index'
+import { SystemStatus, ClientOrganization, UserRole, MaintenanceEvent } from '../../types/index'; // Atualizado
+// Importa o wrapper e a função de log do serviço de arquivo
+import { withAuditLog } from '../utils/auditLogWrapper.ts';
+import { logAction } from './supabaseFileService.ts'; // Importa a função de logAction diretamente
 
 export const SupabaseAdminService: IAdminService = {
     getSystemStatus: async () => {
@@ -17,7 +16,7 @@ export const SupabaseAdminService: IAdminService = {
                 message: data.message,
                 scheduledStart: data.scheduled_start,
                 scheduledEnd: data.scheduled_end,
-                updatedBy: data.updated_by // Adicionado para consistência
+                updatedBy: data.updated_by
             };
         } catch (e) {
             console.error("Erro ao buscar status do sistema:", e);
@@ -27,8 +26,6 @@ export const SupabaseAdminService: IAdminService = {
 
     updateSystemStatus: async (user, newStatus) => {
         if (user.role !== UserRole.ADMIN) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'SYSTEM_STATUS_UPDATE', `Mode: ${newStatus.mode}`, 'SECURITY', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
             throw new Error("Apenas administradores podem alterar o status do sistema.");
         }
 
@@ -36,32 +33,36 @@ export const SupabaseAdminService: IAdminService = {
         try {
             const { data: currentStatusData } = await supabase.from('system_settings').select('mode').single();
             if (currentStatusData) oldStatus.mode = currentStatusData.mode;
+        } catch (e) {
+            console.warn("Could not fetch current system status for logging:", e);
+        }
 
+        const serviceCall = async () => {
             const { data, error } = await supabase.from('system_settings').update({
                 mode: newStatus.mode,
                 message: newStatus.message,
-                scheduled_start: newStatus.scheduledStart, // Passa scheduledStart
-                scheduled_end: newStatus.scheduledEnd,     // Passa scheduledEnd
+                scheduled_start: newStatus.scheduledStart,
+                scheduled_end: newStatus.scheduledEnd,
                 updated_by: user.id,
                 updated_at: new Date().toISOString()
             }).eq('id', 1).select().single();
             
             if (error) throw error;
-
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'SYSTEM_STATUS_UPDATE', `Mode: ${newStatus.mode}`, 'SYSTEM', 'WARNING', 'SUCCESS', { oldMode: oldStatus.mode, newMode: newStatus.mode, message: newStatus.message, scheduledStart: newStatus.scheduledStart, scheduledEnd: newStatus.scheduledEnd });
             return {
                 mode: data.mode,
-                message: data.message, // Usa a mensagem retornada pelo DB
+                message: data.message,
                 scheduledStart: data.scheduled_start,
                 scheduledEnd: data.scheduled_end,
                 updatedBy: data.updated_by
             } as SystemStatus;
-        } catch (e: any) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'SYSTEM_STATUS_UPDATE', `Mode: ${newStatus.mode}`, 'SYSTEM', 'CRITICAL', 'FAILURE', { oldMode: oldStatus.mode, newMode: newStatus.mode, reason: e.message });
-            throw e;
-        }
+        };
+
+        return await withAuditLog(user, 'SYSTEM_STATUS_UPDATE', { 
+            target: `Mode: ${newStatus.mode}`, 
+            category: 'SYSTEM', 
+            initialSeverity: 'WARNING', 
+            metadata: { oldMode: oldStatus.mode, newMode: newStatus.mode, message: newStatus.message, scheduledStart: newStatus.scheduledStart, scheduledEnd: newStatus.scheduledEnd }
+        }, serviceCall);
     },
 
     subscribeToSystemStatus: (listener) => {
@@ -120,8 +121,7 @@ export const SupabaseAdminService: IAdminService = {
             .select(`
                 *,
                 quality_analyst_profile:profiles!quality_analyst_id(full_name)
-            `, { count: 'exact' }); // ALTERADO: Usa sintaxe explícita para o FK 'quality_analyst_id' na tabela organizations.
-                                    // Assumindo que organizations tem uma coluna 'quality_analyst_id' que é FK para profiles(id)
+            `, { count: 'exact' });
 
         if (filters?.search) {
             query = query.or(`name.ilike.%${filters.search}%,cnpj.ilike.%${filters.search}%`);
@@ -149,8 +149,8 @@ export const SupabaseAdminService: IAdminService = {
             cnpj: c.cnpj || '00.000.000/0000-00',
             status: (c.status || 'ACTIVE') as any,
             contractDate: c.contract_date || new Date().toISOString().split('T')[0],
-            qualityAnalystId: c.quality_analyst_id, // Inclui o ID
-            qualityAnalystName: c.quality_analyst_profile ? c.quality_analyst_profile.full_name : undefined, // Acessa o nome do perfil pelo alias
+            qualityAnalystId: c.quality_analyst_id,
+            qualityAnalystName: c.quality_analyst_profile ? c.quality_analyst_profile.full_name : undefined,
         }));
 
         const clientIds = itemsWithoutStats.map(c => c.id);
@@ -162,11 +162,10 @@ export const SupabaseAdminService: IAdminService = {
                 .from('files')
                 .select('owner_id, metadata->>status, metadata->>inspectedAt')
                 .in('owner_id', clientIds)
-                .neq('type', 'FOLDER'); // Only count actual documents, not folders
+                .neq('type', 'FOLDER');
 
             if (filesError) {
                 console.error("[SupabaseAdminService] Erro ao carregar estatísticas de arquivos:", filesError.message);
-                // Continue with partial data if file stats fail
             } else {
                 filesStats = (filesData || []).reduce((acc, file) => {
                     const ownerId = file.owner_id;
@@ -180,7 +179,6 @@ export const SupabaseAdminService: IAdminService = {
                         acc[ownerId].approvedDocs++;
                     }
 
-                    // Calculate last analysis date
                     const inspectedAt = file.metadata?.inspectedAt;
                     if (inspectedAt) {
                         const currentLast = acc[ownerId].lastAnalysisDate;
@@ -196,14 +194,14 @@ export const SupabaseAdminService: IAdminService = {
         const itemsWithStats = itemsWithoutStats.map(c => {
             const stats = filesStats[c.id] || { totalDocs: 0, pendingDocs: 0, approvedDocs: 0 };
             const complianceScore = stats.totalDocs === 0 
-                ? 100 // If no documents, assume 100% compliance
+                ? 100
                 : Math.round((stats.approvedDocs / stats.totalDocs) * 100);
 
             return {
                 ...c,
                 pendingDocs: stats.pendingDocs,
                 complianceScore,
-                lastAnalysisDate: stats.lastAnalysisDate // Adiciona a data da última análise
+                lastAnalysisDate: stats.lastAnalysisDate
             };
         });
 
@@ -218,8 +216,6 @@ export const SupabaseAdminService: IAdminService = {
 
     saveClient: async (user, data) => {
         if (user.role !== UserRole.ADMIN) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'CLIENT_SAVE', data.name || 'New Client', 'SECURITY', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
             throw new Error("Permissão negada para gerenciar organizações.");
         }
 
@@ -228,17 +224,18 @@ export const SupabaseAdminService: IAdminService = {
             cnpj: data.cnpj,
             status: data.status,
             contract_date: data.contractDate,
-            quality_analyst_id: data.qualityAnalystId || null, // NOVO: Persiste o ID do analista
+            quality_analyst_id: data.qualityAnalystId || null,
         };
 
-        try {
-            let query;
-            let actionType = data.id ? 'CLIENT_UPDATED' : 'CLIENT_CREATED';
-            let oldData: any = {};
+        let oldData: any = {};
+        if (data.id) {
+            const { data: existingClient } = await supabase.from('organizations').select('*').eq('id', data.id).single();
+            oldData = existingClient || {};
+        }
 
+        const serviceCall = async () => {
+            let query;
             if (data.id) {
-                const { data: existingClient } = await supabase.from('organizations').select('*').eq('id', data.id).single();
-                oldData = existingClient || {};
                 query = supabase.from('organizations').update(payload).eq('id', data.id);
             } else {
                 query = supabase.from('organizations').insert(payload);
@@ -246,13 +243,6 @@ export const SupabaseAdminService: IAdminService = {
 
             const { data: client, error } = await query.select().single();
             if (error) throw error;
-            
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, actionType, client.name, 'DATA', 'INFO', 'SUCCESS', { 
-                clientId: client.id, new: payload, old: oldData,
-                qualityAnalystId: client.quality_analyst_id, // Adiciona ao log
-                qualityAnalystName: data.qualityAnalystName // Adiciona ao log
-            });
 
             return {
                 id: client.id,
@@ -263,25 +253,30 @@ export const SupabaseAdminService: IAdminService = {
                 pendingDocs: 0,
                 complianceScore: 100,
                 lastAnalysisDate: undefined,
-                qualityAnalystId: client.quality_analyst_id, // Retorna o ID do analista
-                qualityAnalystName: data.qualityAnalystName // Retorna o nome do analista
+                qualityAnalystId: client.quality_analyst_id,
+                qualityAnalystName: data.qualityAnalystName
             };
-        } catch (e: any) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, data.id ? 'CLIENT_UPDATED' : 'CLIENT_CREATED', data.name || 'New Client', 'DATA', 'ERROR', 'FAILURE', { clientId: data.id, reason: e.message });
-            throw e;
-        }
+        };
+
+        return await withAuditLog(user, data.id ? 'CLIENT_UPDATED' : 'CLIENT_CREATED', {
+            target: data.name || 'New Client', 
+            category: 'DATA', 
+            metadata: { 
+                clientId: data.id, new: payload, old: oldData,
+                qualityAnalystId: data.qualityAnalystId,
+                qualityAnalystName: data.qualityAnalystName
+            }
+        }, serviceCall);
     },
 
     deleteClient: async (user, id) => {
         if (user.role !== UserRole.ADMIN) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'CLIENT_DELETE', `ID: ${id}`, 'SECURITY', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
             throw new Error("Apenas administradores podem excluir organizações.");
         }
         let clientName = `ID: ${id}`;
         let qualityAnalystId: string | undefined = undefined;
-        try {
+
+        const serviceCall = async () => {
             const { data: clientData } = await supabase.from('organizations').select('name, quality_analyst_id').eq('id', id).single();
             if (clientData) {
                 clientName = clientData.name;
@@ -290,17 +285,16 @@ export const SupabaseAdminService: IAdminService = {
 
             const { error } = await supabase.from('organizations').delete().eq('id', id);
             if (error) throw error;
+        };
 
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'CLIENT_DELETE', clientName, 'DATA', 'INFO', 'SUCCESS', { 
+        await withAuditLog(user, 'CLIENT_DELETE', {
+            target: clientName, 
+            category: 'DATA', 
+            metadata: { 
                 clientId: id, 
-                qualityAnalystId // Adiciona ao log
-            });
-        } catch (e: any) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'CLIENT_DELETE', clientName, 'DATA', 'ERROR', 'FAILURE', { clientId: id, reason: e.message });
-            throw e;
-        }
+                qualityAnalystId
+            }
+        }, serviceCall);
     },
 
     getFirewallRules: async () => {
@@ -328,22 +322,18 @@ export const SupabaseAdminService: IAdminService = {
 
     scheduleMaintenance: async (user, event) => {
         if (user.role !== UserRole.ADMIN) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'MAINTENANCE_SCHEDULE', event.title || 'New Event', 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
             throw new Error("Ação exclusiva para administradores.");
         }
-        try {
+        const serviceCall = async () => {
             const { data, error } = await supabase.from('maintenance_events').insert({
                 title: event.title,
-                scheduled_date: event.scheduledDate, // Usar scheduledDate diretamente
+                scheduled_date: event.scheduledDate,
                 duration_minutes: event.durationMinutes,
                 description: event.description,
-                status: 'SCHEDULED', // Definir status como SCHEDULED
+                status: 'SCHEDULED',
                 created_by: user.id
             }).select().single();
             if (error) throw error;
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'MAINTENANCE_SCHEDULE', data.title, 'SYSTEM', 'WARNING', 'SUCCESS', { eventId: data.id, scheduledDate: data.scheduled_date });
             return {
                 id: data.id,
                 title: data.title,
@@ -353,27 +343,29 @@ export const SupabaseAdminService: IAdminService = {
                 status: data.status,
                 createdBy: data.created_by
             } as MaintenanceEvent;
-        } catch (e: any) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'MAINTENANCE_SCHEDULE', event.title || 'New Event', 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: e.message });
-            throw e;
-        }
+        };
+
+        return await withAuditLog(user, 'MAINTENANCE_SCHEDULE', {
+            target: event.title || 'New Event', 
+            category: 'SYSTEM', 
+            initialSeverity: 'WARNING', 
+            metadata: { scheduledDate: event.scheduledDate }
+        }, serviceCall);
     },
 
     cancelMaintenance: async (user, id) => {
         if (user.role !== UserRole.ADMIN) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'MAINTENANCE_CANCEL', `ID: ${id}`, 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
             throw new Error("Ação exclusiva para administradores.");
         }
-        try {
+        const serviceCall = async () => {
             await supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id);
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'MAINTENANCE_CANCEL', `ID: ${id}`, 'SYSTEM', 'WARNING', 'SUCCESS', { eventId: id });
-        } catch (e: any) {
-            // Fix: Ensure all 7 arguments are passed to _logAction
-            await _logAction(user, 'MAINTENANCE_CANCEL', `ID: ${id}`, 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: e.message });
-            throw e;
-        }
+        };
+
+        await withAuditLog(user, 'MAINTENANCE_CANCEL', {
+            target: `ID: ${id}`, 
+            category: 'SYSTEM', 
+            initialSeverity: 'WARNING', 
+            metadata: { eventId: id }
+        }, serviceCall);
     },
 };
