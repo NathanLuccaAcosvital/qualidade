@@ -1,5 +1,7 @@
+
+
 import React, { useState } from 'react';
-import { User, UserRole } from '../../../types/index';
+import { User, UserRole } from '../../../types.ts';
 import { MoreVertical, Edit2, Trash2, Mail, Building2, Briefcase, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -42,7 +44,7 @@ export const UserList: React.FC<UserListProps> = ({ users, onEdit, onDelete }) =
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('admin.users.identity')}</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('admin.users.role')}</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('admin.users.department')}</th>
-                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">Organização Vinculada</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">Organização Vinculada</th> {/* ALTERADO: Org / Empresa para Organização Vinculada */}
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">Acesso</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('common.status')}</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" scope="col">{t('common.actions')}</th>
@@ -60,8 +62,7 @@ export const UserList: React.FC<UserListProps> = ({ users, onEdit, onDelete }) =
                                             <p className="font-bold text-slate-900 text-sm whitespace-nowrap truncate">{u.name}</p>
                                             <p className="text-xs text-slate-400 truncate">{u.email || t('common.na')}</p>
                                         </div>
-                                    </div>
-                                </td>
+                                    </td>
                                 <td className="px-6 py-4" role="cell" data-label={t('admin.users.role')}>
                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase ${
                                         u.role === UserRole.ADMIN ? 'bg-purple-50 text-purple-700 border-purple-100' : 
@@ -92,60 +93,52 @@ export const UserList: React.FC<UserListProps> = ({ users, onEdit, onDelete }) =
                                 <td className="px-6 py-4" role="cell" data-label={t('common.status')}>
                                     <StatusBadge status={u.status || 'ACTIVE'} />
                                 </td>
-                                <td className="px-6 py-4 text-right" role="cell">
-                                    <div className="relative inline-block text-left">
-                                        <button
-                                            type="button"
-                                            className="inline-flex justify-center w-full rounded-md px-2 py-2 text-sm font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            id={`menu-button-${u.id}`}
-                                            aria-expanded={activeDropdown === u.id}
-                                            aria-haspopup="true"
-                                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === u.id ? null : u.id); }}
-                                            aria-label={t('common.moreActions')}
-                                        >
-                                            <MoreVertical size={16} />
-                                        </button>
-
-                                        {activeDropdown === u.id && (
-                                            <div
-                                                className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10 animate-in fade-in zoom-in-95 duration-200"
-                                                role="menu"
-                                                aria-orientation="vertical"
-                                                aria-labelledby={`menu-button-${u.id}`}
-                                                tabIndex={-1}
-                                            >
-                                                <div className="py-1" role="none">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); onEdit(u); setActiveDropdown(null); }}
-                                                        className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                                <td className="px-6 py-4 text-right relative" role="cell">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === u.id ? null : u.id); }}
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                        aria-label={t('common.moreActions')}
+                                        aria-haspopup="true"
+                                        aria-expanded={activeDropdown === u.id}
+                                    >
+                                        <MoreVertical size={18} aria-hidden="true" />
+                                    </button>
+                                    {activeDropdown === u.id && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} aria-hidden="true" />
+                                            <div className="absolute right-8 top-12 w-52 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5" role="menu" aria-orientation="vertical">
+                                                <button 
+                                                    onClick={() => { onEdit(u); setActiveDropdown(null); }}
+                                                    className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                                                    role="menuitem"
+                                                >
+                                                    <Edit2 size={16} className="text-blue-500" aria-hidden="true" /> {t('common.edit')}
+                                                </button>
+                                                <button 
+                                                    className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                                                    role="menuitem"
+                                                >
+                                                    <Mail size={16} className="text-indigo-500" aria-hidden="true" /> {t('admin.users.resendAccess')} 
+                                                </button>
+                                                {onDelete && (
+                                                    <button 
+                                                        onClick={() => { onDelete(u); setActiveDropdown(null); }}
+                                                        className="w-full text-left px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 border-t border-slate-50 transition-colors"
                                                         role="menuitem"
-                                                        tabIndex={-1}
-                                                        id={`menu-item-edit-${u.id}`}
                                                     >
-                                                        <Edit2 size={14} aria-hidden="true" className="text-blue-500" /> {t('common.edit')}
+                                                        <Trash2 size={16} aria-hidden="true" /> {t('admin.users.removeUser')} 
                                                     </button>
-                                                    {onDelete && (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); onDelete(u); setActiveDropdown(null); }}
-                                                            className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-800"
-                                                            role="menuitem"
-                                                            tabIndex={-1}
-                                                            id={`menu-item-delete-${u.id}`}
-                                                        >
-                                                            <Trash2 size={14} aria-hidden="true" /> {t('common.delete')}
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
+                                        </>
+                                    )}
                                 </td>
                             </tr>
                         ))}
                         {users.length === 0 && (
-                            <tr role="row">
+                            <tr>
                                 <td colSpan={7} className="px-6 py-20 text-center text-slate-400 italic" role="cell">
-                                    {t('admin.users.noUsersFound')}
+                                    {t('admin.users.noUsersFound')} 
                                 </td>
                             </tr>
                         )}

@@ -1,7 +1,8 @@
+
+
 import React from 'react';
 import { Filter, Eye, Download } from 'lucide-react';
-// Fix: Updated import path for 'types' module to explicitly include '/index'
-import { AuditLog } from '../../../types/index'; // Atualizado
+import { AuditLog } from '../../../types.ts';
 import { useTranslation } from 'react-i18next';
 
 interface AuditLogsTableProps {

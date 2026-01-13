@@ -1,6 +1,7 @@
+
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// Fix: Updated import path for 'types' module to explicitly include '/index'
-import { User } from '../types/index'; // Atualizado
+import { User } from '../types.ts';
 import { userService } from '../lib/services/index.ts';
 
 interface AuthContextType {
@@ -18,6 +19,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const initSession = async () => {
+      // Tenta recuperar o usuário pelo token de sessão (Cookie)
       try {
           const profile = await userService.getCurrentUser();
           if (profile) {
@@ -35,13 +37,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-        const result = await userService.authenticate(email, password);
+        const result = await userService.authenticate(email, password); // Changed to result for error message
         if (result.success) {
+          // Após autenticar (Cookie definido), busca o perfil do usuário
           const profile = await userService.getCurrentUser();
           setUser(profile);
           return { success: true };
         }
-        return { success: false, error: result.error || 'Credenciais inválidas.' };
+        return { success: false, error: result.error || 'Credenciais inválidas.' }; // Use result.error
     } catch (e: any) {
         return { success: false, error: e.message };
     } finally {

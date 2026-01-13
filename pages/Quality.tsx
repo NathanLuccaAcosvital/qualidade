@@ -1,12 +1,12 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
-import { fileService, adminService, notificationService, userService } from '../lib/services/index.ts';
-// Fix: Updated import path for 'types' module to explicitly include '/index'
-import { FileNode, ClientOrganization, FileType, FileMetadata, BreadcrumbItem, UserRole, User, AuditLog } from '../types/index'; // Atualizado
+import { fileService, adminService, notificationService, userService } from '../lib/services/index.ts'; // Importa userService
+import { FileNode, ClientOrganization, FileType, FileMetadata, BreadcrumbItem, UserRole, User, AuditLog } from '../types.ts'; // Importa User, AuditLog
 import { useAuth } from '../context/authContext.tsx';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { useToast } from '../context/notificationContext.tsx';
+import { useToast } from '../context/notificationContext.tsx'; // Importado
 import { 
     X, FileUp, ArrowLeft, Download, ShieldAlert, Loader2, CheckCircle, XCircle, AlertTriangle, Info, Tag, FileText, ChevronRight, MessageSquare, Database, Search, UserPlus, Building2, FolderPlus, Activity, Eye
 } from 'lucide-react';
@@ -16,9 +16,9 @@ import { QualityOverviewCards } from '../components/features/quality/QualityOver
 import { ClientHub } from '../components/features/client/ClientHub.tsx';
 import { FileExplorer, FileExplorerHandle } from '../components/features/files/FileExplorer.tsx';
 import { FilePreviewModal } from '../components/features/files/FilePreviewModal.tsx';
-import { QualityOverviewStats } from '../lib/services/interfaces.ts'; // Mantido, pois são interfaces específicas dos serviços
-import { UserModal, ClientModal, CreateFolderModal } from '../components/features/admin/modals/AdminModals.tsx';
-import { AuditLogsTable } from '../components/features/admin/AuditLogsTable.tsx';
+import { QualityOverviewStats } from '../lib/services/interfaces.ts';
+import { UserModal, ClientModal, CreateFolderModal } from '../components/features/admin/modals/AdminModals.tsx'; // NOVO: Importa UserModal, ClientModal, CreateFolderModal
+import { AuditLogsTable } from '../components/features/admin/AuditLogsTable.tsx'; // Importa AuditLogsTable
 
 const CLIENTS_PER_PAGE = 24;
 
@@ -73,7 +73,7 @@ const Quality: React.FC = () => {
     name: '', 
     email: '', 
     password: '', 
-    role: UserRole.CLIENT,
+    role: UserRole.CLIENT, // Sempre CLIENT para esta view
     organizationId: '',
     department: '',
     status: 'ACTIVE',
@@ -89,7 +89,7 @@ const Quality: React.FC = () => {
     status: 'ACTIVE',
     qualityAnalystId: '',
   });
-  const [qualityAnalysts, setQualityAnalysts] = useState<User[]>([]);
+  const [qualityAnalysts, setQualityAnalysts] = useState<User[]>([]); // Lista de analistas para o ClientModal
 
   // NOVO: Estados para criar pasta
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
@@ -116,16 +116,16 @@ const Quality: React.FC = () => {
           if (user) {
               setIsLoading(true);
               try {
-                  const [globalStats, activeClientsRes, qAnalysts] = await Promise.all([
+                  const [globalStats, activeClientsRes, qAnalysts] = await Promise.all([ // NOVO: Busca analistas
                       fileService.getDashboardStats(user),
                       adminService.getClients({status: 'ACTIVE'}, 1, CLIENTS_PER_PAGE),
-                      userService.getUsersByRole(UserRole.QUALITY),
+                      userService.getUsersByRole(UserRole.QUALITY), // Busca analistas de qualidade
                   ]);
                   setStats({ 
                       pendingDocs: globalStats.pendingValue || 0,
                       totalActiveClients: activeClientsRes.total || 0
                   });
-                  setQualityAnalysts(qAnalysts);
+                  setQualityAnalysts(qAnalysts); // Define os analistas
               } catch (err) {
                   console.error("Erro ao carregar dados de qualidade:", err);
                   showToast(t('quality.errorLoadingQualityData'), 'error');
@@ -199,14 +199,14 @@ const Quality: React.FC = () => {
             setQualityAuditLogs(logs);
         } catch (err: any) {
             console.error("Erro ao carregar logs de auditoria da qualidade:", err.message);
-            showToast(t('common.errorLoadingLogs', { message: err.message }), 'error');
+            showToast(t('common.errorLoadingLogs', { message: err.message }), 'error'); // Usar uma chave genérica
             setQualityAuditLogs([]);
         } finally {
             setLoadingAuditLogs(false);
         }
     };
 
-    const timer = setTimeout(loadQualityLogs, 300);
+    const timer = setTimeout(loadQualityLogs, 300); // Debounce search/filter
     return () => clearTimeout(timer);
   }, [activeView, user, auditLogSearch, auditLogSeverityFilter, refreshTrigger, showToast, t]);
 
@@ -267,8 +267,10 @@ const Quality: React.FC = () => {
       }
   };
 
+  // NOVO: Função para deletar um arquivo (apenas pastas para Quality)
   const handleDeleteFile = async (file: FileNode) => {
     if (!user) return;
+    // ANALISTAS DE QUALIDADE SÓ PODEM DELETAR PASTAS, NÃO ARQUIVOS INDIVIDUAIS
     if (file.type !== FileType.FOLDER) {
         showToast("Permissão negada: Analistas de Qualidade não podem excluir arquivos, apenas pastas.", 'error');
         return;
@@ -277,7 +279,7 @@ const Quality: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      await fileService.deleteFile(user, file.id);
+      await fileService.deleteFile(user, file.id); // Este serviço já contém a lógica de permissão
       showToast(t('files.fileDeletedSuccess', { fileName: file.name }), 'success');
       setRefreshTrigger(prev => prev + 1);
       setFileExplorerRefreshKey(prev => prev + 1); 
@@ -291,6 +293,7 @@ const Quality: React.FC = () => {
     }
   };
 
+  // NOVO: Função para mudar o status de um arquivo para PENDING
   const handleSetFileStatusToPending = async (file: FileNode) => {
     if (!user) return;
     if (file.metadata?.status === 'PENDING') {
@@ -369,17 +372,19 @@ const Quality: React.FC = () => {
       setSelectedFileBlob(null);
   };
 
+  // NOVO: Funções para gerenciar usuários (CLIENT)
   const openUserModal = (u?: User) => {
     if (u) { 
       setEditingUser(u); 
       setUserFormData({ name: u.name, email: u.email, password: '', role: u.role, organizationId: u.organizationId || '', status: u.status || 'ACTIVE', department: u.department || '' });
     } else { 
+      // Ao criar, o role é sempre CLIENT e a organizationId é a do cliente selecionado
       setUserFormData({ 
         name: '', 
         email: '', 
         password: '', 
         role: UserRole.CLIENT, 
-        organizationId: selectedClient?.id || '',
+        organizationId: selectedClient?.id || '', // Preenche automaticamente se um cliente está selecionado
         status: 'ACTIVE', 
         department: '' 
       });
@@ -393,6 +398,7 @@ const Quality: React.FC = () => {
     setIsProcessing(true);
     try {
         if (!editingUser) {
+            // Certifica-se que o usuário é cliente e tem organização vinculada
             if (!userFormData.organizationId && selectedClient) {
                 userFormData.organizationId = selectedClient.id;
             }
@@ -413,7 +419,7 @@ const Quality: React.FC = () => {
             showToast("Usuário cliente atualizado com sucesso!", 'success');
         }
         setIsUserModalOpen(false); setEditingUser(null);
-        setRefreshTrigger(prev => prev + 1);
+        setRefreshTrigger(prev => prev + 1); // Recarrega dados, incluindo clientes/usuários
         setIsProcessing(false);
     } catch (err: any) {
         showToast(`Erro ao salvar usuário cliente: ${err.message}`, 'error');
@@ -421,6 +427,7 @@ const Quality: React.FC = () => {
     }
   };
 
+  // NOVO: Funções para gerenciar clientes (Empresas)
   const openClientModal = (c?: ClientOrganization) => {
       if (c) { 
           setEditingClient(c); 
@@ -437,35 +444,34 @@ const Quality: React.FC = () => {
               cnpj: '', 
               contractDate: new Date().toISOString().split('T')[0], 
               status: 'ACTIVE',
-              qualityAnalystId: user?.id || '',
+              qualityAnalystId: user?.id || '', // Sugere o próprio analista de qualidade logado
           }); 
           setEditingClient(null); 
       }
       setIsClientModalOpen(true);
   };
 
-  // Fix: Adjusted signature to match ClientModalProps new `onSave` definition.
-  const handleSaveClient = async (e: React.FormEvent, confirmEmail?: string, confirmPassword?: string) => {
+  const handleSaveClient = async (e: React.FormEvent, confirmEmail: string, confirmPassword: string) => {
       e.preventDefault(); 
       if (!user) return;
 
       setIsProcessing(true);
       try {
-        if (confirmEmail && confirmPassword) { // Only perform confirmation if credentials provided (requiresConfirmation is true)
-            if (confirmEmail.toLowerCase() !== user.email.toLowerCase()) {
-                showToast(t('quality.emailMismatchError'), 'error');
-                setIsProcessing(false);
-                return;
-            }
-
-            const authResult = await userService.authenticate(confirmEmail, confirmPassword);
-            if (!authResult.success) {
-                showToast(t('quality.invalidConfirmationCredentials'), 'error');
-                setIsProcessing(false);
-                return;
-            }
+        // 1. Verificar credenciais de segurança
+        if (confirmEmail.toLowerCase() !== user.email.toLowerCase()) {
+            showToast(t('quality.emailMismatchError'), 'error');
+            setIsProcessing(false);
+            return;
         }
 
+        const authResult = await userService.authenticate(confirmEmail, confirmPassword);
+        if (!authResult.success) {
+            showToast(t('quality.invalidConfirmationCredentials'), 'error');
+            setIsProcessing(false);
+            return;
+        }
+
+        // 2. Se a verificação de segurança passar, prosseguir com o salvamento da empresa
         const selectedAnalyst = qualityAnalysts.find(qa => qa.id === clientFormData.qualityAnalystId);
         const clientPayload: Partial<ClientOrganization> = { 
             id: editingClient?.id, 
@@ -487,6 +493,7 @@ const Quality: React.FC = () => {
       }
   };
 
+  // NOVO: Função para criar uma pasta
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newFolderName.trim() || !selectedClient?.id) return;
@@ -497,7 +504,7 @@ const Quality: React.FC = () => {
         showToast(t('quality.folderCreatedSuccess', { folderName: newFolderName }), 'success');
         setIsCreateFolderModalOpen(false);
         setNewFolderName('');
-        setFileExplorerRefreshKey(prev => prev + 1);
+        setFileExplorerRefreshKey(prev => prev + 1); // Força o refresh do FileExplorer
     } catch (err: any) {
         showToast(t('quality.errorCreatingFolder', { message: err.message }), 'error');
     } finally {
@@ -505,6 +512,7 @@ const Quality: React.FC = () => {
     }
   };
 
+  // NOVO: Função para abrir o modal de investigação de log
   const handleOpenQualityAuditLogInvestigation = (log: AuditLog) => {
       const related = qualityAuditLogs.filter(l => (l.ip === log.ip && l.ip !== '10.0.0.1') || (l.userId === log.userId && l.userId !== 'unknown')).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setAuditLogInvestigationData({ targetLog: log, relatedLogs: related, riskScore: log.severity === 'CRITICAL' ? 85 : 20 });
@@ -515,7 +523,7 @@ const Quality: React.FC = () => {
     switch (view) {
         case 'overview': return t('quality.overview');
         case 'clients': return t('quality.b2bPortfolio');
-        case 'audit-log': return t('quality.myAuditLog');
+        case 'audit-log': return t('quality.myAuditLog'); // NOVO
         default: return t('menu.documents');
     }
   };
@@ -602,6 +610,7 @@ const Quality: React.FC = () => {
             </div>
         )}
 
+        {/* NOVO: Modal de Criação de Usuário (CLIENT) */}
         <UserModal 
             isOpen={isUserModalOpen} 
             onClose={() => setIsUserModalOpen(false)} 
@@ -609,9 +618,10 @@ const Quality: React.FC = () => {
             editingUser={editingUser} 
             formData={userFormData} 
             setFormData={setUserFormData} 
-            organizations={clients}
+            organizations={clients} // Passa a lista de clientes para vincular
         />
 
+        {/* NOVO: Modal de Criação/Edição de Cliente (Empresa) */}
         <ClientModal 
             isOpen={isClientModalOpen} 
             onClose={() => setIsClientModalOpen(false)} 
@@ -620,10 +630,10 @@ const Quality: React.FC = () => {
             clientFormData={clientFormData} 
             setClientFormData={setClientFormData} 
             qualityAnalysts={qualityAnalysts} 
-            onDelete={undefined}
-            requiresConfirmation={true} {/* Fix: Pass requiresConfirmation prop to ClientModal */}
+            onDelete={undefined} // Analistas de qualidade NÃO podem excluir empresas
         />
 
+        {/* NOVO: Modal de Criação de Pasta */}
         <CreateFolderModal
             isOpen={isCreateFolderModalOpen}
             onClose={() => setIsCreateFolderModalOpen(false)}
@@ -633,6 +643,8 @@ const Quality: React.FC = () => {
             setFolderName={setNewFolderName}
         />
 
+        {/* NOVO: Modal de Investigação de Log de Auditoria (reaproveitando do Admin) */}
+        {/* Implementar modal de investigação aqui se necessário, ou usar um pop-up simples */}
         {isAuditLogInvestigationModalOpen && auditLogInvestigationData.targetLog && (
             <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-labelledby="audit-log-investigation-title">
                 <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col">
@@ -667,7 +679,7 @@ const Quality: React.FC = () => {
                                 {JSON.stringify(auditLogInvestigationData.targetLog.metadata, null, 2)}
                             </pre>
                         </div>
-                        {auditLogInvestigationData.relatedLogs.length > 1 && (
+                        {auditLogInvestigationData.relatedLogs.length > 1 && ( // +1 because targetLog is included
                             <div className="space-y-1">
                                 <p className="text-xs font-bold text-slate-500 uppercase">Atividades Relacionadas ({auditLogInvestigationData.relatedLogs.length - 1}):</p>
                                 <ul className="list-disc pl-5 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -695,6 +707,7 @@ const Quality: React.FC = () => {
                                 <p className="text-[10px] text-slate-400 font-mono mt-1 tracking-widest uppercase">{selectedClient.cnpj}</p>
                             </div>
                             <div className="flex gap-2 ml-auto">
+                                {/* NOVO: Botão Criar Pasta */}
                                 <button 
                                     onClick={() => setIsCreateFolderModalOpen(true)}
                                     className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-slate-900/20 active:scale-95 transition-all"
@@ -740,9 +753,10 @@ const Quality: React.FC = () => {
                                 onFileSelect={setInspectorFile} 
                                 hideToolbar={false} 
                                 refreshKey={fileExplorerRefreshKey} 
-                                onDeleteFile={handleDeleteFile}
+                                onDeleteFile={handleDeleteFile} // Analistas de qualidade podem excluir pastas
                                 onSetStatusToPending={handleSetFileStatusToPending} 
                                 onCreateFolder={() => setIsCreateFolderModalOpen(true)}
+                                // onEdit={...} // Se houver edição de metadados de arquivo, passaria aqui
                             />
                         </div>
 
@@ -884,6 +898,7 @@ const Quality: React.FC = () => {
                     )}
                     {activeView === 'clients' && (
                         <>
+                           {/* NOVO: Barra de Ações para Clientes e Usuários */}
                            <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col xl:flex-row justify-between items-center gap-4 mb-4">
                                <div className="relative w-full max-w-xl">
                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
@@ -919,22 +934,22 @@ const Quality: React.FC = () => {
                                 setClientSearch={setClientSearch} 
                                 clientStatus={clientStatus}
                                 setClientStatus={setClientStatus}
-                                onSelectClient={openClientModal}
+                                onSelectClient={openClientModal} // Abre o modal de edição ao selecionar
                                 isLoading={isLoading}
                                 isLoadingMore={isLoadingMore}
-                                hasMore={hasMoreClients} {/* Fix: Use hasMoreClients state variable */}
+                                hasMore={hasMoreClients}
                                 onLoadMore={handleLoadMoreClients}
                            />
                         </>
                     )}
-                    {activeView === 'audit-log' && (
+                    {activeView === 'audit-log' && ( // NOVO: Renderização da seção de Logs de Auditoria
                         <div className="flex flex-col h-full gap-4 animate-in fade-in duration-300" role="main" aria-label={t('quality.myAuditLog')}>
                             <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col xl:flex-row justify-between items-center gap-4">
                                 <div className="relative w-full max-w-xl">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
                                     <input 
                                         type="text" 
-                                        placeholder={t('quality.allActivities')}
+                                        placeholder={t('quality.allActivities')} // Nova chave
                                         className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" 
                                         value={auditLogSearch} 
                                         onChange={e => setAuditLogSearch(e.target.value)} 

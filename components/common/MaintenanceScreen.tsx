@@ -1,8 +1,9 @@
+
+
 import React from 'react';
 import { AlertOctagon, RefreshCw, Phone } from 'lucide-react';
-// Fix: Updated import path for 'types' module to explicitly include '/index'
-import { SystemStatus } from '../../types/index'; // Atualizado
-import { useTranslation } from 'react-i18next';
+import { SystemStatus } from '../../types.ts';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 interface MaintenanceScreenProps {
     status: SystemStatus;
@@ -10,11 +11,11 @@ interface MaintenanceScreenProps {
 }
 
 export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ status, onRetry }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(); // Use the hook
 
     const formattedEnd = status.scheduledEnd 
         ? new Date(status.scheduledEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-        : t('maintenance.soon');
+        : t('maintenance.soon'); // Translate 'soon'
 
     return (
         <div className="h-screen w-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +19,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { userService, adminService } from '../lib/services/index.ts';
-// Fix: Updated import path for 'types' module to explicitly include '/index'
-import { ClientOrganization } from '../types/index'; // Atualizado
+import { ClientOrganization } from '../types.ts';
 import { CookieBanner } from '../components/common/CookieBanner.tsx';
 import { PrivacyModal } from '../components/common/PrivacyModal.tsx';
 
@@ -66,7 +67,7 @@ const SignUp: React.FC = () => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError(t('changePassword.matchError'));
+      setError(t('changePassword.matchError')); // Reusing translation key
       return;
     }
 
@@ -87,7 +88,7 @@ const SignUp: React.FC = () => {
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
     } catch (err: any) {
-      setError(err.message || t('login.connectionError'));
+      setError(err.message || t('login.connectionError')); // Reusing translation key
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +98,7 @@ const SignUp: React.FC = () => {
     i18n.changeLanguage(lng);
   };
 
+  // Fix: Improved typing for InputWrapper's children props when cloning elements.
   const InputWrapper: React.FC<{ label: string; icon: React.ElementType; fieldId: string; children: React.ReactNode; placeholder?: string }> = ({ label, icon: Icon, fieldId, children, placeholder }) => (
     <div className="space-y-2 group flex-1">
       <label htmlFor={`${fieldId}-input`} className={`text-[10px] font-black uppercase tracking-[2px] ml-1 transition-colors ${focusedInput === fieldId ? 'text-[#62A5FA]' : 'text-slate-400'}`}>
@@ -111,27 +113,23 @@ const SignUp: React.FC = () => {
         </div>
         {React.Children.map(children, child => {
           if (React.isValidElement(child) && child.type === 'input') {
-            // Fix: Explicitly type the cloned element's props to ensure correct prop inference for onFocus/onBlur
-            type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
-            const originalProps = child.props as InputProps;
-            return React.cloneElement<InputProps>(child, {
-              ...originalProps,
-              onFocus: (e: React.FocusEvent<HTMLInputElement>) => { setFocusedInput(fieldId); originalProps.onFocus?.(e); },
-              onBlur: (e: React.FocusEvent<HTMLInputElement>) => { setFocusedInput(null); originalProps.onBlur?.(e); },
-              id: `${fieldId}-input`,
-              placeholder: placeholder || originalProps.placeholder,
+            const inputProps = child.props as React.InputHTMLAttributes<HTMLInputElement>;
+            return React.cloneElement(child, {
+              ...inputProps,
+              onFocus: (e) => { setFocusedInput(fieldId); inputProps.onFocus?.(e); }, // Preserve original onFocus if any
+              onBlur: (e) => { setFocusedInput(null); inputProps.onBlur?.(e); },   // Preserve original onBlur if any
+              id: `${fieldId}-input`, // Ensure ID is passed for input
+              placeholder: placeholder || inputProps.placeholder,
               'aria-label': label,
             });
           }
           if (React.isValidElement(child) && child.type === 'select') {
-            // Fix: Explicitly type the cloned element's props to ensure correct prop inference for onFocus/onBlur
-            type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
-            const originalProps = child.props as SelectProps;
-            return React.cloneElement<SelectProps>(child, {
-              ...originalProps,
-              onFocus: (e: React.FocusEvent<HTMLSelectElement>) => { setFocusedInput(fieldId); originalProps.onFocus?.(e); },
-              onBlur: (e: React.FocusEvent<HTMLSelectElement>) => { setFocusedInput(null); originalProps.onBlur?.(e); },
-              id: `${fieldId}-select`,
+            const selectProps = child.props as React.SelectHTMLAttributes<HTMLSelectElement>;
+            return React.cloneElement(child, {
+              ...selectProps,
+              onFocus: (e) => { setFocusedInput(fieldId); selectProps.onFocus?.(e); }, // Preserve original onFocus if any
+              onBlur: (e) => { setFocusedInput(null); selectProps.onBlur?.(e); },   // Preserve original onBlur if any
+              id: `${fieldId}-select`, // Ensure ID is passed for select
               'aria-label': label,
             });
           }

@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { FileNode, FileType } from '../../../types/index.ts';
+import { X, Download, Printer, ZoomIn, ZoomOut, FileText, Loader2, ExternalLink } from 'lucide-react';
+import { FileNode, FileType } from '../../../types.ts';
 import { useAuth } from '../../../context/authContext.tsx';
 import { fileService } from '../../../lib/services/index.ts';
 import { useTranslation } from 'react-i18next';
-import { X, FileText, Download, ExternalLink, Loader2 } from 'lucide-react';
-import { FileStatusTimeline } from './FileStatusTimeline.tsx'; // Importa o novo componente
 
 interface FilePreviewModalProps {
   file: FileNode | null;
@@ -131,16 +130,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, isOpen
           </div>
       </div>
 
-      {/* PREVIEW AREA & SIDEBAR */}
-      <div className="flex-1 bg-slate-50 overflow-hidden relative flex">
-          <div className="flex-1 bg-slate-900 overflow-hidden relative">
-              {renderContent()}
-          </div>
-          
-          {/* Timeline de Status na lateral direita */}
-          <div className="w-80 bg-white rounded-l-2xl border-l border-slate-200 shadow-xl flex flex-col p-4 overflow-y-auto custom-scrollbar">
-              {file && <FileStatusTimeline file={file} />}
-          </div>
+      {/* PREVIEW AREA */}
+      <div className="flex-1 bg-slate-900 overflow-hidden relative">
+          {renderContent()}
       </div>
 
     </div>

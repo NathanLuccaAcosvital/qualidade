@@ -76,13 +76,13 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ usersCount, activeUsersC
                 <StatCard 
                     label={t('admin.stats.organizations')} 
                     value={clientsCount} 
-                    subtext={t('admin.stats.activeClientsSummary', { count: clientsCount })}
+                    subtext={t('admin.stats.b2bContracts')}
                     icon={Building2} color="indigo" 
                 />
                 <StatCard 
                     label={t('admin.stats.activities')} 
                     value={logsCount > 99 ? '99+' : logsCount} 
-                    subtext={t('admin.stats.logsLast24hSummary', { count: logsCount })}
+                    subtext={t('admin.stats.logsLast24hSubtext')} 
                     icon={Activity} color="orange" 
                 />
             </div>
