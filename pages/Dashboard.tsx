@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { FileExplorer } from '../components/features/files/FileExplorer.tsx';
-import { SupportModal } from '../components/features/support/SupportModal.tsx';
+import { SupportModal } from '../components/features/support/SupportModal.tsx'; // Agora focado em criar novo ticket
+import { ClientTicketDetailsModal } from '../components/features/support/ClientTicketDetailsModal.tsx'; // NOVO: Modal de detalhes do ticket para cliente
 import { useAuth } from '../context/authContext.tsx';
 import { fileService, adminService } from '../lib/services/index.ts';
-import { FileNode, LibraryFilters, SupportTicket, SystemStatus } from '../types.ts';
+import { DashboardStatsData } from '../lib/services/interfaces.ts'; // Importado
+import { FileNode, LibraryFilters, SupportTicket, SystemStatus, FileType } from '../types.ts'; // Adicionado FileType
 import { useTranslation } from 'react-i18next';
 import { 
     Search, ArrowRight, CheckCircle2, LifeBuoy, Plus, Clock, MessageSquare, 
@@ -23,7 +26,8 @@ const Dashboard: React.FC = () => {
   const currentView = queryParams.get('view') || 'home'; 
 
   const [quickSearch, setQuickSearch] = useState('');
-  const [stats, setStats] = useState<any>({ 
+  // Atualizado para usar DashboardStatsData
+  const [stats, setStats] = useState<DashboardStatsData>({ 
       mainValue: 0, subValue: 0, pendingValue: 0, 
       status: 'REGULAR', mainLabel: '', subLabel: '', activeClients: 0 
   });
@@ -40,8 +44,9 @@ const Dashboard: React.FC = () => {
   });
   const [ticketStatusFilter, setTicketStatusFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
 
-
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isClientTicketDetailsModalOpen, setIsClientTicketDetailsModalOpen] = useState(false); // NOVO
+  const [selectedClientTicket, setSelectedClientTicket] = useState<SupportTicket | null>(null); // NOVO
 
   const fetchData = useCallback(async () => {
       if (!user) return;
@@ -94,11 +99,17 @@ const Dashboard: React.FC = () => {
       if (currentView === 'tickets') fetchData(); 
   };
 
+  // NOVO: Função para abrir o modal de detalhes do ticket para o cliente
+  const openClientTicketDetails = (ticket: SupportTicket) => {
+    setSelectedClientTicket(ticket);
+    setIsClientTicketDetailsModalOpen(true);
+  };
+
   const getGreeting = () => {
       const hour = new Date().getHours();
-      if (hour < 12) return 'Bom dia';
-      if (hour < 18) return 'Boa tarde';
-      return 'Boa noite';
+      if (hour < 12) return t('common.goodMorning'); // Use translated 'Bom dia' (or 'Hello' for EN)
+      if (hour < 18) return t('common.goodAfternoon'); // Use translated 'Boa tarde'
+      return t('common.goodEvening'); // Use translated 'Boa noite'
   };
 
   const KpiCard = ({ icon: Icon, label, value, subtext, color, onClick }: any) => {
@@ -112,8 +123,13 @@ const Dashboard: React.FC = () => {
       };
       const colors = getKpiColors(color);
       return (
-          <div onClick={onClick} className="relative overflow-hidden bg-white p-5 rounded-2xl border border-slate-100 shadow-sm cursor-pointer group transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-              <div className={`absolute top-0 right-0 p-4 transform scale-150 -translate-y-2 translate-x-2 ${colors.icon}`}><Icon size={100} /></div>
+          <div 
+            onClick={onClick} 
+            className="relative overflow-hidden bg-white p-5 rounded-2xl border border-slate-100 shadow-sm cursor-pointer group transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+            role="button" // A11y: Indicate it's a clickable element
+            aria-label={`${label}: ${value} ${subtext}`} // A11y: Provide a descriptive label
+          >
+              <div className={`absolute top-0 right-0 p-4 transform scale-150 -translate-y-2 translate-x-1/3 ${colors.icon}`}><Icon size={100} /></div>
               <div className="relative z-10">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm ${colors.bg} ${colors.text}`}><Icon size={24} /></div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
@@ -136,13 +152,13 @@ const Dashboard: React.FC = () => {
                         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full blur-3xl opacity-60 -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
                         <div className="relative z-10 max-w-2xl">
                             <div className="flex items-center gap-3 mb-4">
-                                <span className="px-3 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg">Portal Vital Link</span>
-                                <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><CalendarDays size={12} /> {new Date().toLocaleDateString()}</span>
+                                <span className="px-3 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg" aria-label={t('menu.portalName')}>{t('menu.portalNameShort')}</span>
+                                <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><CalendarDays size={12} aria-hidden="true" /> {new Date().toLocaleDateString()}</span>
                             </div>
-                            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-2">{getGreeting()}, {user?.name.split(' ')[0] || 'Usuário'}.</h1>
-                            <p className="text-slate-500 text-sm md:text-base max-w-lg mb-8">Centralize seus certificados de qualidade e garanta a rastreabilidade total de seus materiais.</p>
+                            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-2">{getGreeting()}, {user?.name.split(' ')[0] || t('common.user')}.</h1>
+                            <p className="text-slate-500 text-sm md:text-base max-w-lg mb-8">{t('dashboard.heroDescription')}</p>
                             <div className="relative group max-w-lg">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" aria-hidden="true" />
                                 <input
                                     type="text"
                                     className="block w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm font-medium"
@@ -150,48 +166,72 @@ const Dashboard: React.FC = () => {
                                     value={quickSearch}
                                     onChange={(e) => setQuickSearch(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter' && quickSearch) { setFilters(prev => ({ ...prev, search: quickSearch })); navigate('/dashboard?view=files'); } }}
+                                    aria-label={t('dashboard.searchPlaceholder')} // A11y: Label for search input
                                 />
-                                <button onClick={() => { setFilters(prev => ({ ...prev, search: quickSearch })); navigate('/dashboard?view=files'); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-md"><ArrowRight size={16} /></button>
+                                <button 
+                                  onClick={() => { setFilters(prev => ({ ...prev, search: quickSearch })); navigate('/dashboard?view=files'); }} 
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-md"
+                                  aria-label={t('common.search')} // A11y: Label for search button
+                                >
+                                  <ArrowRight size={16} aria-hidden="true" />
+                                </button>
                             </div>
                         </div>
                   </div>
                   <div className="lg:col-span-4 flex flex-col gap-6">
                       <div className={`flex-1 rounded-3xl p-6 text-white relative overflow-hidden group shadow-xl ${systemStatus.mode === 'SCHEDULED' ? 'bg-gradient-to-br from-orange-600 to-orange-500' : 'bg-gradient-to-br from-slate-800 to-slate-900'}`}>
-                          <div className="absolute top-0 right-0 p-6 opacity-10">{systemStatus.mode === 'SCHEDULED' ? <AlertTriangle size={120} /> : <Server size={120} />}</div>
+                          <div className="absolute top-0 right-0 p-6 opacity-10">{systemStatus.mode === 'SCHEDULED' ? <AlertTriangle size={120} aria-hidden="true" /> : <Server size={120} aria-hidden="true" />}</div>
                           <div className="relative z-10 flex flex-col h-full justify-between">
                               <div>
-                                  <p className="text-xs font-bold text-white/60 uppercase tracking-wider mb-1">Status do Sistema</p>
-                                  <h3 className="text-2xl font-bold flex items-center gap-2">{systemStatus.mode === 'SCHEDULED' ? 'Manutenção Agendada' : 'Operação Normal'}</h3>
+                                  <p className="text-xs font-bold text-white/60 uppercase tracking-wider mb-1">{t('menu.system')} {t('common.status')}</p>
+                                  <h3 className="text-2xl font-bold flex items-center gap-2">{systemStatus.mode === 'SCHEDULED' ? t('dashboard.status.scheduled') : t('dashboard.status.normal')}</h3>
                               </div>
                               {systemStatus.mode === 'SCHEDULED' ? (
                                    <div className="bg-white/15 rounded-xl p-4 backdrop-blur-sm border border-white/10 mt-4">
-                                       <div className="flex items-center gap-2 mb-2 text-white"><CalendarClock size={18} /><span className="font-bold text-sm">{new Date(systemStatus.scheduledStart!).toLocaleDateString()}</span></div>
-                                       <p className="text-xs text-white/90 leading-relaxed font-medium">{systemStatus.message || 'Sistema em atualização programada.'}</p>
+                                       <div className="flex items-center gap-2 mb-2 text-white"><CalendarClock size={18} aria-hidden="true" /><span className="font-bold text-sm">{new Date(systemStatus.scheduledStart!).toLocaleDateString()}</span></div>
+                                       <p className="text-xs text-white/90 leading-relaxed font-medium">{systemStatus.message || t('dashboard.status.scheduledDefaultMessage')}</p>
                                    </div>
                               ) : (
-                                   <div className="mt-6 space-y-4"><div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-950/30 w-fit px-3 py-1.5 rounded-full border border-emerald-500/20"><CheckCircle2 size={14} /> Monitoramento Vital Ativo</div></div>
+                                   <div className="mt-6 space-y-4"><div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-950/30 w-fit px-3 py-1.5 rounded-full border border-emerald-500/20"><CheckCircle2 size={14} aria-hidden="true" /> {t('dashboard.status.monitoringActive')}</div></div>
                               )}
                           </div>
                       </div>
-                      <button onClick={() => setIsSupportModalOpen(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-1 shadow-lg group hover:shadow-blue-500/20 transition-all active:scale-[0.98]">
+                      <button 
+                        onClick={() => setIsSupportModalOpen(true)} 
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-1 shadow-lg group hover:shadow-blue-500/20 transition-all active:scale-[0.98]"
+                        aria-label={t('menu.support')} // A11y: Label for support button
+                      >
                           <div className="bg-white rounded-[20px] p-4 flex items-center justify-between h-full group-hover:bg-blue-50/50 transition-colors">
                               <div className="flex items-center gap-4">
-                                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform"><LifeBuoy size={24}/></div>
-                                  <div className="text-left"><span className="block font-bold text-slate-800">Suporte Técnico</span><span className="text-xs text-slate-500">Qualidade Vital</span></div>
+                                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform"><LifeBuoy size={24} aria-hidden="true" /></div>
+                                  <div className="text-left"><span className="block font-bold text-slate-800">{t('menu.support')}</span><span className="text-xs text-slate-500">{t('menu.portalName')}</span></div>
                               </div>
-                              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all"><Plus size={18} /></div>
+                              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all"><Plus size={18} aria-hidden="true" /></div>
                           </div>
                       </button>
                   </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <KpiCard icon={FileText} label="Biblioteca" value={stats.subValue} subtext="Docs. Ativos" color="blue" onClick={() => navigate('/dashboard?view=files')} />
-                  <KpiCard icon={Clock} label="Pendências" value={stats.pendingValue} subtext="Aguardando" color="orange" onClick={() => navigate('/dashboard?view=files&status=PENDING')} />
-                  <KpiCard icon={MessageSquare} label="Chamados" value={openTicketCount} subtext="Em aberto" color="indigo" onClick={() => navigate('/dashboard?view=tickets')} />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="region" aria-label={t('menu.dashboard')}>
+                  <KpiCard icon={FileText} label={t('dashboard.kpi.libraryLabel')} value={stats.subValue} subtext={t('dashboard.kpi.activeDocsSubtext')} color="blue" onClick={() => navigate('/dashboard?view=files')} />
+                  <KpiCard icon={Clock} label={t('dashboard.kpi.pendingLabel')} value={stats.pendingValue} subtext={t('dashboard.kpi.awaitingSubtext')} color="orange" onClick={() => navigate('/dashboard?view=files&status=PENDING')} />
+                  <KpiCard icon={MessageSquare} label={t('dashboard.kpi.ticketsLabel')} value={openTicketCount} subtext={t('dashboard.kpi.openTicketsSubtext')} color="indigo" onClick={() => navigate('/dashboard?view=tickets')} />
               </div>
               <div className="space-y-4">
-                  <div className="flex items-center justify-between px-1"><h3 className="font-bold text-slate-800 text-lg flex items-center gap-2"><FileCheck size={20} className="text-blue-500" /> Certificados de Qualidade</h3><button onClick={() => navigate('/dashboard?view=files')} className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors">Explorar Tudo <ChevronRight size={14} /></button></div>
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[500px] flex flex-col"><FileExplorer allowUpload={false} hideToolbar={false} /></div>
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2" aria-label={t('dashboard.libraryHeader')}>
+                      <FileCheck size={20} className="text-blue-500" aria-hidden="true" /> {t('dashboard.libraryHeader')}
+                    </h3>
+                    <button 
+                      onClick={() => navigate('/dashboard?view=files')} 
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors"
+                      aria-label={t('dashboard.exploreAll')} // A11y: Label for "Explore All" button
+                    >
+                      {t('dashboard.exploreAll')} <ChevronRight size={14} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[500px] flex flex-col" role="region" aria-label={t('dashboard.libraryHeader')}>
+                    <FileExplorer allowUpload={false} hideToolbar={false} />
+                  </div>
               </div>
           </div>
         </Layout>
@@ -201,21 +241,28 @@ const Dashboard: React.FC = () => {
   // RENDER: TICKETS (SERVICE DESK VIEW)
   if (currentView === 'tickets') {
       return (
-          <Layout title="Central de Suporte">
+          <Layout title={t('dashboard.supportCenter')}>
               <SupportModal isOpen={isSupportModalOpen} onClose={handleSupportClose} />
-              <div className="space-y-6 animate-in fade-in duration-500">
+              {/* NOVO: Renderiza o modal de detalhes do ticket para o cliente */}
+              <ClientTicketDetailsModal
+                isOpen={isClientTicketDetailsModalOpen}
+                onClose={() => setIsClientTicketDetailsModalOpen(false)}
+                ticket={selectedClientTicket}
+              />
+              <div className="space-y-6 animate-in fade-in duration-500" role="region" aria-label={t('dashboard.myTickets')}>
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                       <div>
-                          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2"><Inbox size={22} className="text-blue-600"/> Meus Chamados</h2>
-                          <p className="text-sm text-slate-500">Acompanhe suas solicitações técnicas e de qualidade.</p>
+                          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2" aria-label={t('dashboard.myTickets')}><Inbox size={22} className="text-blue-600" aria-hidden="true" /> {t('dashboard.myTickets')}</h2>
+                          <p className="text-sm text-slate-500">{t('dashboard.ticketsHeader')}</p>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2 w-full md:w-auto">
-                            <Filter size={18} className="text-slate-400 shrink-0"/>
+                            <Filter size={18} className="text-slate-400 shrink-0" aria-hidden="true"/>
                             <select 
                                 value={ticketStatusFilter} 
                                 onChange={e => setTicketStatusFilter(e.target.value as any)}
                                 className="flex-1 md:flex-none px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                                aria-label={t('common.filterByStatus')} // A11y: Label for status filter
                             >
                                 <option value="ALL">{t('common.all')}</option>
                                 <option value="OPEN">{t('admin.tickets.status.OPEN')}</option>
@@ -223,7 +270,13 @@ const Dashboard: React.FC = () => {
                                 <option value="RESOLVED">{t('admin.tickets.status.RESOLVED')}</option>
                             </select>
                         </div>
-                        <button onClick={() => setIsSupportModalOpen(true)} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Plus size={18}/> Novo Chamado</button>
+                        <button 
+                          onClick={() => setIsSupportModalOpen(true)} 
+                          className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                          aria-label={t('dashboard.openNewTicket')} // A11y: Label for "New Ticket" button
+                        >
+                          <Plus size={18} aria-hidden="true" /> {t('dashboard.openNewTicket')}
+                        </button>
                       </div>
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -231,36 +284,43 @@ const Dashboard: React.FC = () => {
                           <table className="w-full text-left border-collapse">
                               <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                                   <tr>
-                                      <th className="px-6 py-4 text-xs font-bold uppercase">ID</th>
-                                      <th className="px-6 py-4 text-xs font-bold uppercase">Assunto</th>
-                                      <th className="px-6 py-4 text-xs font-bold uppercase text-center">Prioridade</th>
-                                      <th className="px-6 py-4 text-xs font-bold uppercase">Status</th>
-                                      <th className="px-6 py-4 text-xs font-bold uppercase">Criado em</th>
+                                      <th className="px-6 py-4 text-xs font-bold uppercase">{t('dashboard.ticket.id')}</th>
+                                      <th className="px-6 py-4 text-xs font-bold uppercase">{t('dashboard.ticket.subject')}</th>
+                                      <th className="px-6 py-4 text-xs font-bold uppercase text-center">{t('dashboard.ticket.priority')}</th>
+                                      <th className="px-6 py-4 text-xs font-bold uppercase">{t('dashboard.ticket.status')}</th>
+                                      <th className="px-6 py-4 text-xs font-bold uppercase">{t('dashboard.ticket.createdAt')}</th>
                                       <th className="px-6 py-4 text-right"></th>
                                   </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                   {clientTickets.map(t => (
-                                      <tr key={t.id} className="hover:bg-slate-50 transition-colors group">
-                                          <td className="px-6 py-4 text-xs font-mono text-slate-400">#{t.id.slice(-4)}</td>
-                                          <td className="px-6 py-4"><p className="font-bold text-slate-800 text-sm">{t.subject}</p><p className="text-xs text-slate-500 line-clamp-1">{t.description}</p></td>
-                                          <td className="px-6 py-4">
+                                      <tr 
+                                        key={t.id} 
+                                        className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                                        onClick={() => openClientTicketDetails(t)} // NOVO: Abre o modal de detalhes do ticket
+                                        aria-label={`${t('dashboard.ticket.subject')}: ${t.subject}, ${t('dashboard.ticket.status')}: ${t('admin.tickets.status.' + t.status)}`} // A11y: Label for each ticket row
+                                      >
+                                          <td className="px-6 py-4 text-xs font-mono text-slate-400" role="cell" data-label={t('dashboard.ticket.id')}>#{t.id.slice(-4)}</td>
+                                          <td className="px-6 py-4" role="cell" data-label={t('dashboard.ticket.subject')}><p className="font-bold text-slate-800 text-sm">{t.subject}</p><p className="text-xs text-slate-500 line-clamp-1">{t.description}</p></td>
+                                          <td className="px-6 py-4" role="cell" data-label={t('dashboard.ticket.priority')}>
                                               <div className="flex justify-center">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${t.priority === 'CRITICAL' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{t.priority}</span>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${t.priority === 'CRITICAL' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{t(`admin.tickets.priority.${t.priority}`)}</span>
                                               </div>
                                           </td>
-                                          <td className="px-6 py-4">
+                                          <td className="px-6 py-4" role="cell" data-label={t('dashboard.ticket.status')}>
                                               <span className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase ${t.status === 'RESOLVED' ? 'text-emerald-600' : t.status === 'IN_PROGRESS' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                                  <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'RESOLVED' ? 'bg-emerald-500' : t.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-orange-500 animate-pulse'}`} />
-                                                  {t.status}
+                                                  <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'RESOLVED' ? 'bg-emerald-500' : t.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-orange-500 animate-pulse'}`} aria-hidden="true" />
+                                                  {t(`admin.tickets.status.${t.status}`)}
                                               </span>
                                           </td>
-                                          <td className="px-6 py-4 text-xs text-slate-500">{t.createdAt}</td>
-                                          <td className="px-6 py-4 text-right"><button className="p-2 text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all"><ExternalLink size={16}/></button></td>
+                                          <td className="px-6 py-4 text-xs text-slate-500" role="cell" data-label={t('dashboard.ticket.createdAt')}>{t.createdAt}</td>
+                                          <td className="px-6 py-4 text-right">
+                                            <button className="p-2 text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all" aria-label={t('common.expand')}><ExternalLink size={16} aria-hidden="true"/></button>
+                                          </td>
                                       </tr>
                                   ))}
                                   {clientTickets.length === 0 && (
-                                      <tr><td colSpan={6} className="px-6 py-20 text-center"><div className="flex flex-col items-center text-slate-400"><Inbox size={48} className="mb-3 opacity-20"/><p className="font-medium">Nenhum chamado registrado.</p></div></td></tr>
+                                      <tr><td colSpan={6} className="px-6 py-20 text-center"><div className="flex flex-col items-center text-slate-400"><Inbox size={48} className="mb-3 opacity-20" aria-hidden="true"/><p className="font-medium">{t('dashboard.noTicketsRegistered')}</p></div></td></tr>
                                   )}
                               </tbody>
                           </table>
@@ -273,25 +333,41 @@ const Dashboard: React.FC = () => {
 
   // RENDER: FAVORITES & RECENT (FLAT FILE VIEW)
   const isFlatView = currentView === 'favorites' || currentView === 'recent';
-  const viewTitle = currentView === 'favorites' ? 'Meus Favoritos' : 'Arquivos Recentes';
+  const viewTitle = currentView === 'favorites' ? t('dashboard.favoritesTitle') : t('dashboard.recentTitle');
   const ViewIcon = currentView === 'favorites' ? Star : History;
+  const EmptyViewIcon = currentView === 'favorites' ? Star : History; // Icon for empty state
+  const emptySubtext = currentView === 'favorites' ? t('dashboard.emptyFlatView.subtextFavorites') : t('dashboard.emptyFlatView.subtextRecent');
+
 
   return (
-    <Layout title={t(`dashboard.${currentView}Title`) || "Portal"}>
+    <Layout title={viewTitle}> {/* Use viewTitle here */}
         <SupportModal isOpen={isSupportModalOpen} onClose={handleSupportClose} />
-        <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
+        <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500" role="region" aria-label={viewTitle}>
             {isFlatView && (
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${currentView === 'favorites' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}><ViewIcon size={24}/></div>
+                    <div className={`p-3 rounded-xl ${currentView === 'favorites' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                      <ViewIcon size={24} aria-hidden="true"/>
+                    </div>
                     <div>
                         <h2 className="text-xl font-bold text-slate-900">{viewTitle}</h2>
-                        <p className="text-sm text-slate-500">{currentView === 'favorites' ? 'Acesso rápido aos seus documentos marcados com estrela.' : 'Últimos documentos acessados ou aprovados para sua conta.'}</p>
+                        <p className="text-sm text-slate-500">
+                          {emptySubtext}
+                        </p>
                     </div>
                 </div>
             )}
             <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[calc(100vh-280px)]">
                 {isLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4"><Loader2 size={40} className="animate-spin text-blue-500"/><p className="font-bold text-xs uppercase tracking-widest">Carregando lista personalizada...</p></div>
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4">
+                      <Loader2 size={40} className="animate-spin text-blue-500" aria-hidden="true"/>
+                      <p className="font-bold text-xs uppercase tracking-widest">{t('common.loading')}</p>
+                    </div>
+                ) : (viewFiles.length === 0 && isFlatView) ? ( // Check for empty externalFiles in flat view
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 bg-white rounded-b-2xl">
+                        <EmptyViewIcon size={48} className="mb-3 opacity-20" aria-hidden="true"/>
+                        <p className="font-medium">{t('dashboard.emptyFlatView.message')}</p>
+                        <p className="text-xs text-slate-400">{emptySubtext}</p>
+                    </div>
                 ) : (
                     <FileExplorer 
                         allowUpload={false} 

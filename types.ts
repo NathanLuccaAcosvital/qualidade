@@ -1,4 +1,3 @@
-
 export enum UserRole {
   ADMIN = 'ADMIN',
   QUALITY = 'QUALITY',
@@ -13,8 +12,9 @@ export interface ClientOrganization {
   cnpj: string;
   status: 'ACTIVE' | 'INACTIVE';
   contractDate: string;
-  pendingDocs?: number; // Adicionado para dados reais de pendências
-  complianceScore?: number; // Adicionado para dados reais de saúde de compliance
+  pendingDocs?: number; 
+  complianceScore?: number; 
+  lastAnalysisDate?: string; // NOVO: Data da última análise de conformidade
 }
 
 export interface User {

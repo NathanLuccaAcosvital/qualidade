@@ -66,7 +66,7 @@ const SignUp: React.FC = () => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem.');
+      setError(t('changePassword.matchError')); // Reusing translation key
       return;
     }
 
@@ -87,7 +87,7 @@ const SignUp: React.FC = () => {
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
     } catch (err: any) {
-      setError(err.message || 'Erro inesperado ao realizar cadastro.');
+      setError(err.message || t('login.connectionError')); // Reusing translation key
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +99,7 @@ const SignUp: React.FC = () => {
 
   const InputWrapper: React.FC<{ label: string; icon: React.ElementType; fieldId: string; children: React.ReactNode }> = ({ label, icon: Icon, fieldId, children }) => (
     <div className="space-y-2 group flex-1">
-      <label className={`text-[10px] font-black uppercase tracking-[2px] ml-1 transition-colors ${focusedInput === fieldId ? 'text-[#62A5FA]' : 'text-slate-400'}`}>
+      <label htmlFor={`${fieldId}-input`} className={`text-[10px] font-black uppercase tracking-[2px] ml-1 transition-colors ${focusedInput === fieldId ? 'text-[#62A5FA]' : 'text-slate-400'}`}>
         {label}
       </label>
       <div 
@@ -107,7 +107,7 @@ const SignUp: React.FC = () => {
         ${focusedInput === fieldId ? 'border-[#62A5FA] bg-white ring-4 ring-[#62A5FA]/10 shadow-sm' : 'border-slate-100'}`}
       >
         <div className={`w-12 h-12 flex items-center justify-center border-r transition-colors ${focusedInput === fieldId ? 'text-[#62A5FA] border-[#62A5FA]/10' : 'text-slate-300 border-slate-100'}`}>
-          <Icon size={16} strokeWidth={2.5} />
+          <Icon size={16} strokeWidth={2.5} aria-hidden="true" />
         </div>
         {children}
       </div>
@@ -124,13 +124,14 @@ const SignUp: React.FC = () => {
       <div className="absolute top-6 right-6 z-50">
           <div className="bg-white/80 backdrop-blur-xl border border-slate-200/50 p-1 rounded-xl shadow-sm flex items-center gap-1">
               <div className="pl-2.5 pr-1.5 text-slate-400">
-                  <Globe size={14} />
+                  <Globe size={14} aria-hidden="true" />
               </div>
               {['pt', 'en', 'es'].map((lang) => (
                   <button
                       key={lang}
                       onClick={() => changeLanguage(lang)}
                       className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${i18n.language === lang ? 'bg-[#081437] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
+                      aria-label={t(`common.language.${lang}`)} // A11y
                   >
                       {lang}
                   </button>
@@ -147,15 +148,15 @@ const SignUp: React.FC = () => {
         
         <div className="relative z-10 flex flex-col justify-between p-12 w-full text-white h-full">
             <div className="space-y-12">
-                <Link to="/login" className="flex items-center gap-2 text-slate-400 hover:text-white transition-all group">
-                    <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-[3px]">VOLTAR AO LOGIN</span>
+                <Link to="/login" className="flex items-center gap-2 text-slate-400 hover:text-white transition-all group" aria-label={t('common.backToLogin')}>
+                    <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
+                    <span className="text-[10px] font-black uppercase tracking-[3px]">{t('login.backToLogin')}</span>
                 </Link>
                 <img src={LOGO_URL} alt="Logo" className="h-10 object-contain drop-shadow-2xl" />
                 <div className="space-y-4">
                     <div className="h-px w-8 bg-[#B23C0E]"></div>
-                    <h1 className="text-3xl font-black leading-tight tracking-tighter">Solicite seu acesso corporativo.</h1>
-                    <p className="text-slate-400 font-medium text-sm">Junte-se à rede de conformidade Aços Vital.</p>
+                    <h1 className="text-3xl font-black leading-tight tracking-tighter">{t('signup.requestAccess')}</h1>
+                    <p className="text-slate-400 font-medium text-sm">{t('signup.joinNetwork')}</p>
                 </div>
             </div>
             <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">&copy; {new Date().getFullYear()} Aços Vital S.A.</div>
@@ -167,89 +168,101 @@ const SignUp: React.FC = () => {
             
             {success ? (
                 <div className="p-16 bg-white rounded-3xl text-center space-y-6">
-                    <div className="w-20 h-20 bg-blue-50 text-[#62A5FA] rounded-full flex items-center justify-center mx-auto shadow-inner"><CheckCircle2 size={40} /></div>
-                    <h2 className="text-3xl font-black text-[#081437] tracking-tighter">Solicitação Enviada!</h2>
-                    <p className="text-slate-500 text-sm font-medium">Seu pedido está sendo validado pela equipe técnica.</p>
+                    <div className="w-20 h-20 bg-blue-50 text-[#62A5FA] rounded-full flex items-center justify-center mx-auto shadow-inner"><CheckCircle2 size={40} aria-hidden="true" /></div>
+                    <h2 className="text-3xl font-black text-[#081437] tracking-tighter">{t('signup.requestSent')}</h2>
+                    <p className="text-slate-500 text-sm font-medium">{t('signup.validationPending')}</p>
                     <div className="flex justify-center pt-4">
-                        <Loader2 size={24} className="animate-spin text-[#62A5FA]" />
+                        <Loader2 size={24} className="animate-spin text-[#62A5FA]" aria-hidden="true" />
                     </div>
                 </div>
             ) : (
                 <div className="space-y-8">
                     <div className="space-y-2">
-                        <h2 className="text-4xl font-black text-[#081437] tracking-tighter">Novo Registro</h2>
-                        <p className="text-slate-400 text-sm font-medium">Preencha os campos abaixo com seus dados profissionais.</p>
+                        <h2 className="text-4xl font-black text-[#081437] tracking-tighter">{t('signup.newRegister')}</h2>
+                        <p className="text-slate-400 text-sm font-medium">{t('signup.fillFields')}</p>
                     </div>
 
                     <form onSubmit={handleSignUp} className="space-y-6">
                         <div className="flex flex-col md:flex-row gap-6">
-                            <InputWrapper label="Nome Completo" icon={UserIcon} fieldId="name">
+                            <InputWrapper label={t('signup.fullName')} icon={UserIcon} fieldId="name">
                                 <input 
+                                    id="name-input"
                                     required className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="João Silva" value={formData.fullName}
                                     onFocus={() => setFocusedInput('name')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, fullName: e.target.value})}
+                                    aria-label={t('signup.fullName')}
                                 />
                             </InputWrapper>
-                            <InputWrapper label="E-mail Corporativo" icon={Mail} fieldId="email">
+                            <InputWrapper label={t('signup.corpEmail')} icon={Mail} fieldId="email">
                                 <input 
+                                    id="email-input"
                                     type="email" required className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="usuario@empresa.com" value={formData.email}
                                     onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, email: e.target.value})}
+                                    aria-label={t('signup.corpEmail')}
                                 />
                             </InputWrapper>
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-6">
-                            <InputWrapper label="Organização" icon={Building2} fieldId="org">
+                            <InputWrapper label={t('signup.organization')} icon={Building2} fieldId="org">
                                 <select 
+                                    id="org-select"
                                     required className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 appearance-none cursor-pointer"
                                     value={formData.organizationId} onFocus={() => setFocusedInput('org')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, organizationId: e.target.value})}
+                                    aria-label={t('signup.organization')}
                                 >
-                                    <option value="">Selecione...</option>
+                                    <option value="">{t('signup.select')}</option>
                                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    <option value="NEW">Minha empresa não está listada</option>
+                                    <option value="NEW">{t('signup.companyNotListed')}</option>
                                 </select>
                             </InputWrapper>
-                            <InputWrapper label="Departamento" icon={Briefcase} fieldId="dept">
+                            <InputWrapper label={t('signup.department')} icon={Briefcase} fieldId="dept">
                                 <input 
+                                    id="dept-input"
                                     className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
-                                    placeholder="Qualidade, TI..." value={formData.department}
+                                    placeholder={t('admin.users.departmentPlaceholder')} value={formData.department}
                                     onFocus={() => setFocusedInput('dept')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, department: e.target.value})}
+                                    aria-label={t('signup.department')}
                                 />
                             </InputWrapper>
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-6">
-                            <InputWrapper label="Senha de Acesso" icon={Lock} fieldId="pass">
+                            <InputWrapper label={t('signup.password')} icon={Lock} fieldId="pass">
                                 <input 
+                                    id="pass-input"
                                     type={showPassword ? "text" : "password"} required
                                     className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="••••••••" value={formData.password}
                                     onFocus={() => setFocusedInput('pass')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, password: e.target.value})}
+                                    aria-label={t('signup.password')}
                                 />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-[#62A5FA] transition-colors">
-                                    {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-[#62A5FA] transition-colors" aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}>
+                                    {showPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
                                 </button>
                             </InputWrapper>
-                            <InputWrapper label="Confirmar Senha" icon={Lock} fieldId="confirm">
+                            <InputWrapper label={t('signup.confirmPassword')} icon={Lock} fieldId="confirm">
                                 <input 
+                                    id="confirm-input"
                                     type={showPassword ? "text" : "password"} required
                                     className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="••••••••" value={formData.confirmPassword}
                                     onFocus={() => setFocusedInput('confirm')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
+                                    aria-label={t('signup.confirmPassword')}
                                 />
                             </InputWrapper>
                         </div>
 
                         {error && (
-                            <div className="p-4 bg-red-50 text-red-600 text-[11px] font-bold rounded-xl border border-red-100 flex items-center gap-3 animate-in slide-in-from-top-2">
-                                <AlertOctagon size={16} className="shrink-0" /> {error}
+                            <div className="p-4 bg-red-50 text-red-600 text-[11px] font-bold rounded-xl border border-red-100 flex items-center gap-3 animate-in slide-in-from-top-2" role="alert">
+                                <AlertOctagon size={16} className="shrink-0" aria-hidden="true" /> {error}
                             </div>
                         )}
 
@@ -257,18 +270,21 @@ const SignUp: React.FC = () => {
                             <button 
                                 type="submit" disabled={isLoading}
                                 className="w-full bg-[#081437] hover:bg-[#0c1d4d] text-white font-black py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-3 h-14 active:scale-[0.98] disabled:opacity-70"
+                                aria-label={t('signup.requestRegister')}
                             >
                                 {isLoading ? (
-                                    <Loader2 size={24} className="animate-spin" />
+                                    <Loader2 size={24} className="animate-spin" aria-hidden="true" />
                                 ) : (
                                     <div className="flex items-center gap-3">
-                                        <span className="uppercase tracking-[4px] text-[11px]">Solicitar Registro</span> 
-                                        <ArrowRight size={18} className="text-[#62A5FA]" />
+                                        <span className="uppercase tracking-[4px] text-[11px]">{t('signup.requestRegister')}</span> 
+                                        <ArrowRight size={18} className="text-[#62A5FA]" aria-hidden="true" />
                                     </div>
                                 )}
                             </button>
                             <p className="text-center text-xs text-slate-400 font-medium">
-                                Já possui uma conta? <Link to="/login" className="text-[#081437] font-black hover:text-[#B23C0E] transition-all uppercase tracking-wider ml-1">Fazer Login</Link>
+                                {t('signup.alreadyHaveAccount')} <Link to="/login" className="text-[#081437] font-black hover:text-[#B23C0E] transition-all uppercase tracking-wider ml-1">
+                                    {t('signup.login')}
+                                </Link>
                             </p>
                         </div>
                     </form>

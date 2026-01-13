@@ -15,6 +15,13 @@ const _fetchUserFavorites = async (userId: string, fileIds: string[]): Promise<S
     return new Set((data || []).map(f => f.file_id));
 };
 
+// Define a type for the data structure expected by Supabase insert for 'files' table,
+// including database-specific fields not always present in the client-side FileNode.
+type FileInsertPayload = Omit<FileNode, 'id' | 'updatedAt' | 'isFavorite'> & {
+    storage_path: string;
+    uploaded_by: string;
+};
+
 export const SupabaseFileService: IFileService = {
     getFiles: async (user: User, folderId: string | null, page = 1, pageSize = 20): Promise<PaginatedResponse<FileNode>> => {
         let query = supabase
@@ -215,7 +222,7 @@ export const SupabaseFileService: IFileService = {
         const { data, error: dbError } = await supabase.from('files').insert({
             parent_id: fileData.parentId || null,
             name: fileData.name,
-            type: FileType.PDF,
+            type: FileType.PDF, // Assumindo PDF para uploads manuais, ajustar se necessário
             size: `${(fileData.fileBlob.size / (1024 * 1024)).toFixed(2)} MB`,
             owner_id: ownerId,
             storage_path: storagePath,
@@ -405,12 +412,81 @@ export const SupabaseFileService: IFileService = {
     },
 
     importFilesFromMaster: async (user: User, fileIds: string[], targetFolderId: string, targetOwnerId: string): Promise<void> => {
-        const { data: masterFiles } = await supabase.from('files').select('*').in('id', fileIds);
-        if (!masterFiles) return;
-        const newFiles = masterFiles.map(mf => ({
-            name: mf.name, type: mf.type, size: mf.size, parent_id: targetFolderId, owner_id: targetOwnerId, storage_path: mf.storage_path,
-            metadata: { ...mf.metadata, status: 'APPROVED', imported_at: new Date().toISOString() }, updated_at: new Date().toISOString()
-        }));
-        await supabase.from('files').insert(newFiles);
+        const { data: masterFiles, error: fetchError } = await supabase
+            .from('files')
+            .select('name, type, size, storage_path, metadata')
+            .in('id', fileIds)
+            .eq('owner_id', MASTER_ORG_ID); // Ensure we only fetch from master
+        
+        if (fetchError) {
+            console.error("Erro ao buscar arquivos mestre:", fetchError.message);
+            throw new Error("Falha ao buscar arquivos da biblioteca mestre.");
+        }
+        if (!masterFiles || masterFiles.length === 0) return;
+
+        // Fix: Use the new FileInsertPayload type
+        const filesToInsert: FileInsertPayload[] = [];
+
+        for (const mf of masterFiles) {
+            if (!mf.storage_path) {
+                console.warn(`Arquivo mestre '${mf.name}' (ID: ${mf.id}) não possui storage_path. Pulando.`);
+                continue;
+            }
+
+            // 1. Download do arquivo original
+            const { data: fileBlob, error: downloadError } = await supabase.storage
+                .from('certificates')
+                .download(mf.storage_path);
+
+            if (downloadError) {
+                console.error(`Erro ao baixar arquivo '${mf.name}':`, downloadError.message);
+                throw new Error(`Falha ao baixar o arquivo mestre '${mf.name}'.`);
+            }
+            if (!fileBlob) {
+                console.warn(`Arquivo mestre '${mf.name}' baixado, mas conteúdo vazio. Pulando.`);
+                continue;
+            }
+
+            // 2. Upload para o novo caminho do cliente
+            const newStoragePath = `${targetOwnerId}/${mf.name}`;
+            const { error: uploadError } = await supabase.storage
+                .from('certificates')
+                .upload(newStoragePath, fileBlob, { cacheControl: '3600', upsert: true });
+
+            if (uploadError) {
+                console.error(`Erro ao fazer upload da cópia de '${mf.name}' para o cliente '${targetOwnerId}':`, uploadError.message);
+                throw new Error(`Falha ao fazer upload da cópia do arquivo '${mf.name}'.`);
+            }
+
+            // 3. Preparar dados para inserção no banco de dados
+            filesToInsert.push({
+                name: mf.name,
+                type: mf.type as FileType,
+                size: mf.size,
+                parentId: targetFolderId,
+                ownerId: targetOwnerId,
+                storage_path: newStoragePath, // This is now allowed by FileInsertPayload
+                uploaded_by: user.id, // This is now allowed by FileInsertPayload
+                metadata: { 
+                    ...mf.metadata, 
+                    status: 'PENDING', // Arquivos importados são PENDING para análise do Quality
+                    imported_at: new Date().toISOString() 
+                },
+            });
+        }
+        
+        // 4. Inserir os novos registros de arquivo no banco de dados
+        if (filesToInsert.length > 0) {
+            const { error: dbInsertError } = await supabase.from('files').insert(
+                filesToInsert.map(f => ({
+                    ...f, // Spreads all properties from FileInsertPayload, including storage_path and uploaded_by
+                    updated_at: new Date().toISOString(), // Add updated_at
+                }))
+            );
+            if (dbInsertError) {
+                console.error("Erro ao inserir cópias de arquivos no DB:", dbInsertError.message);
+                throw new Error("Falha ao registrar as cópias dos arquivos no banco de dados.");
+            }
+        }
     }
 };

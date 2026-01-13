@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Building2, Clock, Inbox, Database, ArrowUpRight, ChevronRight, Activity, ShieldAlert, AlertTriangle } from 'lucide-react';
 
@@ -6,11 +7,11 @@ interface QualityOverviewCardsProps {
     totalClients: number;
     totalPendingDocs: number;
     totalOpenTickets: number;
-    totalInbox: number;
+    // totalInbox: number; // REMOVIDO: Prop redundante
     onChangeView: (view: any) => void;
 }
 
-export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ totalClients, totalPendingDocs, totalOpenTickets, totalInbox, onChangeView }) => {
+export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ totalClients, totalPendingDocs, totalOpenTickets, onChangeView }) => {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -35,7 +36,7 @@ export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ tota
                 <div onClick={() => onChangeView('tickets')} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform"><Inbox size={24}/></div>
-                        <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">{totalInbox} Total</span>
+                        <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">{totalOpenTickets} Total</span>
                     </div>
                     <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Chamados Abertos</p>
                     <p className="text-3xl font-bold text-slate-800 mt-1">{totalOpenTickets}</p>

@@ -23,6 +23,24 @@ export interface AdminStatsData {
   dbMaxConnections: number;
 }
 
+// NOVO: Interface para as estatísticas do Dashboard do Cliente
+export interface DashboardStatsData {
+  mainValue: number;
+  subValue: number;
+  pendingValue: number;
+  status: 'REGULAR' | 'PENDING';
+  mainLabel: string;
+  subLabel: string;
+  activeClients?: number;
+}
+
+// NOVO: Interface para as estatísticas da Visão Geral da Qualidade
+export interface QualityOverviewStats {
+  pendingDocs: number;
+  openQualityTickets: number;
+  totalActiveClients: number;
+}
+
 export interface IUserService {
   authenticate: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string, fullName: string, organizationId?: string, department?: string) => Promise<void>;
@@ -45,7 +63,7 @@ export interface IFileService {
   importFilesFromMaster: (user: User, fileIds: string[], targetFolderId: string, targetOwnerId: string) => Promise<void>;
   getRecentFiles: (user: User, limit?: number) => Promise<FileNode[]>;
   getLibraryFiles: (user: User, filters: LibraryFilters, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
-  getDashboardStats: (user: User) => Promise<any>;
+  getDashboardStats: (user: User) => Promise<DashboardStatsData>; // Atualizado para usar a nova interface
   createFolder: (user: User, parentId: string | null, name: string, ownerId?: string) => Promise<FileNode | null>;
   uploadFile: (user: User, fileData: Partial<FileNode>, ownerId: string) => Promise<FileNode>;
   updateFile: (user: User, fileId: string, updates: Partial<FileNode>) => Promise<void>;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { fileService, adminService, userService } from '../lib/services/index.ts';
@@ -7,6 +6,7 @@ import { AdminStatsData } from '../lib/services/interfaces.ts';
 import { useAuth } from '../context/authContext.tsx';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../context/notificationContext.tsx'; // Importado
 import { 
   Building2, Search, UserPlus, X, Edit2, Trash2, Mail, ExternalLink, MessageSquare, Clock, CheckCircle2, AlertCircle, Loader2, Settings, ShieldCheck, Database, Server, RefreshCw
 } from 'lucide-react';
@@ -22,6 +22,7 @@ const Admin: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as any) || 'overview';
+  const { showToast } = useToast(); // Hook useToast
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [ports, setPorts] = useState<NetworkPort[]>([]);
@@ -84,6 +85,7 @@ const Admin: React.FC = () => {
           }
       } catch (err) {
           console.error("Erro ao carregar dados administrativos:", err);
+          showToast("Erro ao carregar dados administrativos.", 'error');
       } finally { setIsLoading(false); }
   };
 
@@ -119,6 +121,7 @@ const Admin: React.FC = () => {
       try {
           if (!editingUser) {
               await userService.signUp(formData.email, formData.password, formData.name, formData.clientId || undefined, formData.department);
+              showToast("Usuário criado com sucesso!", 'success');
           } else {
               const userPayload: User = { 
                   id: editingUser.id, name: formData.name, email: formData.email, role: formData.role as UserRole, 
@@ -126,11 +129,13 @@ const Admin: React.FC = () => {
                   status: formData.status as any, department: formData.department, lastLogin: editingUser?.lastLogin || 'Nunca' 
               };
               await userService.saveUser(userPayload);
+              showToast("Usuário atualizado com sucesso!", 'success');
           }
           setIsUserModalOpen(false); setEditingUser(null); setSearchTerm('');
-          setTimeout(() => { loadData(); setIsSaving(false); }, 800);
+          loadData(); // Recarrega os dados imediatamente
+          setIsSaving(false);
       } catch (err: any) {
-          alert(`Erro ao salvar usuário: ${err.message}`);
+          showToast(`Erro ao salvar usuário: ${err.message}`, 'error');
           setIsSaving(false);
       }
   };
@@ -143,10 +148,12 @@ const Admin: React.FC = () => {
             id: editingClient?.id, name: clientFormData.name, cnpj: clientFormData.cnpj, contractDate: clientFormData.contractDate, status: clientFormData.status as any 
         };
         await adminService.saveClient(user, clientPayload);
+        showToast("Empresa salva com sucesso!", 'success');
         setIsClientModalOpen(false); setEditingClient(null); 
-        setTimeout(() => { loadData(); setIsSaving(false); }, 500);
+        loadData(); // Recarrega os dados imediatamente
+        setIsSaving(false);
       } catch (err: any) {
-        alert(`Erro ao salvar empresa: ${err.message}`);
+        showToast(`Erro ao salvar empresa: ${err.message}`, 'error');
         setIsSaving(false);
       }
   };
@@ -180,9 +187,9 @@ const Admin: React.FC = () => {
       try {
           await adminService.updateSystemStatus(user, { mode });
           setSystemStatus(prev => ({ ...prev, mode }));
-          alert(`Sistema agora em modo: ${mode}`);
+          showToast(`Sistema agora em modo: ${mode === 'ONLINE' ? 'Online' : 'Manutenção'}`, 'success');
       } catch (err) {
-          alert("Falha ao atualizar status do sistema.");
+          showToast("Falha ao atualizar status do sistema.", 'error');
       } finally {
           setIsSaving(false);
       }

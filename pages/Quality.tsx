@@ -1,20 +1,25 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
-import { FileExplorer, FileExplorerHandle } from '../components/features/files/FileExplorer.tsx';
-import { FilePreviewModal } from '../components/features/files/FilePreviewModal.tsx';
+import { fileService, adminService, notificationService } from '../lib/services/index.ts';
 import { MASTER_ORG_ID, FileNode, ClientOrganization, FileType, SupportTicket, FileMetadata, BreadcrumbItem, UserRole } from '../types.ts';
 import { useAuth } from '../context/authContext.tsx';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { useToast } from '../context/notificationContext.tsx'; // Importado
 import { 
     X, FileUp, ArrowLeft, Download, ShieldAlert, Loader2, CheckCircle, XCircle, AlertTriangle, Info, Tag, FileText, ChevronRight, MessageSquare, Database, Search
 } from 'lucide-react';
-import { fileService, adminService, notificationService } from '../lib/services/index.ts';
 
+// Sub-components
 import { QualityOverviewCards } from '../components/features/quality/QualityOverviewCards.tsx';
 import { ClientHub } from '../components/features/client/ClientHub.tsx';
 import { QualityServiceDesk } from '../components/features/quality/QualityServiceDesk.tsx'; // NOVO: Importa o Service Desk
+// Fix: Import FileExplorer and its handle type
+import { FileExplorer, FileExplorerHandle } from '../components/features/files/FileExplorer.tsx';
+// Fix: Import FilePreviewModal
+import { FilePreviewModal } from '../components/features/files/FilePreviewModal.tsx';
+import { QualityOverviewStats } from '../lib/services/interfaces.ts'; // Importado
 
 const CLIENTS_PER_PAGE = 24;
 
@@ -23,6 +28,7 @@ const Quality: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView = (searchParams.get('view') as any) || 'overview';
+  const { showToast } = useToast(); // Hook useToast
   
   // Clientes State
   const [clients, setClients] = useState<ClientOrganization[]>([]);
@@ -34,7 +40,8 @@ const Quality: React.FC = () => {
 
   const [selectedClient, setSelectedClient] = useState<ClientOrganization | null>(null);
   // const [inboxTickets, setInboxTickets] = useState<SupportTicket[]>([]); // Removido: Gerenciado pelo QualityServiceDesk
-  const [stats, setStats] = useState<{ pendingDocs: number; openQualityTickets: number; totalActiveClients: number }>({ pendingDocs: 0, openQualityTickets: 0, totalActiveClients: 0 }); // Adicionado totalActiveClients
+  // Atualizado para usar QualityOverviewStats
+  const [stats, setStats] = useState<QualityOverviewStats>({ pendingDocs: 0, openQualityTickets: 0, totalActiveClients: 0 }); // Adicionado totalActiveClients
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -79,12 +86,15 @@ const Quality: React.FC = () => {
                       adminService.getClients({status: 'ACTIVE'}, 1, 1) // Busca apenas a contagem total de clientes ativos
                   ]);
                   setStats({ 
+                      // Mapeia os campos relevantes de globalStats para QualityOverviewStats
                       pendingDocs: globalStats.pendingValue || 0,
+                      // Calcula openQualityTickets com base nos tickets não resolvidos
                       openQualityTickets: qualityInbox.filter(t => t.status !== 'RESOLVED').length,
                       totalActiveClients: activeClientsRes.total || 0 // Armazena a contagem total de clientes ativos
                   });
               } catch (err) {
                   console.error("Erro ao carregar dados de qualidade:", err);
+                  showToast("Erro ao carregar dados de qualidade.", 'error');
               } finally {
                   setIsLoading(false);
               }
@@ -108,6 +118,7 @@ const Quality: React.FC = () => {
               setClientsPage(1);
           } catch (err: any) {
               console.error("[Quality.tsx] Erro ao carregar clientes na primeira vez:", err.message);
+              showToast(`Erro ao carregar clientes: ${err.message}`, 'error');
               setClients([]); // Clear clients on error
               setTotalClientsCount(0);
               setHasMoreClients(false);
@@ -133,6 +144,7 @@ const Quality: React.FC = () => {
           setClientsPage(nextPage);
       } catch (err: any) {
           console.error("[Quality.tsx] Erro ao carregar mais clientes:", err.message);
+          showToast(`Erro ao carregar mais clientes: ${err.message}`, 'error');
           setHasMoreClients(false); // Stop trying to load more if there's an error
       } finally {
           setIsLoadingMore(false);
@@ -151,7 +163,7 @@ const Quality: React.FC = () => {
   const handleInspectAction = async (action: 'APPROVE' | 'REJECT') => {
       if (!inspectorFile || !user) return;
       if (action === 'REJECT' && !rejectionReason.trim()) {
-          alert("Por favor, informe o motivo da rejeição.");
+          showToast("Por favor, informe o motivo da rejeição.", 'warning');
           return;
       }
       
@@ -176,13 +188,14 @@ const Quality: React.FC = () => {
                   '/dashboard?view=files'
               );
           }
+          showToast(`Documento ${inspectorFile.name} ${action === 'APPROVE' ? 'aprovado' : 'recusado'} com sucesso!`, 'success');
 
           setInspectorFile({ ...inspectorFile, metadata: updatedMetadata });
           setRejectionReason('');
           setIsRejecting(false);
           setRefreshTrigger(prev => prev + 1);
       } catch (err) {
-          alert("Erro ao processar inspeção.");
+          showToast("Erro ao processar inspeção.", 'error');
       } finally {
           setIsProcessing(false);
       }
@@ -201,12 +214,13 @@ const Quality: React.FC = () => {
               fileBlob: selectedFileBlob
           } as any, selectedClient.id);
 
+          showToast("Arquivo enviado com sucesso!", 'success');
           setIsUploadModalOpen(false);
           setSelectedFileBlob(null);
           setUploadData({ status: 'PENDING', productName: '', batchNumber: '', invoiceNumber: '' });
           setRefreshTrigger(prev => prev + 1);
       } catch (err) {
-          alert("Erro no upload do arquivo.");
+          showToast("Erro no upload do arquivo.", 'error');
       } finally {
           setIsProcessing(false);
       }
@@ -273,7 +287,7 @@ const Quality: React.FC = () => {
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 uppercase">Nota Fiscal vinculada</label>
                             <input 
-                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" 
                                 placeholder="NF-000123"
                                 value={uploadData.invoiceNumber}
                                 onChange={e => setUploadData({...uploadData, invoiceNumber: e.target.value})}
@@ -329,6 +343,7 @@ const Quality: React.FC = () => {
                     
                     <div className="flex-1 flex gap-4 overflow-hidden">
                         <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                             {/* Fix: Use FileExplorer component */}
                              <FileExplorer 
                                 ref={fileExplorerRef} 
                                 currentFolderId={currentFolderId} 
@@ -467,8 +482,8 @@ const Quality: React.FC = () => {
                         <QualityOverviewCards 
                             totalClients={stats.totalActiveClients} 
                             totalPendingDocs={stats.pendingDocs} 
-                            totalOpenTickets={stats.openQualityTickets} // Utiliza a contagem do estado
-                            totalInbox={stats.openQualityTickets} // Utiliza a contagem do estado
+                            totalOpenTickets={stats.openQualityTickets} 
+                            // totalInbox={stats.openQualityTickets} // REMOVIDO: Prop redundante
                             onChangeView={(v) => setSearchParams({view: v})} 
                         />
                     )}
@@ -501,6 +516,7 @@ const Quality: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex-1 overflow-hidden">
+                                {/* Fix: Use FileExplorer component */}
                                 <FileExplorer 
                                     initialFolderId={null} 
                                     currentFolderId={currentFolderId} 

@@ -35,7 +35,7 @@ export const SupabaseAdminService: IAdminService = {
         if (error) throw error;
         return {
             mode: data.mode,
-            message: data.message,
+            message: newStatus.message,
             scheduledStart: newStatus.scheduledStart,
             scheduledEnd: newStatus.scheduledEnd
         } as SystemStatus;
@@ -92,10 +92,11 @@ export const SupabaseAdminService: IAdminService = {
 
     getClients: async (filters, page = 1, pageSize = 20): Promise<PaginatedResponse<ClientOrganization>> => {
         console.log(`[SupabaseAdminService] getClients called with filters: ${JSON.stringify(filters)}, page: ${page}, pageSize: ${pageSize}`);
+        
         let query = supabase
             .from('organizations')
-            .select('*, pending_docs, compliance_score', { count: 'exact' }); // Adicionado pending_docs e compliance_score
-        
+            .select('*', { count: 'exact' });
+
         if (filters?.search) {
             query = query.or(`name.ilike.%${filters.search}%,cnpj.ilike.%${filters.search}%`);
         }
@@ -107,30 +108,81 @@ export const SupabaseAdminService: IAdminService = {
         const from = (page - 1) * pageSize;
         const to = from + pageSize - 1;
 
-        const { data, count, error } = await query
+        const { data: orgsData, count, error } = await query
             .range(from, to)
             .order('name');
         
         if (error) {
             console.error("[SupabaseAdminService] Erro ao carregar organizações:", error.message);
-            // Throwing the error here will be caught by the calling component
             throw new Error(`Falha ao carregar organizações: ${error.message}`);
         }
 
-        console.log(`[SupabaseAdminService] Fetched ${count} clients. Data:`, data);
-
-        const items = (data || []).map(c => ({
+        const itemsWithoutStats = (orgsData || []).map(c => ({
             id: c.id,
             name: c.name || 'Empresa sem Nome',
             cnpj: c.cnpj || '00.000.000/0000-00',
             status: (c.status || 'ACTIVE') as any,
             contractDate: c.contract_date || new Date().toISOString().split('T')[0],
-            pendingDocs: c.pending_docs, // Mapeado
-            complianceScore: c.compliance_score // Mapeado
         }));
 
+        const clientIds = itemsWithoutStats.map(c => c.id);
+
+        let filesStats: { [clientId: string]: { totalDocs: number; pendingDocs: number; approvedDocs: number; lastAnalysisDate?: string } } = {};
+
+        if (clientIds.length > 0) {
+            const { data: filesData, error: filesError } = await supabase
+                .from('files')
+                .select('owner_id, metadata->>status, metadata->>inspectedAt')
+                .in('owner_id', clientIds)
+                .neq('type', 'FOLDER'); // Only count actual documents, not folders
+
+            if (filesError) {
+                console.error("[SupabaseAdminService] Erro ao carregar estatísticas de arquivos:", filesError.message);
+                // Continue with partial data if file stats fail
+            } else {
+                filesStats = (filesData || []).reduce((acc, file) => {
+                    const ownerId = file.owner_id;
+                    if (!acc[ownerId]) {
+                        acc[ownerId] = { totalDocs: 0, pendingDocs: 0, approvedDocs: 0 };
+                    }
+                    acc[ownerId].totalDocs++;
+                    if (file.metadata?.status === 'PENDING') {
+                        acc[ownerId].pendingDocs++;
+                    } else if (file.metadata?.status === 'APPROVED') {
+                        acc[ownerId].approvedDocs++;
+                    }
+
+                    // Calculate last analysis date
+                    const inspectedAt = file.metadata?.inspectedAt;
+                    if (inspectedAt) {
+                        const currentLast = acc[ownerId].lastAnalysisDate;
+                        if (!currentLast || new Date(inspectedAt) > new Date(currentLast)) {
+                            acc[ownerId].lastAnalysisDate = inspectedAt;
+                        }
+                    }
+                    return acc;
+                }, {});
+            }
+        }
+
+        const itemsWithStats = itemsWithoutStats.map(c => {
+            const stats = filesStats[c.id] || { totalDocs: 0, pendingDocs: 0, approvedDocs: 0 };
+            const complianceScore = stats.totalDocs === 0 
+                ? 100 // If no documents, assume 100% compliance
+                : Math.round((stats.approvedDocs / stats.totalDocs) * 100);
+
+            return {
+                ...c,
+                pendingDocs: stats.pendingDocs,
+                complianceScore,
+                lastAnalysisDate: stats.lastAnalysisDate // Adiciona a data da última análise
+            };
+        });
+
+        console.log(`[SupabaseAdminService] Fetched ${count} clients. Data:`, itemsWithStats);
+
         return {
-            items,
+            items: itemsWithStats,
             total: count || 0,
             hasMore: (count || 0) > to + 1
         };
@@ -144,8 +196,7 @@ export const SupabaseAdminService: IAdminService = {
             cnpj: data.cnpj,
             status: data.status,
             contract_date: data.contractDate,
-            pending_docs: data.pendingDocs, // Incluído
-            compliance_score: data.complianceScore // Incluído
+            // pending_docs e compliance_score removidos daqui também
         };
 
         let query;
@@ -164,8 +215,10 @@ export const SupabaseAdminService: IAdminService = {
             cnpj: client.cnpj,
             status: client.status as any,
             contractDate: client.contract_date,
-            pendingDocs: client.pending_docs,
-            complianceScore: client.compliance_score
+            // Valores default ou null para campos não selecionados/salvos
+            pendingDocs: 0, // Definido como 0 por padrão para novos/atualizados
+            complianceScore: 100, // Definido como 100 por padrão
+            lastAnalysisDate: undefined // Definido como undefined por padrão
         };
     },
 
@@ -211,8 +264,8 @@ export const SupabaseAdminService: IAdminService = {
             .eq('user_id', user.id);
         
         if (filters?.status && filters.status !== 'ALL') {
-            // Use eq for enum columns
-            query = query.eq('status', filters.status);
+            // Usa toUpperCase() para garantir que a comparação do enum seja case-sensitive com o DB
+            query = query.eq('status', filters.status.toUpperCase());
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -257,8 +310,8 @@ export const SupabaseAdminService: IAdminService = {
         }
 
         if (filters?.status && filters.status !== 'ALL') {
-            // Use eq for enum columns
-            query = query.eq('status', filters.status);
+            // Usa toUpperCase() para garantir que a comparação do enum seja case-sensitive com o DB
+            query = query.eq('status', filters.status.toUpperCase());
         }
 
         const { data, error } = await query;
@@ -309,7 +362,7 @@ export const SupabaseAdminService: IAdminService = {
             subject: data.subject,
             description: data.description,
             priority: data.priority,
-            status: 'OPEN',
+            status: 'OPEN', // Alterado para CAIXA ALTA
             flow
         }).select().single();
         
@@ -339,7 +392,7 @@ export const SupabaseAdminService: IAdminService = {
         const { error } = await supabase
             .from('tickets')
             .update({ 
-                status, 
+                status: status.toUpperCase(), // Converte para CAIXA ALTA
                 resolution_note: note, 
                 updated_at: new Date().toISOString() 
             })
@@ -364,7 +417,7 @@ export const SupabaseAdminService: IAdminService = {
         const { error } = await supabase
             .from('tickets')
             .update({ 
-                status, 
+                status: status.toUpperCase(), // Converte para CAIXA ALTA
                 resolution_note: resolutionNote, // Optional resolution note
                 updated_at: new Date().toISOString() 
             })
@@ -390,7 +443,7 @@ export const SupabaseAdminService: IAdminService = {
             .from('tickets')
             .update({
                 flow: 'QUALITY_TO_ADMIN',
-                status: 'OPEN', // Reset status to open for admin review
+                status: 'OPEN', // Alterado para CAIXA ALTA
                 updated_at: new Date().toISOString(),
                 resolution_note: note || 'Escalado para administração.'
             })

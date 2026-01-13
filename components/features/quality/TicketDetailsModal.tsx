@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SupportTicket, UserRole } from '../../../types.ts';
 import { adminService } from '../../../lib/services/index.ts';
 import { useAuth } from '../../../context/authContext.tsx';
+import { useToast } from '../../../context/notificationContext.tsx'; // Importado
 
 interface TicketDetailsModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface TicketDetailsModalProps {
 export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, onClose, ticket, onTicketUpdated }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showToast } = useToast(); // Hook useToast
   
   const [currentStatus, setCurrentStatus] = useState<SupportTicket['status']>(ticket?.status || 'OPEN');
   const [resolutionNote, setResolutionNote] = useState(ticket?.resolutionNote || '');
@@ -34,7 +36,7 @@ export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, 
   const handleUpdateStatus = async (status: SupportTicket['status']) => {
     if (!user) return;
     if (status === 'RESOLVED' && !resolutionNote.trim()) {
-      alert("É necessário adicionar uma nota de resolução para fechar o chamado.");
+      showToast("É necessário adicionar uma nota de resolução para fechar o chamado.", 'warning');
       return;
     }
 
@@ -44,8 +46,9 @@ export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, 
       await adminService.updateTicketStatus(user, ticket.id, status, resolutionNote);
       onTicketUpdated(); // Notifica o componente pai
       onClose();
+      showToast("Status do chamado atualizado com sucesso!", 'success');
     } catch (err: any) {
-      alert(`Erro ao atualizar status: ${err.message}`);
+      showToast(`Erro ao atualizar status: ${err.message}`, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -54,7 +57,7 @@ export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, 
   const handleEscalate = async () => {
     if (!user) return;
     if (!escalationReason.trim()) {
-        alert("Por favor, forneça um motivo para o escalonamento.");
+        showToast("Por favor, forneça um motivo para o escalonamento.", 'warning');
         return;
     }
 
@@ -64,8 +67,9 @@ export const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ isOpen, 
         await adminService.escalateTicketToAdmin(user, ticket.id, escalationReason);
         onTicketUpdated(); // Notifica o componente pai
         onClose();
+        showToast("Chamado escalado para administração com sucesso!", 'success');
     } catch (err: any) {
-        alert(`Erro ao escalar chamado: ${err.message}`);
+        showToast(`Erro ao escalar chamado: ${err.message}`, 'error');
     } finally {
         setIsProcessing(false);
     }

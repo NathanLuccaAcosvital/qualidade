@@ -59,10 +59,10 @@ const Login: React.FC = () => {
     try {
         const result = await login(email, password);
         if (!result.success) {
-          setError(result.error || 'Acesso negado.');
+          setError(result.error || t('login.connectionError'));
         }
     } catch (e: any) {
-        setError('Erro de conexão com o servidor.');
+        setError(t('login.connectionError'));
     }
   };
 
@@ -74,7 +74,7 @@ const Login: React.FC = () => {
       <div className="absolute top-6 right-6 z-[110] animate-in fade-in slide-in-from-top-4 duration-1000">
           <div className="bg-white/60 backdrop-blur-xl border border-slate-200/50 p-1 rounded-xl shadow-sm flex items-center gap-1">
               <div className="pl-2.5 pr-1.5 text-slate-400">
-                  <Globe size={14} />
+                  <Globe size={14} aria-hidden="true" />
               </div>
               {['pt', 'en', 'es'].map((lang) => (
                   <button
@@ -86,6 +86,7 @@ const Login: React.FC = () => {
                               ? 'bg-[#081437] text-white shadow-sm' 
                               : 'text-slate-500 hover:bg-slate-100 hover:text-[#081437]'}
                       `}
+                      aria-label={t(`common.language.${lang}`)} // A11y
                   >
                       {lang}
                   </button>
@@ -123,15 +124,15 @@ const Login: React.FC = () => {
                 </div>
                 
                 <p className="text-lg text-slate-300/90 font-medium leading-relaxed max-w-md">
-                    Repositório central de documentos técnicos e certificados. Precisão industrial em cada dado.
+                    {t('login.sloganText')}
                 </p>
                 
                 <div className="flex flex-wrap gap-4 pt-4">
                      <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-white bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 shadow-xl">
-                        <CheckCircle2 size={16} className="text-[#B23C0E]" /> Certificação ISO 9001
+                        <CheckCircle2 size={16} className="text-[#B23C0E]" aria-hidden="true" /> {t('files.certification')}
                      </div>
                      <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-white bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 shadow-xl">
-                        <ShieldCheck size={16} className="text-[#B23C0E]" /> Dados Seguros
+                        <ShieldCheck size={16} className="text-[#B23C0E]" aria-hidden="true" /> {t('files.secureData')}
                      </div>
                 </div>
             </div>
@@ -139,9 +140,11 @@ const Login: React.FC = () => {
             <div className="text-[10px] text-slate-400 font-bold flex items-center gap-10 uppercase tracking-[4px]">
                 <div className="flex items-center gap-2.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Sistemas Monitorados
+                    {t('menu.systemMonitoring')}
                 </div>
-                <button onClick={() => setIsPrivacyOpen(true)} className="hover:text-white transition-colors">Privacidade</button>
+                <button onClick={() => setIsPrivacyOpen(true)} className="hover:text-white transition-colors">
+                    {t('common.privacy')}
+                </button>
                 <span className="opacity-40">&copy; {new Date().getFullYear()} Aços Vital S.A.</span>
             </div>
         </div>
@@ -152,24 +155,25 @@ const Login: React.FC = () => {
         <div className="w-full max-w-[420px] space-y-10 animate-in fade-in slide-in-from-right-6 duration-1000">
             
             <div className="space-y-3">
-                <h2 className="text-4xl font-black text-[#081437] tracking-tighter">Portal da Qualidade</h2>
-                <p className="text-slate-400 text-sm font-medium">Acesse a rede de conformidade Aços Vital.</p>
+                <h2 className="text-4xl font-black text-[#081437] tracking-tighter">{t('menu.portalName')}</h2>
+                <p className="text-slate-400 text-sm font-medium">{t('login.enterCredentials')}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Campo E-mail Premium */}
                 <div className="space-y-2 group">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] ml-1 transition-colors group-focus-within:text-[#62A5FA]">
-                        E-mail Corporativo
+                    <label htmlFor="email-input" className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] ml-1 transition-colors group-focus-within:text-[#62A5FA]">
+                        {t('login.corpEmail')}
                     </label>
                     <div 
                         className={`flex items-center bg-slate-50 border-[1.5px] rounded-2xl overflow-hidden transition-all duration-300
                         ${focusedInput === 'email' ? 'border-[#62A5FA] bg-white ring-4 ring-[#62A5FA]/10 shadow-sm' : 'border-slate-100'}`}
                     >
                         <div className={`w-12 h-14 flex items-center justify-center border-r transition-colors ${focusedInput === 'email' ? 'text-[#62A5FA] border-[#62A5FA]/10' : 'text-slate-300 border-slate-100'}`}>
-                            <Mail size={18} strokeWidth={2.5} />
+                            <Mail size={18} strokeWidth={2.5} aria-hidden="true" />
                         </div>
                         <input 
+                            id="email-input"
                             type="email" 
                             required
                             className="flex-1 px-5 py-4 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-300 font-normal"
@@ -178,6 +182,7 @@ const Login: React.FC = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             onFocus={() => setFocusedInput('email')}
                             onBlur={() => setFocusedInput(null)}
+                            aria-label={t('login.corpEmail')}
                         />
                     </div>
                 </div>
@@ -185,19 +190,22 @@ const Login: React.FC = () => {
                 {/* Campo Senha Premium */}
                 <div className="space-y-2 group">
                     <div className="flex justify-between items-end px-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] transition-colors group-focus-within:text-[#62A5FA]">
-                            Senha de Acesso
+                        <label htmlFor="password-input" className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] transition-colors group-focus-within:text-[#62A5FA]">
+                            {t('login.accessPassword')}
                         </label>
-                        <a href="#" className="text-[10px] font-bold text-[#B23C0E] hover:underline underline-offset-4 tracking-wider">ESQUECEU?</a>
+                        <a href="#" className="text-[10px] font-bold text-[#B23C0E] hover:underline underline-offset-4 tracking-wider">
+                            {t('login.forgotPassword')}
+                        </a>
                     </div>
                     <div 
                         className={`flex items-center bg-slate-50 border-[1.5px] rounded-2xl overflow-hidden transition-all duration-300
                         ${focusedInput === 'password' ? 'border-[#62A5FA] bg-white ring-4 ring-[#62A5FA]/10 shadow-sm' : 'border-slate-100'}`}
                     >
                         <div className={`w-12 h-14 flex items-center justify-center border-r transition-colors ${focusedInput === 'password' ? 'text-[#62A5FA] border-[#62A5FA]/10' : 'text-slate-300 border-slate-100'}`}>
-                            <Lock size={18} strokeWidth={2.5} />
+                            <Lock size={18} strokeWidth={2.5} aria-hidden="true" />
                         </div>
                         <input 
+                            id="password-input"
                             type={showPassword ? "text" : "password"}
                             required
                             className="flex-1 px-5 py-4 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-300 font-normal"
@@ -206,20 +214,22 @@ const Login: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             onFocus={() => setFocusedInput('password')}
                             onBlur={() => setFocusedInput(null)}
+                            aria-label={t('login.accessPassword')}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
                             className="w-12 h-14 flex items-center justify-center text-slate-300 hover:text-[#62A5FA] transition-colors"
+                            aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')} // A11y
                         >
-                            {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                            {showPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
                         </button>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="p-4 bg-red-50 text-red-600 text-[11px] font-bold rounded-xl border border-red-100 flex items-center gap-3 animate-in slide-in-from-top-2">
-                        <AlertOctagon size={16} className="shrink-0" />
+                    <div className="p-4 bg-red-50 text-red-600 text-[11px] font-bold rounded-xl border border-red-100 flex items-center gap-3 animate-in slide-in-from-top-2" role="alert">
+                        <AlertOctagon size={16} className="shrink-0" aria-hidden="true" />
                         {error}
                     </div>
                 )}
@@ -229,13 +239,14 @@ const Login: React.FC = () => {
                         type="submit" 
                         disabled={isLoading}
                         className="w-full bg-[#081437] hover:bg-[#0c1d4d] text-white font-black py-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-lg active:scale-[0.98] disabled:opacity-70"
+                        aria-label={t('login.authenticateAccess')}
                     >
                         {isLoading ? (
-                            <Loader2 size={20} className="animate-spin" />
+                            <Loader2 size={20} className="animate-spin" aria-hidden="true" />
                         ) : (
                             <div className="flex items-center gap-3">
-                                <span className="tracking-[4px] uppercase text-[11px]">Autenticar Acesso</span>
-                                <ArrowRight size={18} className="text-[#62A5FA]" />
+                                <span className="tracking-[4px] uppercase text-[11px]">{t('login.authenticateAccess')}</span>
+                                <ArrowRight size={18} className="text-[#62A5FA]" aria-hidden="true" />
                             </div>
                         )}
                     </button>
@@ -244,7 +255,9 @@ const Login: React.FC = () => {
 
             <div className="text-center pt-8 border-t border-slate-50">
                 <p className="text-[12px] text-slate-400 font-medium">
-                  Novo por aqui? <Link to="/signup" className="text-[#081437] font-black hover:text-[#B23C0E] transition-colors ml-1 uppercase tracking-wider">Solicitar Registro</Link>
+                  {t('login.newUser')} <Link to="/signup" className="text-[#081437] font-black hover:text-[#B23C0E] transition-colors ml-1 uppercase tracking-wider">
+                      {t('login.requestRegister')}
+                  </Link>
                 </p>
             </div>
         </div>

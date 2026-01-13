@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../context/authContext.tsx';
 // Fix: Import from services/index.ts to use the correctly typed and initialized service instances
 import { userService } from '../../../lib/services/index.ts';
+import { useToast } from '../../../context/notificationContext.tsx'; // Importado
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface ChangePasswordModalProps {
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showToast } = useToast(); // Hook useToast
   
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -33,7 +35,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
       setLoading(true);
       try {
           await userService.changePassword(user.id, currentPassword, newPassword);
-          alert(t('changePassword.success'));
+          showToast(t('changePassword.success'), 'success');
           onClose();
           // Reset form
           setCurrentPassword('');
@@ -41,6 +43,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
           setConfirmPassword('');
       } catch (err: any) {
           setError(err.message || 'Erro ao alterar senha.');
+          showToast(err.message || 'Erro ao alterar senha.', 'error');
       } finally {
           setLoading(false);
       }

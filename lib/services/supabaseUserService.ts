@@ -6,8 +6,10 @@ export const SupabaseUserService: IUserService = {
     authenticate: async (email, password): Promise<boolean> => {
         console.log("Iniciando autenticação para:", email);
         
-        // Passo 1: Limpeza preventiva de sessões zumbis
-        await supabase.auth.signOut();
+        // Remoção da limpeza preventiva de sessões zumbis.
+        // O método signInWithPassword do Supabase é projetado para lidar com sessões existentes,
+        // substituindo-as automaticamente por uma nova sessão válida, tornando o signOut() prévio redundante
+        // e otimizando o número de requisições de rede.
 
         // Passo 2: Login no Auth
         const { data, error } = await supabase.auth.signInWithPassword({ 

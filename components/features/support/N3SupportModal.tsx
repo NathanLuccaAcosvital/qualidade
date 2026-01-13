@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { X, Briefcase, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 // Fix: Import from services/index.ts to use the correctly typed and initialized service instances
 import { adminService } from '../../../lib/services/index.ts';
 import { User } from '../../../types.ts';
+import { useToast } from '../../../context/notificationContext.tsx'; // Importado
 
 interface N3SupportModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface N3SupportModalProps {
 
 export const N3SupportModal: React.FC<N3SupportModalProps> = ({ isOpen, onClose, user }) => {
   const { t } = useTranslation();
+  const { showToast } = useToast(); // Hook useToast
   const [n3Data, setN3Data] = useState({ 
       component: 'INFRA_UP', 
       description: '', 
@@ -26,17 +27,21 @@ export const N3SupportModal: React.FC<N3SupportModalProps> = ({ isOpen, onClose,
   const handleN3Submit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!user) return;
-      const id = await adminService.requestInfrastructureSupport(user, n3Data);
-      alert(`${t('admin.n3Support.success')} ${id}`);
-      onClose();
-      setN3Data({ 
-          component: 'INFRA_UP', 
-          description: '', 
-          severity: 'HIGH',
-          affectedContext: 'SYSTEM',
-          module: 'DASHBOARD',
-          steps: '' 
-      });
+      try {
+          const id = await adminService.requestInfrastructureSupport(user, n3Data);
+          showToast(`${t('admin.n3Support.success')} ${id}`, 'success');
+          onClose();
+          setN3Data({ 
+              component: 'INFRA_UP', 
+              description: '', 
+              severity: 'HIGH',
+              affectedContext: 'SYSTEM',
+              module: 'DASHBOARD',
+              steps: '' 
+          });
+      } catch (error: any) {
+          showToast(`Erro ao enviar solicitação N3: ${error.message}`, 'error');
+      }
   };
 
   if (!isOpen) return null;

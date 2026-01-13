@@ -35,7 +35,13 @@ const resources = {
         all: "Todos",
         filter: "Filtrar",
         description: "Descrição",
-        priority: "Prioridade"
+        priority: "Prioridade",
+        user: "Usuário", // NOVO
+        dateToday: "{{date}}", // NOVO
+        goodMorning: "Bom dia", // NOVO
+        goodAfternoon: "Boa tarde", // NOVO
+        goodEvening: "Boa noite", // NOVO
+        filterByStatus: "Filtrar por status" // NOVO
       },
       files: {
         name: "Nome do Arquivo",
@@ -61,7 +67,8 @@ const resources = {
           folders: "Pastas",
           approved: "Aprovados",
           pending: "Pendentes",
-          ungrouped: "Sem grupo"
+          ungrouped: "Sem grupo",
+          rejected: "Recusados" // NOVO
         },
         sort: {
           nameAsc: "Nome (A-Z)",
@@ -69,7 +76,9 @@ const resources = {
           dateNew: "Data (Mais recente)",
           dateOld: "Data (Mais antigo)",
           status: "Status"
-        }
+        },
+        toggleFavorite: "Desfavoritar", // NOVO
+        addFavorite: "Adicionar aos favoritos" // NOVO
       },
       cookie: {
         title: "Segurança e Dados",
@@ -90,7 +99,13 @@ const resources = {
         portalName: "Portal da Qualidade",
         brand: "Aços Vital",
         support: "Suporte",
-        system: "Sistema"
+        system: "Sistema",
+        portalNameShort: "Vital Link", // NOVO
+        qualityManagement: "Gestão da Qualidade", // NOVO
+        clientPortfolio: "Carteira de Clientes", // NOVO
+        masterLibrary: "Biblioteca Mestra", // NOVO
+        serviceDesk: "Service Desk", // NOVO
+        systemMonitoring: "Sistemas Monitorados", // NOVO
       },
       dashboard: {
         hello: "Olá",
@@ -113,17 +128,78 @@ const resources = {
         filesTitle: "Minha Biblioteca",
         favoritesTitle: "Meus Favoritos",
         recentTitle: "Arquivos Recentes",
-        ticketsTitle: "Central de Suporte"
+        ticketsTitle: "Central de Suporte",
+        heroDescription: "Centralize seus certificados de qualidade e garanta a rastreabilidade total de seus materiais.", // NOVO
+        status: { // NOVO
+          scheduled: "Manutenção Agendada",
+          normal: "Operação Normal",
+          scheduledDefaultMessage: "Sistema em atualização programada.",
+          monitoringActive: "Monitoramento Vital Ativo"
+        },
+        kpi: { // NOVO
+          libraryLabel: "Biblioteca",
+          activeDocsSubtext: "Docs. Ativos",
+          pendingLabel: "Pendências",
+          awaitingSubtext: "Aguardando",
+          ticketsLabel: "Chamados",
+          openTicketsSubtext: "Em aberto"
+        },
+        noTicketsRegistered: "Nenhum chamado registrado.", // NOVO
+        exploreAll: "Explorar Tudo", // NOVO
+        emptyFlatView: { // NOVO
+            message: "Nenhum documento aqui ainda.",
+            subtextFavorites: "Marque documentos com estrela para encontrá-los rapidamente.",
+            subtextRecent: "Seus documentos mais recentes aparecerão aqui."
+        },
+        supportCenter: "Central de Suporte", // NOVO
+        myTickets: "Meus Chamados", // NOVO
+        noSupportTickets: "Nenhum chamado registrado.", // NOVO
+        openNewTicket: "Abrir Novo Chamado", // NOVO
+        ticket: { // NOVO
+          id: "ID",
+          subject: "Assunto",
+          priority: "Prioridade",
+          status: "Status",
+          createdAt: "Criado em",
+          resolutionNote: "Nota de Resolução", // NOVO
+          details: "Detalhes do Chamado", // NOVO
+          requester: "Solicitante", // NOVO
+          user: "Usuário", // NOVO
+          company: "Empresa", // NOVO
+          history: "Histórico", // NOVO
+          updatedStatus: "Atualizar Status", // NOVO
+          saveChanges: "Salvar Alterações", // NOVO
+          requiredResolutionNote: "É necessário adicionar uma nota de resolução para fechar o chamado.", // NOVO
+        },
+        accessingAuditRecords: "Acessando registros de auditoria...", // NOVO
+        noRecordsFound: "Nenhum registro encontrado para auditoria.", // NOVO
+        auditMoreClients: "Auditar mais clientes", // NOVO
+        auditedRecords: "Auditado • {{count}} Registros", // NOVO
+        pendingStatus: "{{count}} Pendências", // NOVO
+        complianceHealth: "Saúde Compliance", // NOVO
+        lastAnalysis: "Última Análise", // NOVO
+        criticalPendencies: "Críticas", // NOVO
+        upToDate: "Em Dia", // NOVO
+        organization: "Organização / Razão Social", // NOVO
+        fiscalID: "ID Fiscal", // NOVO
+        activeClients: "Ativos", // NOVO
+        allClients: "Todos" // NOVO
       },
       login: {
         welcomeBack: "Acesso Restrito",
         enterCredentials: "Use suas credenciais fornecidas pela TI Aços Vital.",
         emailLabel: "E-mail Profissional",
         passwordLabel: "Senha de Acesso",
-        forgotPassword: "Redefinir Senha",
+        forgotPassword: "Esqueceu?", // NOVO
         accessPortal: "Entrar no Portal",
         sloganTitle: "Conformidade e Rastreabilidade Industrial.",
-        sloganText: "Plataforma centralizada para gestão de certificados de qualidade e laudos técnicos Aços Vital S.A."
+        sloganText: "Plataforma centralizada para gestão de certificados de qualidade e laudos técnicos Aços Vital S.A.",
+        authenticateAccess: "Autenticar Acesso", // NOVO
+        newUser: "Novo por aqui?", // NOVO
+        requestRegister: "Solicitar Registro", // NOVO
+        corpEmail: "E-mail Corporativo", // NOVO
+        accessPassword: "Senha de Acesso", // NOVO
+        connectionError: "Erro de conexão com o servidor." // NOVO
       },
       roles: {
         ADMIN: "Administrador",
@@ -240,6 +316,87 @@ const resources = {
         submit: "Atualizar Senha",
         matchError: "As senhas não coincidem.",
         success: "Senha alterada com sucesso."
+      },
+      maintenance: { // NOVO: Para MaintenanceScreen
+        title: "Sistema em Manutenção",
+        message: "Estamos realizando atualizações críticas de segurança e infraestrutura. O acesso está temporariamente suspenso para garantir a integridade dos dados.",
+        returnEstimate: "Previsão de Retorno",
+        soon: "Em breve",
+        todayAt: "Hoje às {{time}}",
+        retry: "Tentar Novamente",
+        contact: "Contato",
+        systemId: "ID do Sistema: AV-SYS-LOCKDOWN-001"
+      },
+      signup: { // NOVO
+        newRegister: "Novo Registro",
+        fillFields: "Preencha os campos abaixo com seus dados profissionais.",
+        fullName: "Nome Completo",
+        corpEmail: "E-mail Corporativo",
+        password: "Senha de Acesso",
+        confirmPassword: "Confirmar Senha",
+        organization: "Organização",
+        department: "Departamento",
+        select: "Selecione...",
+        companyNotListed: "Minha empresa não está listada",
+        requestAccess: "Solicitar acesso corporativo.",
+        joinNetwork: "Junte-se à rede de conformidade Aços Vital.",
+        requestSent: "Solicitação Enviada!",
+        validationPending: "Seu pedido está sendo validado pela equipe técnica.",
+        alreadyHaveAccount: "Já possui uma conta?",
+        login: "Fazer Login"
+      },
+      quality: { // NOVO
+        overview: "Visão Geral",
+        activePortfolio: "Carteira Ativa",
+        pendingDocs: "Docs. Pendentes",
+        openTickets: "Chamados Abertos",
+        masterRepository: "Repositório Mestre",
+        accessFiles: "Acessar Arquivos",
+        recentActivity: "Atividade Recente",
+        activityHistory: "Histórico de análise carregado em tempo real.",
+        systemAlerts: "Alertas do Sistema",
+        complianceISO: "Conformidade ISO 9001",
+        biannualCheck: "Verificação semestral agendada para o próximo mês.",
+        b2bPortfolio: "Carteira B2B",
+        masterLibrary: "Biblioteca Mestra",
+        masterLibrarySubtitle: "Modelos de certificados e especificações técnicas globais.",
+        sendNewCertificate: "Enviar Novo Certificado",
+        pdfImageFile: "Arquivo PDF/Imagem",
+        product: "Produto",
+        batchNumber: "Nº Corrida/Lote",
+        invoiceNumber: "Nota Fiscal vinculada",
+        currentStatus: "Estado Atual",
+        approve: "Aprovar",
+        reject: "Recusar",
+        justification: "Justificativa",
+        rejectionReasonPlaceholder: "Descreva o motivo da não conformidade...",
+        confirmRejection: "Confirmar Recusa",
+        batchData: "Dados do Lote",
+        productLabel: "Produto",
+        batchLabel: "Nº Corrida",
+        invoiceLabel: "Nota Fiscal",
+        lastAnalysis: "Última Análise",
+        viewPDF: "Visualizar PDF",
+        uploadFile: "Realizar Upload",
+        uploading: "Enviando...",
+        documentApprovedSuccess: "Documento {{fileName}} aprovado com sucesso!",
+        documentRejectedSuccess: "Documento {{fileName}} recusado com sucesso!",
+        errorProcessingInspection: "Erro ao processar inspeção.",
+        reasonRequired: "Por favor, informe o motivo da rejeição.",
+        documentUploadedSuccess: "Arquivo enviado com sucesso!",
+        errorUploadingFile: "Erro no upload do arquivo.",
+        myClients: "Meus Clientes", // NOVO
+        searchClient: "Auditar cliente por nome ou CNPJ...", // NOVO
+        healthCompliance: "Saúde Compliance", // NOVO
+        critical: "Críticas", // NOVO
+        upToDate: "Em Dia", // NOVO
+        lastUpdate: "Última atualização", // NOVO
+        escalateToAdmin: "Escalonar para Administração", // NOVO
+        escalateReason: "Motivo do escalonamento para Admin...", // NOVO
+        escalateWarning: "Se o chamado exige intervenção administrativa ou técnica de nível 3, você pode escalá-lo. Um motivo é obrigatório.", // NOVO
+        escalateTicket: "Escalar Chamado", // NOVO
+        serviceDeskLoading: "Carregando Service Desk...", // NOVO
+        noTicketsFoundQuality: "Nenhum chamado pendente ou registrado." // NOVO
       }
     }
   },
@@ -273,7 +430,13 @@ const resources = {
         all: "All",
         filter: "Filter",
         description: "Description",
-        priority: "Priority"
+        priority: "Priority",
+        user: "User", // NOVO
+        dateToday: "{{date}}", // NOVO
+        goodMorning: "Good morning", // NOVO
+        goodAfternoon: "Good afternoon", // NOVO
+        goodEvening: "Good evening", // NOVO
+        filterByStatus: "Filter by status" // NOVO
       },
       files: {
         name: "File Name",
@@ -299,7 +462,8 @@ const resources = {
           folders: "Folders",
           approved: "Approved",
           pending: "Pending",
-          ungrouped: "Ungrouped"
+          ungrouped: "Ungrouped",
+          rejected: "Rejected" // NOVO
         },
         sort: {
           nameAsc: "Name (A-Z)",
@@ -307,7 +471,9 @@ const resources = {
           dateNew: "Date (Newest)",
           dateOld: "Date (Oldest)",
           status: "Status"
-        }
+        },
+        toggleFavorite: "Unfavorite", // NOVO
+        addFavorite: "Add to favorites" // NOVO
       },
       cookie: {
         title: "Security & Data",
@@ -328,7 +494,13 @@ const resources = {
         portalName: "Quality Portal",
         brand: "Vital Steels",
         support: "Support",
-        system: "System"
+        system: "System",
+        portalNameShort: "Vital Link", // NOVO
+        qualityManagement: "Quality Management", // NOVO
+        clientPortfolio: "Client Portfolio", // NOVO
+        masterLibrary: "Master Library", // NOVO
+        serviceDesk: "Service Desk", // NOVO
+        systemMonitoring: "Systems Monitored", // NOVO
       },
       dashboard: {
         hello: "Hello",
@@ -351,17 +523,78 @@ const resources = {
         filesTitle: "My Library",
         favoritesTitle: "My Favorites",
         recentTitle: "Recent Files",
-        ticketsTitle: "Support Center"
+        ticketsTitle: "Support Center",
+        heroDescription: "Centralize your quality certificates and ensure total traceability of your materials.", // NOVO
+        status: { // NOVO
+          scheduled: "Scheduled Maintenance",
+          normal: "Normal Operation",
+          scheduledDefaultMessage: "System undergoing scheduled update.",
+          monitoringActive: "Vital Monitoring Active"
+        },
+        kpi: { // NOVO
+          libraryLabel: "Library",
+          activeDocsSubtext: "Active Docs",
+          pendingLabel: "Pending",
+          awaitingSubtext: "Awaiting",
+          ticketsLabel: "Tickets",
+          openTicketsSubtext: "Open"
+        },
+        noTicketsRegistered: "No tickets registered.", // NOVO
+        exploreAll: "Explore All", // NOVO
+        emptyFlatView: { // NOVO
+            message: "No documents here yet.",
+            subtextFavorites: "Star documents to find them quickly.",
+            subtextRecent: "Your most recent documents will appear here."
+        },
+        supportCenter: "Support Center", // NOVO
+        myTickets: "My Tickets", // NOVO
+        noSupportTickets: "No tickets registered.", // NOVO
+        openNewTicket: "Open New Ticket", // NOVO
+        ticket: { // NOVO
+          id: "ID",
+          subject: "Subject",
+          priority: "Priority",
+          status: "Status",
+          createdAt: "Created At",
+          resolutionNote: "Resolution Note", // NOVO
+          details: "Ticket Details", // NOVO
+          requester: "Requester", // NOVO
+          user: "User", // NOVO
+          company: "Company", // NOVO
+          history: "History", // NOVO
+          updatedStatus: "Update Status", // NOVO
+          saveChanges: "Save Changes", // NOVO
+          requiredResolutionNote: "A resolution note is required to close the ticket.", // NOVO
+        },
+        accessingAuditRecords: "Accessing audit records...", // NOVO
+        noRecordsFound: "No audit records found.", // NOVO
+        auditMoreClients: "Audit more clients", // NOVO
+        auditedRecords: "Audited • {{count}} Records", // NOVO
+        pendingStatus: "{{count}} Pending", // NOVO
+        complianceHealth: "Compliance Health", // NOVO
+        lastAnalysis: "Last Analysis", // NOVO
+        criticalPendencies: "Critical", // NOVO
+        upToDate: "Up to Date", // NOVO
+        organization: "Organization / Company Name", // NOVO
+        fiscalID: "Fiscal ID", // NOVO
+        activeClients: "Active", // NOVO
+        allClients: "All" // NOVO
       },
       login: {
         welcomeBack: "Restricted Access",
         enterCredentials: "Use your credentials provided by Vital IT.",
         emailLabel: "Work Email",
         passwordLabel: "Access Password",
-        forgotPassword: "Reset Password",
+        forgotPassword: "Forgot?", // NOVO
         accessPortal: "Enter Portal",
         sloganTitle: "Industrial Compliance and Traceability.",
-        sloganText: "Centralized platform for managing quality certificates and technical reports for Vital Steels S.A."
+        sloganText: "Centralized platform for managing quality certificates and technical reports for Vital Steels S.A.",
+        authenticateAccess: "Authenticate Access", // NOVO
+        newUser: "New here?", // NOVO
+        requestRegister: "Request Registration", // NOVO
+        corpEmail: "Corporate Email", // NOVO
+        accessPassword: "Access Password", // NOVO
+        connectionError: "Connection error with the server." // NOVO
       },
       roles: {
         ADMIN: "Administrator",
@@ -478,6 +711,87 @@ const resources = {
         submit: "Update Password",
         matchError: "Passwords do not match.",
         success: "Password updated successfully."
+      },
+      maintenance: { // NOVO: Para MaintenanceScreen
+        title: "System Under Maintenance",
+        message: "We are performing critical security and infrastructure updates. Access is temporarily suspended to ensure data integrity.",
+        returnEstimate: "Return Estimate",
+        soon: "Soon",
+        todayAt: "Today at {{time}}",
+        retry: "Try Again",
+        contact: "Contact",
+        systemId: "System ID: AV-SYS-LOCKDOWN-001"
+      },
+      signup: { // NOVO
+        newRegister: "New Registration",
+        fillFields: "Fill in the fields below with your professional data.",
+        fullName: "Full Name",
+        corpEmail: "Corporate Email",
+        password: "Access Password",
+        confirmPassword: "Confirm Password",
+        organization: "Organization",
+        department: "Department",
+        select: "Select...",
+        companyNotListed: "My company is not listed",
+        requestAccess: "Request your corporate access.",
+        joinNetwork: "Join the Vital Steels compliance network.",
+        requestSent: "Request Sent!",
+        validationPending: "Your request is being validated by the technical team.",
+        alreadyHaveAccount: "Already have an account?",
+        login: "Login"
+      },
+      quality: { // NOVO
+        overview: "Overview",
+        activePortfolio: "Active Portfolio",
+        pendingDocs: "Pending Docs.",
+        openTickets: "Open Tickets",
+        masterRepository: "Master Repository",
+        accessFiles: "Access Files",
+        recentActivity: "Recent Activity",
+        activityHistory: "Analysis history loaded in real-time.",
+        systemAlerts: "System Alerts",
+        complianceISO: "ISO 9001 Compliance",
+        biannualCheck: "Biannual verification scheduled for next month.",
+        b2bPortfolio: "B2B Portfolio",
+        masterLibrary: "Master Library",
+        masterLibrarySubtitle: "Global certificate templates and technical specifications.",
+        sendNewCertificate: "Send New Certificate",
+        pdfImageFile: "PDF/Image File",
+        product: "Product",
+        batchNumber: "Batch/Lot No.",
+        invoiceNumber: "Linked Invoice No.",
+        currentStatus: "Current Status",
+        approve: "Approve",
+        reject: "Reject",
+        justification: "Justification",
+        rejectionReasonPlaceholder: "Describe the reason for non-conformity...",
+        confirmRejection: "Confirm Rejection",
+        batchData: "Batch Data",
+        productLabel: "Product",
+        batchLabel: "Batch No.",
+        invoiceLabel: "Invoice No.",
+        lastAnalysis: "Last Analysis",
+        viewPDF: "View PDF",
+        uploadFile: "Perform Upload",
+        uploading: "Uploading...",
+        documentApprovedSuccess: "Document {{fileName}} approved successfully!",
+        documentRejectedSuccess: "Document {{fileName}} rejected successfully!",
+        errorProcessingInspection: "Error processing inspection.",
+        reasonRequired: "Please state the reason for rejection.",
+        documentUploadedSuccess: "File uploaded successfully!",
+        errorUploadingFile: "Error uploading file.",
+        myClients: "My Clients", // NOVO
+        searchClient: "Audit client by name or CNPJ...", // NOVO
+        healthCompliance: "Compliance Health", // NOVO
+        critical: "Critical", // NOVO
+        upToDate: "Up to Date", // NOVO
+        lastUpdate: "Last update", // NOVO
+        escalateToAdmin: "Escalate to Admin", // NOVO
+        escalateReason: "Reason for escalation to Admin...", // NOVO
+        escalateWarning: "If the ticket requires administrative or level 3 technical intervention, you can escalate it. A reason is mandatory.", // NOVO
+        escalateTicket: "Escalate Ticket", // NOVO
+        serviceDeskLoading: "Loading Service Desk...", // NOVO
+        noTicketsFoundQuality: "No pending or registered tickets." // NOVO
       }
     }
   },
@@ -503,7 +817,7 @@ const resources = {
         logout: "Cerrar Sesión",
         back: "Volver",
         close: "Cerrar",
-        confirm: "Confirmar",
+        confirm: "Confirm",
         required: "Obligatorio",
         expand: "Expandir",
         collapse: "Contraer",
@@ -511,7 +825,13 @@ const resources = {
         all: "Todos",
         filter: "Filtrar",
         description: "Descripción",
-        priority: "Prioridade"
+        priority: "Prioridade",
+        user: "Usuario", // NOVO
+        dateToday: "{{date}}", // NOVO
+        goodMorning: "Buenos días", // NOVO
+        goodAfternoon: "Buenas tardes", // NOVO
+        goodEvening: "Buenas noches", // NOVO
+        filterByStatus: "Filtrar por estado" // NOVO
       },
       files: {
         name: "Nombre del Archivo",
@@ -537,7 +857,8 @@ const resources = {
           folders: "Carpetas",
           approved: "Aprobados",
           pending: "Pendientes",
-          ungrouped: "Sin grupo"
+          ungrouped: "Sin grupo",
+          rejected: "Rechazados" // NOVO
         },
         sort: {
           nameAsc: "Nombre (A-Z)",
@@ -545,7 +866,9 @@ const resources = {
           dateNew: "Fecha (Más reciente)",
           dateOld: "Fecha (Más antiguo)",
           status: "Estado"
-        }
+        },
+        toggleFavorite: "Quitar de favoritos", // NOVO
+        addFavorite: "Agregar a favoritos" // NOVO
       },
       cookie: {
         title: "Seguridad y Datos",
@@ -566,7 +889,13 @@ const resources = {
         portalName: "Portal de Calidad",
         brand: "Aceros Vital",
         support: "Soporte",
-        system: "Sistema"
+        system: "Sistema",
+        portalNameShort: "Vital Link", // NOVO
+        qualityManagement: "Gestión de Calidad", // NOVO
+        clientPortfolio: "Cartera de Clientes", // NOVO
+        masterLibrary: "Biblioteca Maestra", // NOVO
+        serviceDesk: "Mesa de Servicio", // NOVO
+        systemMonitoring: "Sistemas Monitorizados", // NOVO
       },
       dashboard: {
         hello: "Hola",
@@ -579,7 +908,7 @@ const resources = {
         favoritesHeader: "Acceso Rápido",
         historyHeader: "Historial",
         ticketsHeader: "Centro de Soporte",
-        filters: "Filtros Avançados",
+        filters: "Filtros Avanzados",
         period: "Período",
         clear: "Limpar Filtros",
         openTicket: "Abrir Nuevo Ticket",
@@ -589,17 +918,78 @@ const resources = {
         filesTitle: "Mi Biblioteca",
         favoritesTitle: "Mis Favoritos",
         recentTitle: "Archivos Recentes",
-        ticketsTitle: "Centro de Soporte"
+        ticketsTitle: "Centro de Soporte",
+        heroDescription: "Centralice sus certificados de calidad y garantice la trazabilidad total de sus materiales.", // NOVO
+        status: { // NOVO
+          scheduled: "Mantenimiento Programado",
+          normal: "Operación Normal",
+          scheduledDefaultMessage: "Sistema en actualización programada.",
+          monitoringActive: "Monitoreo Vital Activo"
+        },
+        kpi: { // NOVO
+          libraryLabel: "Biblioteca",
+          activeDocsSubtext: "Docs. Activos",
+          pendingLabel: "Pendientes",
+          awaitingSubtext: "Esperando",
+          ticketsLabel: "Tickets",
+          openTicketsSubtext: "Abiertos"
+        },
+        noTicketsRegistered: "Ningún ticket registrado.", // NOVO
+        exploreAll: "Explorar Todo", // NOVO
+        emptyFlatView: { // NOVO
+            message: "Ningún documento aquí todavía.",
+            subtextFavorites: "Marque documentos con estrella para encontrarlos rápidamente.",
+            subtextRecent: "Sus documentos más recientes aparecerán aquí."
+        },
+        supportCenter: "Centro de Soporte", // NOVO
+        myTickets: "Mis Tickets", // NOVO
+        noSupportTickets: "Ningún ticket registrado.", // NOVO
+        openNewTicket: "Abrir Nuevo Ticket", // NOVO
+        ticket: { // NOVO
+          id: "ID",
+          subject: "Asunto",
+          priority: "Prioridad",
+          status: "Estado",
+          createdAt: "Creado En",
+          resolutionNote: "Nota de Resolución", // NOVO
+          details: "Detalles del Ticket", // NOVO
+          requester: "Solicitante", // NOVO
+          user: "Usuario", // NOVO
+          company: "Empresa", // NOVO
+          history: "Historial", // NOVO
+          updatedStatus: "Actualizar Estado", // NOVO
+          saveChanges: "Guardar Cambios", // NOVO
+          requiredResolutionNote: "Se requiere una nota de resolución para cerrar el ticket.", // NOVO
+        },
+        accessingAuditRecords: "Accediendo a los registros de auditoría...", // NOVO
+        noRecordsFound: "No se encontraron registros de auditoría.", // NOVO
+        auditMoreClients: "Auditar más clientes", // NOVO
+        auditedRecords: "Auditado • {{count}} Registros", // NOVO
+        pendingStatus: "{{count}} Pendientes", // NOVO
+        complianceHealth: "Salud de Cumplimiento", // NOVO
+        lastAnalysis: "Último Análisis", // NOVO
+        criticalPendencies: "Críticos", // NOVO
+        upToDate: "Al Día", // NOVO
+        organization: "Organización / Razón Social", // NOVO
+        fiscalID: "ID Fiscal", // NOVO
+        activeClients: "Activos", // NOVO
+        allClients: "Todos" // NOVO
       },
       login: {
         welcomeBack: "Acceso Restringido",
         enterCredentials: "Use sus credenciales proporcionadas por IT de Vital.",
         emailLabel: "Correo Profesional",
         passwordLabel: "Contraseña de Acceso",
-        forgotPassword: "Restablecer Contraseña",
+        forgotPassword: "¿Olvidó?", // NOVO
         accessPortal: "Entrar al Portal",
         sloganTitle: "Cumplimiento y Trazabilidad Industrial.",
-        sloganText: "Plataforma centralizada para la gestión de certificados de calidad e informes técnicos de Aceros Vital S.A."
+        sloganText: "Plataforma centralizada para la gestión de certificados de calidad e informes técnicos de Aceros Vital S.A.",
+        authenticateAccess: "Autenticar Acceso", // NOVO
+        newUser: "¿Nuevo aquí?", // NOVO
+        requestRegister: "Solicitar Registro", // NOVO
+        corpEmail: "Correo Corporativo", // NOVO
+        accessPassword: "Contraseña de Acceso", // NOVO
+        connectionError: "Error de conexión con el servidor." // NOVO
       },
       roles: {
         ADMIN: "Administrador",
@@ -705,7 +1095,7 @@ const resources = {
         section2: "Recolección de Datos",
         section3: "Seguridad",
         section4: "Uso de Cookies",
-        section5: "Direitos do Titular",
+        section5: "Dereitos do Titular",
         close: "He Leído y Acepto"
       },
       changePassword: {
@@ -716,6 +1106,87 @@ const resources = {
         submit: "Actualizar Contraseña",
         matchError: "Las contraseñas no coinciden.",
         success: "Contraseña cambiada con éxito."
+      },
+      maintenance: { // NOVO: Para MaintenanceScreen
+        title: "Sistema en Mantenimiento",
+        message: "Estamos realizando actualizaciones críticas de seguridad e infraestructura. El acceso está temporalmente suspendido para garantizar la integridad de los datos.",
+        returnEstimate: "Estimación de Regreso",
+        soon: "Pronto",
+        todayAt: "Hoy a las {{time}}",
+        retry: "Intentar de Nuevo",
+        contact: "Contacto",
+        systemId: "ID del Sistema: AV-SYS-LOCKDOWN-001"
+      },
+      signup: { // NOVO
+        newRegister: "Nuevo Registro",
+        fillFields: "Rellene los campos a continuación con sus datos profesionales.",
+        fullName: "Nombre Completo",
+        corpEmail: "Correo Corporativo",
+        password: "Contraseña de Acceso",
+        confirmPassword: "Confirmar Contraseña",
+        organization: "Organización",
+        department: "Departamento",
+        select: "Seleccione...",
+        companyNotListed: "Mi empresa no está en la lista",
+        requestAccess: "Solicite su acceso corporativo.",
+        joinNetwork: "Únase a la red de cumplimiento de Aceros Vital.",
+        requestSent: "¡Solicitud Enviada!",
+        validationPending: "Su solicitud está siendo validada por el equipo técnico.",
+        alreadyHaveAccount: "¿Ya tienes una cuenta?",
+        login: "Iniciar Sesión"
+      },
+      quality: { // NOVO
+        overview: "Resumen",
+        activePortfolio: "Cartera Activa",
+        pendingDocs: "Docs. Pendientes",
+        openTickets: "Tickets Abiertos",
+        masterRepository: "Repositorio Maestro",
+        accessFiles: "Acceder a Archivos",
+        recentActivity: "Actividad Reciente",
+        activityHistory: "Historial de análisis cargado en tiempo real.",
+        systemAlerts: "Alertas del Sistema",
+        complianceISO: "Cumplimiento ISO 9001",
+        biannualCheck: "Verificación semestral programada para el próximo mes.",
+        b2bPortfolio: "Cartera B2B",
+        masterLibrary: "Biblioteca Maestra",
+        masterLibrarySubtitle: "Plantillas de certificados y especificaciones técnicas globales.",
+        sendNewCertificate: "Enviar Nuevo Certificado",
+        pdfImageFile: "Archivo PDF/Imagen",
+        product: "Producto",
+        batchNumber: "No. Lote/Colada",
+        invoiceNumber: "No. Factura vinculada",
+        currentStatus: "Estado Actual",
+        approve: "Aprobar",
+        reject: "Rechazar",
+        justification: "Justificación",
+        rejectionReasonPlaceholder: "Describa el motivo de la no conformidad...",
+        confirmRejection: "Confirmar Rechazo",
+        batchData: "Datos del Lote",
+        productLabel: "Producto",
+        batchLabel: "No. Lote",
+        invoiceLabel: "No. Factura",
+        lastAnalysis: "Último Análisis",
+        viewPDF: "Ver PDF",
+        uploadFile: "Realizar Carga",
+        uploading: "Subiendo...",
+        documentApprovedSuccess: "¡Documento {{fileName}} aprobado con éxito!",
+        documentRejectedSuccess: "¡Documento {{fileName}} rechazado con éxito!",
+        errorProcessingInspection: "Error al procesar la inspección.",
+        reasonRequired: "Por favor, indique el motivo del rechazo.",
+        documentUploadedSuccess: "¡Archivo subido con éxito!",
+        errorUploadingFile: "Error al subir el archivo.",
+        myClients: "Mis Clientes", // NOVO
+        searchClient: "Auditar cliente por nombre o CNPJ...", // NOVO
+        healthCompliance: "Salud de Cumplimiento", // NOVO
+        critical: "Críticos", // NOVO
+        upToDate: "Al Día", // NOVO
+        lastUpdate: "Última actualización", // NOVO
+        escalateToAdmin: "Escalar a Administrador", // NOVO
+        escalateReason: "Motivo de la escalada al Administrador...", // NOVO
+        escalateWarning: "Si el ticket requiere intervención administrativa o técnica de nivel 3, puede escalarlo. Es obligatorio un motivo.", // NOVO
+        escalateTicket: "Escalar Ticket", // NOVO
+        serviceDeskLoading: "Cargando Mesa de Servicio...", // NOVO
+        noTicketsFoundQuality: "No hay tickets pendientes o registrados." // NOVO
       }
     }
   }

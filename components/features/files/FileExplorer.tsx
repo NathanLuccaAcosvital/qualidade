@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, forwardRef, type ForwardedRef } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo, useRef, forwardRef, type ForwardedRef } from 'react'; 
 import { 
   Folder, 
   FileText, 
@@ -31,6 +32,7 @@ import { useAuth } from '../../../context/authContext.tsx';
 import { useTranslation } from 'react-i18next';
 import { fileService } from '../../../lib/services/index.ts';
 import { FileNode, FileType, BreadcrumbItem, FileMetadata } from '../../../types.ts';
+import { useToast } from '../../../context/notificationContext.tsx'; // Importado
 
 export interface FileExplorerHandle {
     triggerBulkDownload: () => Promise<void>;
@@ -77,6 +79,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
 }, ref: ForwardedRef<FileExplorerHandle>) => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { showToast } = useToast(); // Hook useToast
   
   const [internalFolderId, setInternalFolderId] = useState<string | null>(initialFolderId);
   const activeFolderId = controlledFolderId !== undefined ? controlledFolderId : internalFolderId;
@@ -91,7 +94,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   const [searchQuery, searchQuerySet] = useState('');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list'); 
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  // Fix: Initialize with `useState<Set<string>>(new Set())` instead of `new Set<string>()`
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set()); 
   
   const [sortBy, setSortBy] = useState<SortOption>('DATE_NEW');
   const [groupBy, setGroupBy] = useState<GroupOption>('NONE');
@@ -114,7 +118,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   // Expose methods via ref for parent components
   React.useImperativeHandle(ref, () => ({
       triggerBulkDownload: handleBulkDownload,
-      clearSelection: () => setSelectedFiles(new Set()),
+      // Fix: Changed to clear the Set directly
+      clearSelection: () => setSelectedFiles(new Set()), 
   }));
 
   const fetchFiles = useCallback(async (resetPage: boolean = false) => {
@@ -145,11 +150,12 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
           setPage(currentPage);
       } catch (err) {
           console.error("Erro ao carregar arquivos:", err);
+          showToast(t('files.errorLoadingFiles'), 'error');
       } finally {
           if (resetPage) setLoading(false);
           else setLoadingMore(false);
       }
-  }, [user, page, searchQuery, activeFolderId, externalFiles]);
+  }, [user, page, searchQuery, activeFolderId, externalFiles, t, showToast]);
 
   const fetchBreadcrumbs = useCallback(async () => {
       if (!user || flatMode) return;
@@ -158,8 +164,9 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
           setBreadcrumbs(crumbs);
       } catch (err) {
           console.error("Erro ao carregar breadcrumbs:", err);
+          showToast(t('files.errorLoadingNavigation'), 'error');
       }
-  }, [user, activeFolderId, flatMode]);
+  }, [user, activeFolderId, flatMode, t, showToast]);
 
   useEffect(() => {
       fetchFiles(true); // Always reset files when folder, search or externalFiles change
@@ -206,9 +213,11 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
       try {
           const isFavorite = await fileService.toggleFavorite(user, file.id);
           setFiles(prev => prev.map(f => f.id === file.id ? { ...f, isFavorite } : f));
+          showToast(isFavorite ? t('files.addFavorite', { fileName: file.name }) : t('files.toggleFavorite', { fileName: file.name }), 'info');
           if (onRefresh) onRefresh(); // Notify parent to refresh if it's a favorites/recent view
       } catch (err) {
           console.error("Erro ao alternar favorito:", err);
+          showToast(t('files.errorToggleFavorite'), 'error');
       } finally {
           setActiveActionId(null);
       }
@@ -219,8 +228,9 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
       try {
           const url = await fileService.getFileSignedUrl(user, file.id);
           window.open(url, '_blank');
+          showToast(t('files.downloadingFile', { fileName: file.name }), 'info');
       } catch (err) {
-          alert(t('files.permissionError'));
+          showToast(t('files.permissionError'), 'error');
       } finally {
           setActiveActionId(null);
       }
@@ -228,10 +238,12 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
 
   const handleBulkDownload = async () => {
       if (!user || selectedFiles.size === 0) return;
-      alert(t('files.downloading'));
+      showToast(t('files.downloading'), 'info');
       // Lógica de download em massa (simulada ou via API de backend para zip)
       // Exemplo: Iterar e baixar individualmente, ou enviar IDs para um endpoint de zip
-      setSelectedFiles(new Set()); // Clear selection after initiating download
+      // Fix: Changed to clear the Set directly
+      setSelectedFiles(new Set());
+      showToast(t('files.bulkDownloadStarted', { count: selectedFiles.size }), 'success');
   };
 
   const handleActionClick = (fileId: string) => {
@@ -241,13 +253,14 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
 
   const handleDelete = async (file: FileNode) => {
       if (!user || !onDelete) return;
-      if (!window.confirm(`Tem certeza que deseja excluir "${file.name}"?`)) return;
+      if (!window.confirm(t('files.confirmDelete', { fileName: file.name }))) return;
       try {
           await fileService.deleteFile(user, file.id);
           setFiles(prev => prev.filter(f => f.id !== file.id));
           onDelete(file);
+          showToast(t('files.fileDeletedSuccess', { fileName: file.name }), 'success');
       } catch (err) {
-          alert("Erro ao excluir arquivo.");
+          showToast(t('files.errorDeletingFile'), 'error');
       } finally {
           setActiveActionId(null);
       }
@@ -258,7 +271,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
     setActiveActionId(null);
   };
 
-  const filteredAndSortedFiles = useMemo(() => {
+  // Fix: Explicitly define the return type of useMemo to avoid `unknown` inference.
+  const filteredAndSortedFiles: { [key: string]: FileNode[] } = useMemo(() => {
     let currentFiles = externalFiles || files;
 
     if (filterStatus !== 'ALL') {
@@ -284,7 +298,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
 
     const groups: { [key: string]: FileNode[] } = {};
     sorted.forEach(file => {
-        let groupKey = 'Outros';
+        let groupKey = t('files.groups.ungrouped');
         if (groupBy === 'STATUS') {
             groupKey = file.metadata?.status ? t(`files.groups.${file.metadata.status.toLowerCase()}`) : t('files.groups.pending');
         } else if (groupBy === 'PRODUCT' && file.metadata?.productName) {
@@ -311,32 +325,32 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
 
 
 const renderFileIcon = (file: FileNode) => {
-    if (file.type === FileType.FOLDER) return <Folder size={20} className="text-blue-500" />;
-    if (file.type === FileType.PDF) return <FileText size={20} className="text-red-500" />;
-    if (file.type === FileType.IMAGE) return <ImageIcon size={20} className="text-emerald-500" />;
-    return <FileText size={20} className="text-slate-500" />;
+    if (file.type === FileType.FOLDER) return <Folder size={20} className="text-blue-500" aria-hidden="true" />;
+    if (file.type === FileType.PDF) return <FileText size={20} className="text-red-500" aria-hidden="true" />;
+    if (file.type === FileType.IMAGE) return <ImageIcon size={20} className="text-emerald-500" aria-hidden="true" />;
+    return <FileText size={20} className="text-slate-500" aria-hidden="true" />;
 };
 
 const renderStatusBadge = (status?: string) => {
     if (!status) return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-1.5 whitespace-nowrap">
-            <Clock size={10}/> {t('files.pending')}
+            <Clock size={10} aria-hidden="true"/> {t('files.pending')}
         </span>
     );
     switch (status) {
         case 'APPROVED': return (
             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center gap-1.5 whitespace-nowrap">
-                <CheckCircle2 size={10}/> {t('files.groups.approved')}
+                <CheckCircle2 size={10} aria-hidden="true"/> {t('files.groups.approved')}
             </span>
         );
         case 'PENDING': return (
             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-1.5 whitespace-nowrap">
-                <Clock size={10}/> {t('files.pending')}
+                <Clock size={10} aria-hidden="true"/> {t('files.pending')}
             </span>
         );
         case 'REJECTED': return (
             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-50 text-red-600 border border-red-100 flex items-center gap-1.5 whitespace-nowrap">
-                <AlertCircle size={10}/> {t('files.groups.rejected')}
+                <AlertCircle size={10} aria-hidden="true"/> {t('files.groups.rejected')}
             </span>
         );
         default: return null;
@@ -344,20 +358,20 @@ const renderStatusBadge = (status?: string) => {
 };
 
   return (
-    <div className={`flex flex-col h-full bg-white rounded-2xl ${!autoHeight ? 'flex-1' : ''}`}>
+    <div className={`flex flex-col h-full bg-white rounded-2xl ${!autoHeight ? 'flex-1' : ''}`} role="region" aria-label={t('menu.library')}>
       {!hideToolbar && (
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-50">
-            <div className="flex items-center gap-2 md:gap-4 flex-1 w-full md:w-auto">
-                <button onClick={() => handleNavigate(null)} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm">
-                    <Home size={18} />
+            <div className="flex items-center gap-2 md:gap-4 flex-1 w-full md:w-auto" role="navigation" aria-label={t('files.breadcrumbs')}>
+                <button onClick={() => handleNavigate(null)} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" aria-label={t('menu.home')}>
+                    <Home size={18} aria-hidden="true" />
                 </button>
                 <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar whitespace-nowrap flex-1">
                     {breadcrumbs.map((crumb, idx) => (
                         <React.Fragment key={crumb.id}>
-                            <button onClick={() => handleNavigate(crumb.id === 'root' ? null : crumb.id)} className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md transition-all ${idx === breadcrumbs.length - 1 ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}>
+                            <button onClick={() => handleNavigate(crumb.id === 'root' ? null : crumb.id)} className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md transition-all ${idx === breadcrumbs.length - 1 ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} aria-label={crumb.name}>
                                 {crumb.name}
                             </button>
-                            {idx < breadcrumbs.length - 1 && <ChevronRight size={10} className="text-slate-300 shrink-0" />}
+                            {idx < breadcrumbs.length - 1 && <ChevronRight size={10} className="text-slate-300 shrink-0" aria-hidden="true" />}
                         </React.Fragment>
                     ))}
                 </div>
@@ -365,19 +379,20 @@ const renderStatusBadge = (status?: string) => {
 
             <div className="flex items-center gap-3 w-full md:w-auto">
                 <div className="relative group flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} aria-hidden="true" />
                     <input
                         type="text"
                         placeholder={t('common.search')}
                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                         value={searchQuery}
                         onChange={e => searchQuerySet(e.target.value)}
+                        aria-label={t('common.search')}
                     />
                 </div>
                 
                 {selectedFiles.size > 0 && (
-                    <button onClick={handleBulkDownload} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg active:scale-95">
-                        <Download size={16} /> {t('files.download')} ({selectedFiles.size})
+                    <button onClick={handleBulkDownload} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg active:scale-95" aria-label={t('files.downloadSelected', { count: selectedFiles.size })}>
+                        <Download size={16} aria-hidden="true" /> {t('files.download')} ({selectedFiles.size})
                     </button>
                 )}
 
@@ -385,12 +400,15 @@ const renderStatusBadge = (status?: string) => {
                     <button 
                         onClick={() => setIsViewMenuOpen(!isViewMenuOpen)}
                         className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm"
+                        aria-label={t('files.viewOptions')}
+                        aria-haspopup="true"
+                        aria-expanded={isViewMenuOpen}
                     >
-                        <SlidersHorizontal size={18} />
+                        <SlidersHorizontal size={18} aria-hidden="true" />
                     </button>
                     {isViewMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-100 z-30 overflow-hidden animate-in fade-in slide-in-from-top-2 origin-top-right">
-                            <div className="p-4 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">{t('files.viewOptions')}</div>
+                        <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-100 z-30 overflow-hidden animate-in fade-in slide-in-from-top-2 origin-top-right" role="menu" aria-orientation="vertical">
+                            <div className="p-4 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase" aria-hidden="true">{t('files.viewOptions')}</div>
                             
                             <div className="p-4 space-y-4">
                                 <div className="space-y-2">
@@ -398,26 +416,26 @@ const renderStatusBadge = (status?: string) => {
                                     <div className="flex flex-col gap-1.5">
                                         {/* Sort by Name */}
                                         <div className="grid grid-cols-2 gap-1.5">
-                                            <button onClick={() => { setSortBy('NAME_ASC'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'NAME_ASC' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                                <ArrowDownAZ size={14}/> {t('files.sort.nameAsc')}
+                                            <button onClick={() => { setSortBy('NAME_ASC'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'NAME_ASC' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                                <ArrowDownAZ size={14} aria-hidden="true"/> {t('files.sort.nameAsc')}
                                             </button>
-                                            <button onClick={() => { setSortBy('NAME_DESC'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'NAME_DESC' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                                <ArrowUpZA size={14}/> {t('files.sort.nameDesc')}
+                                            <button onClick={() => { setSortBy('NAME_DESC'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'NAME_DESC' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                                <ArrowUpZA size={14} aria-hidden="true"/> {t('files.sort.nameDesc')}
                                             </button>
                                         </div>
                                         {/* Sort by Date */}
                                         <div className="grid grid-cols-2 gap-1.5">
-                                            <button onClick={() => { setSortBy('DATE_NEW'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'DATE_NEW' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                                <Calendar size={14}/> {t('files.sort.dateNew')}
+                                            <button onClick={() => { setSortBy('DATE_NEW'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'DATE_NEW' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                                <Calendar size={14} aria-hidden="true"/> {t('files.sort.dateNew')}
                                             </button>
-                                            <button onClick={() => { setSortBy('DATE_OLD'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'DATE_OLD' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                                <Calendar size={14}/> {t('files.sort.dateOld')}
+                                            <button onClick={() => { setSortBy('DATE_OLD'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'DATE_OLD' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                                <Calendar size={14} aria-hidden="true"/> {t('files.sort.dateOld')}
                                             </button>
                                         </div>
                                         {/* Sort by Status */}
                                         <div>
-                                            <button onClick={() => { setSortBy('STATUS'); setIsViewMenuOpen(false); }} className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'STATUS' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                                <FileCheck size={14}/> {t('files.sort.status')}
+                                            <button onClick={() => { setSortBy('STATUS'); setIsViewMenuOpen(false); }} className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortBy === 'STATUS' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                                <FileCheck size={14} aria-hidden="true"/> {t('files.sort.status')}
                                             </button>
                                         </div>
                                     </div>
@@ -426,19 +444,19 @@ const renderStatusBadge = (status?: string) => {
                                 <div className="border-t border-slate-100 pt-4 space-y-2">
                                     <p className="text-xs font-bold text-slate-800 mb-1">{t('files.groupBy')}</p>
                                     <div className="grid grid-cols-2 gap-1.5">
-                                        <button onClick={() => { setGroupBy('NONE'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupBy === 'NONE' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                            <Layers size={14}/> {t('files.groups.ungrouped')}
+                                        <button onClick={() => { setGroupBy('NONE'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupBy === 'NONE' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                            <Layers size={14} aria-hidden="true"/> {t('files.groups.ungrouped')}
                                         </button>
-                                        <button onClick={() => { setGroupBy('STATUS'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupBy === 'STATUS' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                            <FileCheck size={14}/> {t('files.sort.status')}
+                                        <button onClick={() => { setGroupBy('STATUS'); setIsViewMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${groupBy === 'STATUS' ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`} role="menuitem">
+                                            <FileCheck size={14} aria-hidden="true"/> {t('files.sort.status')}
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="p-4 border-t border-slate-100 flex justify-around">
-                                <button onClick={() => { setViewMode('list'); setIsViewMenuOpen(false); }} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-blue-100 text-blue-600 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}><List size={18}/></button>
-                                <button onClick={() => { setViewMode('grid'); setIsViewMenuOpen(false); }} className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}><LayoutGrid size={18}/></button>
+                            <div className="p-4 border-t border-slate-100 flex justify-around" role="group" aria-label={t('files.viewMode')}>
+                                <button onClick={() => { setViewMode('list'); setIsViewMenuOpen(false); }} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-blue-100 text-blue-600 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`} aria-label={t('files.listView')} aria-pressed={viewMode === 'list'}><List size={18} aria-hidden="true"/></button>
+                                <button onClick={() => { setViewMode('grid'); setIsViewMenuOpen(false); }} className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`} aria-label={t('files.gridView')} aria-pressed={viewMode === 'grid'}><LayoutGrid size={18} aria-hidden="true"/></button>
                             </div>
                         </div>
                     )}
@@ -448,31 +466,31 @@ const renderStatusBadge = (status?: string) => {
       )}
 
       {(loading && page === 1) ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4">
-              <Loader2 size={40} className="animate-spin text-blue-500" />
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4" role="status">
+              <Loader2 size={40} className="animate-spin text-blue-500" aria-hidden="true" />
               <p className="font-bold text-xs uppercase tracking-widest">{t('common.loading')} {t('menu.library')}...</p>
           </div>
       ) : Object.keys(filteredAndSortedFiles).length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 bg-white rounded-b-2xl">
-              <FileText size={48} className="mb-3 opacity-20" />
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 bg-white rounded-b-2xl" role="status">
+              <FileText size={48} className="mb-3 opacity-20" aria-hidden="true" />
               <p className="font-medium">{t('files.noItems')}</p>
           </div>
       ) : (
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6" role="list">
               {Object.entries(filteredAndSortedFiles).map(([groupName, groupFiles]) => (
-                  <div key={groupName} className="space-y-4">
+                  <div key={groupName} className="space-y-4" role="group" aria-labelledby={`group-label-${groupName}`}>
                       {groupBy !== 'NONE' && (
                           <div className="flex items-center gap-3">
-                              <div className="h-px flex-1 bg-slate-200"></div>
-                              <span className="text-xs font-black text-slate-400 uppercase tracking-[4px]">{groupName}</span>
-                              <div className="h-px flex-1 bg-slate-200"></div>
+                              <div className="h-px flex-1 bg-slate-200" aria-hidden="true"></div>
+                              <span id={`group-label-${groupName}`} className="text-xs font-black text-slate-400 uppercase tracking-[4px]">{groupName}</span>
+                              <div className="h-px flex-1 bg-slate-200" aria-hidden="true"></div>
                           </div>
                       )}
                       <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4' : 'space-y-2'}>
                           {groupFiles.map((file, idx) => {
                               const isLastItem = idx === groupFiles.length - 1;
                               const isSelected = selectedFiles.has(file.id);
-                              const ActionIcon = file.isFavorite ? Star : MoreHorizontal; // Example icon
+                              // const ActionIcon = file.isFavorite ? Star : MoreHorizontal; // Example icon
 
                               return (
                                   <div 
@@ -480,6 +498,8 @@ const renderStatusBadge = (status?: string) => {
                                       className={`relative group p-3 ${viewMode === 'grid' ? 'bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center text-center hover:border-blue-300 hover:shadow-md' : 'bg-white rounded-xl border border-slate-200 shadow-sm flex items-center hover:border-blue-300 hover:shadow-md'} transition-all cursor-pointer`}
                                       onClick={() => handleFileClick(file)}
                                       ref={!externalFiles && hasMore && isLastItem ? lastElementRef : null}
+                                      role="listitem"
+                                      aria-label={`${file.name}. ${t('files.type')}: ${file.type}. ${t('files.status')}: ${file.metadata?.status ? t(`files.groups.${file.metadata.status.toLowerCase()}`) : t('files.pending')}.`}
                                   >
                                       {/* Checkbox for selection */}
                                       <input 
@@ -487,6 +507,7 @@ const renderStatusBadge = (status?: string) => {
                                           checked={isSelected}
                                           onChange={e => {e.stopPropagation(); handleToggleSelect(file.id);}}
                                           className="absolute top-3 left-3 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer z-10"
+                                          aria-label={isSelected ? t('files.deselectFile', { fileName: file.name }) : t('files.selectFile', { fileName: file.name })}
                                       />
                                       
                                       {/* File/Folder Icon and Name */}
@@ -499,7 +520,7 @@ const renderStatusBadge = (status?: string) => {
                                               {viewMode === 'list' && (
                                                   <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                                                       <span>{file.size}</span>
-                                                      <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                                      <span className="w-1 h-1 bg-slate-200 rounded-full" aria-hidden="true"></span>
                                                       <span>{file.updatedAt}</span>
                                                   </div>
                                               )}
@@ -518,29 +539,32 @@ const renderStatusBadge = (status?: string) => {
                                           <button 
                                               onClick={(e) => { e.stopPropagation(); handleActionClick(file.id); }}
                                               className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all opacity-0 group-hover:opacity-100"
+                                              aria-label={t('common.moreActions')}
+                                              aria-haspopup="true"
+                                              aria-expanded={activeActionId === file.id}
                                           >
-                                              <MoreVertical size={16} />
+                                              <MoreVertical size={16} aria-hidden="true" />
                                           </button>
                                           {activeActionId === file.id && (
                                               <>
-                                                  <div className="fixed inset-0 z-40" onClick={() => setActiveActionId(null)} />
-                                                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right">
+                                                  <div className="fixed inset-0 z-40" onClick={() => setActiveActionId(null)} aria-hidden="true" />
+                                                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right" role="menu" aria-orientation="vertical">
                                                       {file.type !== FileType.FOLDER && (
-                                                          <button onClick={() => handleDownload(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                                              <Download size={14} className="text-blue-500" /> {t('common.download')}
+                                                          <button onClick={() => handleDownload(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors" role="menuitem">
+                                                              <Download size={14} className="text-blue-500" aria-hidden="true" /> {t('common.download')}
                                                           </button>
                                                       )}
-                                                      <button onClick={() => handleToggleFavorite(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                                              <Star size={14} className={file.isFavorite ? 'text-amber-500 fill-amber-500' : 'text-slate-400'} /> {file.isFavorite ? 'Desfavoritar' : 'Adicionar aos favoritos'}
+                                                      <button onClick={() => handleToggleFavorite(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors" role="menuitem">
+                                                              <Star size={14} className={file.isFavorite ? 'text-amber-500 fill-amber-500' : 'text-slate-400'} aria-hidden="true" /> {file.isFavorite ? t('files.toggleFavorite') : t('files.addFavorite')}
                                                       </button>
                                                       {onEdit && (
-                                                          <button onClick={() => handleEdit(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                                              <Edit2 size={14} className="text-blue-500" /> {t('common.edit')}
+                                                          <button onClick={() => handleEdit(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors" role="menuitem">
+                                                              <Edit2 size={14} className="text-blue-500" aria-hidden="true" /> {t('common.edit')}
                                                           </button>
                                                       )}
                                                       {onDelete && (
-                                                          <button onClick={() => handleDelete(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 border-t border-slate-50">
-                                                              <Trash2 size={14} /> {t('common.delete')}
+                                                          <button onClick={() => handleDelete(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 border-t border-slate-50" role="menuitem">
+                                                              <Trash2 size={14} aria-hidden="true" /> {t('common.delete')}
                                                           </button>
                                                       )}
                                                   </div>
@@ -554,8 +578,8 @@ const renderStatusBadge = (status?: string) => {
                   </div>
               ))}
               {loadingMore && (
-                  <div className="flex justify-center py-4">
-                      <Loader2 size={24} className="animate-spin text-blue-500" />
+                  <div className="flex justify-center py-4" role="status">
+                      <Loader2 size={24} className="animate-spin text-blue-500" aria-hidden="true" />
                   </div>
               )}
           </div>
