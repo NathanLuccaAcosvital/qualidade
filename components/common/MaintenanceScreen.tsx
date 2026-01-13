@@ -19,7 +19,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ status, on
 
     return (
         <div className="h-screen w-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black opacity-80 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black opacity-80 pointer-events-none" aria-hidden="true"></div>
             
             <div className="relative z-10 max-w-md animate-in fade-in zoom-in-95 duration-500">
                 <div className="bg-orange-500/10 p-6 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center border-4 border-orange-500/20 shadow-2xl shadow-orange-500/10">

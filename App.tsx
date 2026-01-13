@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { HashRouter } from 'react-router-dom';
 import { AuthProvider } from './context/authContext.tsx';
 import { AppRoutes } from './routes.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { NotificationProvider } from './context/notificationContext.tsx'; // Importado
+import './lib/i18n.ts'; // Initialize i18n service before rendering
 
 /**
  * Componente Raiz da Aplicação

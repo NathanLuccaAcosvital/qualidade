@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/authContext.tsx';
 import { CookieBanner } from '../components/common/CookieBanner.tsx';
@@ -86,7 +87,7 @@ const Login: React.FC = () => {
                               ? 'bg-[#081437] text-white shadow-sm' 
                               : 'text-slate-500 hover:bg-slate-100 hover:text-[#081437]'}
                       `}
-                      aria-label={t(`common.language.${lang}`)} // A11y
+                      aria-label={t(`common.language.${lang}`)} 
                   >
                       {lang}
                   </button>
@@ -139,13 +140,13 @@ const Login: React.FC = () => {
 
             <div className="text-[10px] text-slate-400 font-bold flex items-center gap-10 uppercase tracking-[4px]">
                 <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
                     {t('menu.systemMonitoring')}
                 </div>
-                <button onClick={() => setIsPrivacyOpen(true)} className="hover:text-white transition-colors">
+                <button onClick={() => setIsPrivacyOpen(true)} className="hover:text-white transition-colors" aria-label={t('common.privacy')}>
                     {t('common.privacy')}
                 </button>
-                <span className="opacity-40">&copy; {new Date().getFullYear()} Aços Vital S.A.</span>
+                <span className="opacity-40" aria-hidden="true">&copy; {new Date().getFullYear()} Aços Vital S.A.</span>
             </div>
         </div>
       </div>
@@ -193,7 +194,7 @@ const Login: React.FC = () => {
                         <label htmlFor="password-input" className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] transition-colors group-focus-within:text-[#62A5FA]">
                             {t('login.accessPassword')}
                         </label>
-                        <a href="#" className="text-[10px] font-bold text-[#B23C0E] hover:underline underline-offset-4 tracking-wider">
+                        <a href="#" className="text-[10px] font-bold text-[#B23C0E] hover:underline underline-offset-4 tracking-wider" aria-label={t('login.forgotPassword')}>
                             {t('login.forgotPassword')}
                         </a>
                     </div>
@@ -255,7 +256,7 @@ const Login: React.FC = () => {
 
             <div className="text-center pt-8 border-t border-slate-50">
                 <p className="text-[12px] text-slate-400 font-medium">
-                  {t('login.newUser')} <Link to="/signup" className="text-[#081437] font-black hover:text-[#B23C0E] transition-colors ml-1 uppercase tracking-wider">
+                  {t('login.newUser')} <Link to="/signup" className="text-[#081437] font-black hover:text-[#B23C0E] transition-colors ml-1 uppercase tracking-wider" aria-label={t('login.requestRegister')}>
                       {t('login.requestRegister')}
                   </Link>
                 </p>

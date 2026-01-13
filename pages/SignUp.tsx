@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -97,7 +98,8 @@ const SignUp: React.FC = () => {
     i18n.changeLanguage(lng);
   };
 
-  const InputWrapper: React.FC<{ label: string; icon: React.ElementType; fieldId: string; children: React.ReactNode }> = ({ label, icon: Icon, fieldId, children }) => (
+  // Fix: Improved typing for InputWrapper's children props when cloning elements.
+  const InputWrapper: React.FC<{ label: string; icon: React.ElementType; fieldId: string; children: React.ReactNode; placeholder?: string }> = ({ label, icon: Icon, fieldId, children, placeholder }) => (
     <div className="space-y-2 group flex-1">
       <label htmlFor={`${fieldId}-input`} className={`text-[10px] font-black uppercase tracking-[2px] ml-1 transition-colors ${focusedInput === fieldId ? 'text-[#62A5FA]' : 'text-slate-400'}`}>
         {label}
@@ -109,7 +111,30 @@ const SignUp: React.FC = () => {
         <div className={`w-12 h-12 flex items-center justify-center border-r transition-colors ${focusedInput === fieldId ? 'text-[#62A5FA] border-[#62A5FA]/10' : 'text-slate-300 border-slate-100'}`}>
           <Icon size={16} strokeWidth={2.5} aria-hidden="true" />
         </div>
-        {children}
+        {React.Children.map(children, child => {
+          if (React.isValidElement(child) && child.type === 'input') {
+            const inputProps = child.props as React.InputHTMLAttributes<HTMLInputElement>;
+            return React.cloneElement(child, {
+              ...inputProps,
+              onFocus: (e) => { setFocusedInput(fieldId); inputProps.onFocus?.(e); }, // Preserve original onFocus if any
+              onBlur: (e) => { setFocusedInput(null); inputProps.onBlur?.(e); },   // Preserve original onBlur if any
+              id: `${fieldId}-input`, // Ensure ID is passed for input
+              placeholder: placeholder || inputProps.placeholder,
+              'aria-label': label,
+            });
+          }
+          if (React.isValidElement(child) && child.type === 'select') {
+            const selectProps = child.props as React.SelectHTMLAttributes<HTMLSelectElement>;
+            return React.cloneElement(child, {
+              ...selectProps,
+              onFocus: (e) => { setFocusedInput(fieldId); selectProps.onFocus?.(e); }, // Preserve original onFocus if any
+              onBlur: (e) => { setFocusedInput(null); selectProps.onBlur?.(e); },   // Preserve original onBlur if any
+              id: `${fieldId}-select`, // Ensure ID is passed for select
+              'aria-label': label,
+            });
+          }
+          return child;
+        })}
       </div>
     </div>
   );
@@ -131,7 +156,7 @@ const SignUp: React.FC = () => {
                       key={lang}
                       onClick={() => changeLanguage(lang)}
                       className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${i18n.language === lang ? 'bg-[#081437] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
-                      aria-label={t(`common.language.${lang}`)} // A11y
+                      aria-label={t(`common.language.${lang}`)} 
                   >
                       {lang}
                   </button>
@@ -150,16 +175,16 @@ const SignUp: React.FC = () => {
             <div className="space-y-12">
                 <Link to="/login" className="flex items-center gap-2 text-slate-400 hover:text-white transition-all group" aria-label={t('common.backToLogin')}>
                     <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
-                    <span className="text-[10px] font-black uppercase tracking-[3px]">{t('login.backToLogin')}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[3px]">{t('common.backToLogin')}</span>
                 </Link>
                 <img src={LOGO_URL} alt="Logo" className="h-10 object-contain drop-shadow-2xl" />
                 <div className="space-y-4">
-                    <div className="h-px w-8 bg-[#B23C0E]"></div>
+                    <div className="h-px w-8 bg-[#B23C0E]" aria-hidden="true"></div>
                     <h1 className="text-3xl font-black leading-tight tracking-tighter">{t('signup.requestAccess')}</h1>
                     <p className="text-slate-400 font-medium text-sm">{t('signup.joinNetwork')}</p>
                 </div>
             </div>
-            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">&copy; {new Date().getFullYear()} Aços Vital S.A.</div>
+            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest" aria-hidden="true">&copy; {new Date().getFullYear()} Aços Vital S.A.</div>
         </div>
       </div>
 
@@ -172,7 +197,7 @@ const SignUp: React.FC = () => {
                     <h2 className="text-3xl font-black text-[#081437] tracking-tighter">{t('signup.requestSent')}</h2>
                     <p className="text-slate-500 text-sm font-medium">{t('signup.validationPending')}</p>
                     <div className="flex justify-center pt-4">
-                        <Loader2 size={24} className="animate-spin text-[#62A5FA]" aria-hidden="true" />
+                        <Loader2 size={24} className="animate-spin" aria-hidden="true" />
                     </div>
                 </div>
             ) : (
@@ -186,22 +211,16 @@ const SignUp: React.FC = () => {
                         <div className="flex flex-col md:flex-row gap-6">
                             <InputWrapper label={t('signup.fullName')} icon={UserIcon} fieldId="name">
                                 <input 
-                                    id="name-input"
                                     required className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="João Silva" value={formData.fullName}
-                                    onFocus={() => setFocusedInput('name')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, fullName: e.target.value})}
-                                    aria-label={t('signup.fullName')}
                                 />
                             </InputWrapper>
                             <InputWrapper label={t('signup.corpEmail')} icon={Mail} fieldId="email">
                                 <input 
-                                    id="email-input"
                                     type="email" required className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="usuario@empresa.com" value={formData.email}
-                                    onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, email: e.target.value})}
-                                    aria-label={t('signup.corpEmail')}
                                 />
                             </InputWrapper>
                         </div>
@@ -209,11 +228,9 @@ const SignUp: React.FC = () => {
                         <div className="flex flex-col md:flex-row gap-6">
                             <InputWrapper label={t('signup.organization')} icon={Building2} fieldId="org">
                                 <select 
-                                    id="org-select"
                                     required className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 appearance-none cursor-pointer"
-                                    value={formData.organizationId} onFocus={() => setFocusedInput('org')} onBlur={() => setFocusedInput(null)}
+                                    value={formData.organizationId} 
                                     onChange={e => setFormData({...formData, organizationId: e.target.value})}
-                                    aria-label={t('signup.organization')}
                                 >
                                     <option value="">{t('signup.select')}</option>
                                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -222,12 +239,9 @@ const SignUp: React.FC = () => {
                             </InputWrapper>
                             <InputWrapper label={t('signup.department')} icon={Briefcase} fieldId="dept">
                                 <input 
-                                    id="dept-input"
                                     className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder={t('admin.users.departmentPlaceholder')} value={formData.department}
-                                    onFocus={() => setFocusedInput('dept')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, department: e.target.value})}
-                                    aria-label={t('signup.department')}
                                 />
                             </InputWrapper>
                         </div>
@@ -235,13 +249,10 @@ const SignUp: React.FC = () => {
                         <div className="flex flex-col md:flex-row gap-6">
                             <InputWrapper label={t('signup.password')} icon={Lock} fieldId="pass">
                                 <input 
-                                    id="pass-input"
                                     type={showPassword ? "text" : "password"} required
                                     className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="••••••••" value={formData.password}
-                                    onFocus={() => setFocusedInput('pass')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, password: e.target.value})}
-                                    aria-label={t('signup.password')}
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-[#62A5FA] transition-colors" aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}>
                                     {showPassword ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
@@ -249,13 +260,10 @@ const SignUp: React.FC = () => {
                             </InputWrapper>
                             <InputWrapper label={t('signup.confirmPassword')} icon={Lock} fieldId="confirm">
                                 <input 
-                                    id="confirm-input"
                                     type={showPassword ? "text" : "password"} required
                                     className="flex-1 px-5 py-4 bg-transparent outline-none text-sm font-normal text-slate-800 placeholder-slate-300"
                                     placeholder="••••••••" value={formData.confirmPassword}
-                                    onFocus={() => setFocusedInput('confirm')} onBlur={() => setFocusedInput(null)}
                                     onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
-                                    aria-label={t('signup.confirmPassword')}
                                 />
                             </InputWrapper>
                         </div>
@@ -282,7 +290,7 @@ const SignUp: React.FC = () => {
                                 )}
                             </button>
                             <p className="text-center text-xs text-slate-400 font-medium">
-                                {t('signup.alreadyHaveAccount')} <Link to="/login" className="text-[#081437] font-black hover:text-[#B23C0E] transition-all uppercase tracking-wider ml-1">
+                                {t('signup.alreadyHaveAccount')} <Link to="/login" className="text-[#081437] font-black hover:text-[#B23C0E] transition-colors ml-1 uppercase tracking-wider" aria-label={t('signup.login')}>
                                     {t('signup.login')}
                                 </Link>
                             </p>

@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useState } from 'react';
 import { 
     Search, 
@@ -12,7 +13,8 @@ import {
     AlertCircle, 
     CheckCircle2, 
     ArrowUpDown,
-    Filter
+    Filter,
+    UserCheck
 } from 'lucide-react';
 import { ClientOrganization } from '../../../types.ts';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
@@ -51,6 +53,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
 
     // Remove a simulação de dados analíticos. Agora, 'clients' deve vir do backend com esses dados.
     const sortedClients = useMemo(() => {
+        if (!clients) return []; // Defensive check: return empty array if clients is null/undefined
         return [...clients].sort((a, b) => { // Usa 'clients' diretamente
             if (sortKey === 'NAME') return a.name.localeCompare(b.name);
             // Assume 0 se pendingDocs ou complianceScore não estiverem definidos
@@ -66,6 +69,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
     }, [clients, sortKey]);
 
     const clientGroups = useMemo(() => {
+        if (!sortedClients || sortedClients.length === 0) return []; // Defensive check
         const groups: Record<string, typeof clients[0][]> = {};
         sortedClients.forEach(c => {
             const letter = c.name.charAt(0).toUpperCase();
@@ -81,14 +85,14 @@ export const ClientHub: React.FC<ClientHubProps> = ({
 
         if (actualPending > 0) {
             return (
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 text-orange-600 rounded-lg border border-orange-100 animate-pulse">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 text-orange-600 rounded-lg border border-orange-100 animate-pulse" aria-label={t('dashboard.pendingStatus', { count: actualPending })}>
                     <AlertCircle size={12} aria-hidden="true" />
                     <span className="text-[10px] font-black uppercase">{t('dashboard.pendingStatus', { count: actualPending })}</span>
                 </div>
             );
         }
         return (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100" aria-label={`100% ${t('dashboard.complianceHealth')}`}>
                 <CheckCircle2 size={12} aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase">100% {t('dashboard.complianceHealth')}</span>
             </div>
@@ -104,7 +108,8 @@ export const ClientHub: React.FC<ClientHubProps> = ({
     return (
         <div className="flex flex-col h-full gap-4 animate-in fade-in duration-300" role="main" aria-label={t('quality.b2bPortfolio')}>
             {/* Barra de Auditoria e Controles */}
-            <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col xl:flex-row justify-between items-center gap-4">
+            {/* Mantida a barra de busca e filtros, movida os botões de ação para a Quality.tsx */}
+            <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col xl:flex-row justify-between items-center gap-4 hidden"> {/* Hidden, as moved to parent */}
                 <div className="relative w-full max-w-xl">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
                     <input 
@@ -124,6 +129,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                             onClick={() => setViewMode('list')}
                             className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             aria-label={t('files.listView')}
+                            aria-pressed={viewMode === 'list'}
                         >
                             <List size={18} aria-hidden="true" />
                         </button>
@@ -131,6 +137,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                             onClick={() => setViewMode('grid')}
                             className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             aria-label={t('files.gridView')}
+                            aria-pressed={viewMode === 'grid'}
                         >
                             <LayoutGrid size={18} aria-hidden="true" />
                         </button>
@@ -148,7 +155,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                         >
                             <option value="NAME">{t('files.sort.nameAsc')}</option>
                             <option value="PENDING">{t('dashboard.criticalPendencies')}</option>
-                            <option value="LAST_ANALYSIS">{t('dashboard.lastAnalysis')} ({t('files.sort.dateNew')})</option> {/* Adicionado opção */}
+                            <option value="LAST_ANALYSIS">{t('dashboard.lastAnalysis')} ({t('files.sort.dateNew')})</option>
                             <option value="NEWEST">{t('dashboard.recent')}</option>
                         </select>
                     </div>
@@ -176,31 +183,31 @@ export const ClientHub: React.FC<ClientHubProps> = ({
             {/* Lista com Infinite Scroll */}
             <div className="flex-1 overflow-y-auto pb-10 custom-scrollbar">
                 {isLoading && sortedClients.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64">
+                    <div className="flex flex-col items-center justify-center h-64" role="status">
                         <Loader2 size={40} className="animate-spin text-blue-500" aria-hidden="true" />
                         <p className="mt-4 text-sm font-bold text-slate-400 uppercase tracking-widest">{t('dashboard.accessingAuditRecords')}</p>
                     </div>
                 ) : sortedClients.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200" role="status">
                         <Users size={48} className="mb-4 opacity-20" aria-hidden="true" />
                         <p className="font-medium">{t('dashboard.noRecordsFound')}</p>
                     </div>
                 ) : viewMode === 'grid' ? (
                     <div className="space-y-10">
                         {clientGroups.map(([letter, groupClients]) => (
-                            <div key={letter} className="space-y-4">
+                            <div key={letter} className="space-y-4" role="group" aria-labelledby={`group-label-${letter}`}>
                                 <div className="flex items-center gap-3 px-2">
                                     <div className="h-px flex-1 bg-slate-200" aria-hidden="true"></div>
-                                    <span className="text-xs font-black text-slate-400 uppercase tracking-[4px]">{letter}</span>
+                                    <span id={`group-label-${letter}`} className="text-xs font-black text-slate-400 uppercase tracking-[4px]">{letter}</span>
                                     <div className="h-px flex-1 bg-slate-200" aria-hidden="true"></div>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" role="list">
                                     {groupClients.map(c => (
                                         <div 
                                             key={c.id} 
                                             onClick={() => onSelectClient(c)} 
                                             className={`bg-white p-5 rounded-2xl border ${c.pendingDocs && c.pendingDocs > 0 ? 'border-orange-200 bg-orange-50/10' : 'border-slate-200'} hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all group relative overflow-hidden`}
-                                            role="listitem button" // A11y
+                                            role="listitem button"
                                             aria-label={`${c.name}. ${t('dashboard.fiscalID')}: ${c.cnpj}. ${t('dashboard.complianceHealth')}: ${c.complianceScore || 0}%. ${t('dashboard.pendingStatus', { count: c.pendingDocs || 0 })}`}
                                         >
                                             <div className="flex justify-between items-start mb-4">
@@ -238,13 +245,14 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                 <tr role="row">
                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" scope="col">{t('dashboard.organization')}</th>
                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" scope="col">{t('dashboard.fiscalID')}</th>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" scope="col">Analista Qual.</th>
                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" scope="col">{t('dashboard.complianceHealth')}</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center" scope="col">{t('dashboard.pendingLabel')}</th>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center" scope="col">{t('dashboard.kpi.pendingLabel')}</th>
                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" scope="col">{t('dashboard.lastAnalysis')}</th>
                                     <th className="px-6 py-4" scope="col"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100" role="rowgroup">
                                 {sortedClients.map(c => (
                                     <tr 
                                         key={c.id} 
@@ -262,6 +270,9 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-xs font-mono text-slate-500" role="cell" data-label={t('dashboard.fiscalID')}>{c.cnpj}</td>
+                                        <td className="px-6 py-4 text-xs font-medium text-slate-700" role="cell" data-label="Analista Qual.">
+                                            {c.qualityAnalystName || t('common.na')}
+                                        </td>
                                         <td className="px-6 py-4" role="cell" data-label={t('dashboard.complianceHealth')}>
                                             <div className="flex items-center gap-3">
                                                 <div className="flex-1 h-1.5 bg-slate-100 rounded-full max-w-[100px] overflow-hidden">
@@ -273,7 +284,7 @@ export const ClientHub: React.FC<ClientHubProps> = ({
                                                 <span className="text-xs font-black text-slate-600">{c.complianceScore || 0}%</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4" role="cell" data-label={t('dashboard.pendingLabel')}>
+                                        <td className="px-6 py-4" role="cell" data-label={t('dashboard.kpi.pendingLabel')}>
                                             <div className="flex justify-center">
                                                 {c.pendingDocs && c.pendingDocs > 0 ? (
                                                     <span className="px-2 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-md text-[10px] font-black uppercase">

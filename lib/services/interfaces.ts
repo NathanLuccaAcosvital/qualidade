@@ -1,6 +1,7 @@
+
 import { 
   User, UserRole, FileNode, FileType, AuditLog, LibraryFilters, 
-  ClientOrganization, SupportTicket, SystemStatus, NetworkPort, 
+  ClientOrganization, SystemStatus, NetworkPort, 
   FirewallRule, MaintenanceEvent, AppNotification 
 } from '../../types.ts';
 
@@ -14,7 +15,6 @@ export interface AdminStatsData {
   totalUsers: number;
   activeUsers: number;
   activeClients: number;
-  openTickets: number;
   logsLast24h: number;
   systemHealthStatus: 'HEALTHY' | 'WARNING' | 'CRITICAL';
   cpuUsage: number;
@@ -37,18 +37,17 @@ export interface DashboardStatsData {
 // NOVO: Interface para as estatísticas da Visão Geral da Qualidade
 export interface QualityOverviewStats {
   pendingDocs: number;
-  openQualityTickets: number;
   totalActiveClients: number;
 }
 
 export interface IUserService {
-  authenticate: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, fullName: string, organizationId?: string, department?: string) => Promise<void>;
+  authenticate: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, fullName: string, organizationId?: string, department?: string) => Promise<void>; // ALTERADO: clientId para organizationId
   getCurrentUser: () => Promise<User | null>;
   logout: () => Promise<void>;
   getUsers: () => Promise<User[]>;
   getUsersByRole: (role: UserRole) => Promise<User[]>; // Adicionado
-  saveUser: (user: User, initialPassword?: string) => Promise<void>;
+  saveUser: (user: User, initialPassword?: string) => Promise<void>; // ALTERADO: user: User agora tem organizationId
   changePassword: (userId: string, current: string, newPass: string) => Promise<boolean>;
   deleteUser: (userId: string) => Promise<void>;
   blockUserById: (adminUser: User, targetUserId: string, reason: string) => Promise<void>;
@@ -59,13 +58,13 @@ export interface IUserService {
 export interface IFileService {
   getFiles: (user: User, folderId: string | null, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
   getFilesByOwner: (ownerId: string) => Promise<FileNode[]>;
-  getMasterLibraryFiles: () => Promise<FileNode[]>;
-  importFilesFromMaster: (user: User, fileIds: string[], targetFolderId: string, targetOwnerId: string) => Promise<void>;
+  // REMOVIDO: getMasterLibraryFiles: () => Promise<FileNode[]>;
+  // REMOVIDO: importFilesFromMaster: (user: User, fileIds: string[], targetFolderId: string, targetOwnerId: string) => Promise<void>;
   getRecentFiles: (user: User, limit?: number) => Promise<FileNode[]>;
   getLibraryFiles: (user: User, filters: LibraryFilters, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
   getDashboardStats: (user: User) => Promise<DashboardStatsData>; // Atualizado para usar a nova interface
   createFolder: (user: User, parentId: string | null, name: string, ownerId?: string) => Promise<FileNode | null>;
-  uploadFile: (user: User, fileData: Partial<FileNode>, ownerId: string) => Promise<FileNode>;
+  uploadFile: (user: User, fileData: Partial<FileNode> & { fileBlob?: Blob }, ownerId: string) => Promise<FileNode>;
   updateFile: (user: User, fileId: string, updates: Partial<FileNode>) => Promise<void>;
   deleteFile: (user: User, fileId: string) => Promise<void>;
   searchFiles: (user: User, query: string, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
@@ -73,8 +72,18 @@ export interface IFileService {
   toggleFavorite: (user: User, fileId: string) => Promise<boolean>;
   getFavorites: (user: User) => Promise<FileNode[]>;
   getFileSignedUrl: (user: User, fileId: string) => Promise<string>;
-  logAction: (user: User, action: string, target: string, severity?: AuditLog['severity']) => Promise<void>;
+  // Fix: Updated logAction signature to match the implementation in supabaseFileService.ts
+  logAction: (
+    user: User | null,
+    action: string,
+    target: string,
+    category: AuditLog['category'],
+    severity?: AuditLog['severity'],
+    status?: AuditLog['status'],
+    metadata?: Record<string, any>
+  ) => Promise<void>;
   getAuditLogs: (user: User) => Promise<AuditLog[]>;
+  getQualityAuditLogs: (user: User, filters?: { search?: string; severity?: AuditLog['severity'] | 'ALL' }) => Promise<AuditLog[]>; // NOVO
 }
 
 export interface IAdminService {
@@ -83,23 +92,13 @@ export interface IAdminService {
   subscribeToSystemStatus: (listener: (status: SystemStatus) => void) => () => void;
   getAdminStats: () => Promise<AdminStatsData>;
   getClients: (filters?: { search?: string; status?: string }, page?: number, pageSize?: number) => Promise<PaginatedResponse<ClientOrganization>>;
-  saveClient: (user: User, clientData: Partial<ClientOrganization>) => Promise<ClientOrganization>;
+  saveClient: (user: User, clientData: Partial<ClientOrganization> & { qualityAnalystId?: string; qualityAnalystName?: string }) => Promise<ClientOrganization>;
   deleteClient: (user: User, clientId: string) => Promise<void>;
-  getTickets: () => Promise<SupportTicket[]>;
-  getMyTickets: (user: User, filters?: { status?: 'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' }) => Promise<SupportTicket[]>;
-  getUserTickets: (userId: string) => Promise<SupportTicket[]>;
-  getQualityInbox: (filters?: { search?: string; status?: string }) => Promise<SupportTicket[]>; // Adicionado filters
-  getAdminInbox: () => Promise<SupportTicket[]>;
-  createTicket: (user: User, ticket: Partial<SupportTicket>) => Promise<SupportTicket>;
-  resolveTicket: (user: User, ticketId: string, status: SupportTicket['status'], resolutionNote?: string) => Promise<void>;
-  updateTicketStatus: (user: User, ticketId: string, status: SupportTicket['status'], resolutionNote?: string) => Promise<void>; // Adicionado resolutionNote
-  escalateTicketToAdmin: (user: User, ticketId: string, note?: string) => Promise<void>; // Adicionado
   getFirewallRules: () => Promise<FirewallRule[]>;
   getPorts: () => Promise<NetworkPort[]>;
   getMaintenanceEvents: () => Promise<MaintenanceEvent[]>;
   scheduleMaintenance: (user: User, event: Partial<MaintenanceEvent>) => Promise<MaintenanceEvent>;
   cancelMaintenance: (user: User, eventId: string) => Promise<void>;
-  requestInfrastructureSupport: (user: User, data: any) => Promise<string>;
 }
 
 export interface INotificationService {

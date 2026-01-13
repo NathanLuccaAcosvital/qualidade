@@ -1,20 +1,18 @@
 
 
 import React from 'react';
-import { Building2, Clock, Inbox, Database, ArrowUpRight, ChevronRight, Activity, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Building2, Clock, Inbox, ArrowUpRight, ChevronRight, Activity, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 interface QualityOverviewCardsProps {
     totalClients: number;
     totalPendingDocs: number;
-    totalOpenTickets: number;
-    // totalInbox: number; // REMOVIDO: Prop redundante
     onChangeView: (view: any) => void;
 }
 
-export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ totalClients, totalPendingDocs, totalOpenTickets, onChangeView }) => {
+export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ totalClients, totalPendingDocs, onChangeView }) => {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div onClick={() => onChangeView('clients')} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform"><Building2 size={24}/></div>
@@ -33,23 +31,16 @@ export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ tota
                     <p className="text-3xl font-bold text-slate-800 mt-1">{totalPendingDocs}</p>
                 </div>
 
-                <div onClick={() => onChangeView('tickets')} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform"><Inbox size={24}/></div>
-                        <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">{totalOpenTickets} Total</span>
+                {/* REMOVIDO: O CARD DE "REPOSITÓRIO MESTRE" FOI EXCLUÍDO */}
+                <div onClick={() => onChangeView('clients')} className="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer group text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Building2 size={80}/></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div className="p-3 bg-white/10 text-white rounded-xl"><Building2 size={24}/></div>
                     </div>
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Chamados Abertos</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{totalOpenTickets}</p>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider relative z-10">Carteira B2B</p>
+                    <p className="text-sm font-medium text-white mt-1 relative z-10 flex items-center gap-2">Acessar Clientes <ChevronRight size={14}/></p>
                 </div>
 
-                <div onClick={() => onChangeView('master')} className="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer group text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10"><Database size={80}/></div>
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="p-3 bg-white/10 text-white rounded-xl"><Database size={24}/></div>
-                    </div>
-                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider relative z-10">Repositório Mestre</p>
-                    <p className="text-sm font-medium text-white mt-1 relative z-10 flex items-center gap-2">Acessar Arquivos <ChevronRight size={14}/></p>
-                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

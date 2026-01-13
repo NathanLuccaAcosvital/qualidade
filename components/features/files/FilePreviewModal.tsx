@@ -56,19 +56,19 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, isOpen
   const renderContent = () => {
       if (isLoadingUrl) {
           return (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
-                  <Loader2 size={48} className="animate-spin text-blue-500" />
-                  <p className="text-sm font-bold uppercase tracking-widest">Autenticando acesso ao documento...</p>
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4" role="status">
+                  <Loader2 size={48} className="animate-spin text-blue-500" aria-hidden="true" />
+                  <p className="text-sm font-bold uppercase tracking-widest">{t('files.authenticatingAccess')}</p>
               </div>
           );
       }
 
       if (!signedUrl) {
           return (
-              <div className="flex flex-col items-center justify-center h-full text-red-400 p-8 text-center">
-                  <X size={48} className="mb-4" />
-                  <p className="font-bold">Erro ao carregar o documento.</p>
-                  <p className="text-sm mt-2">Você pode não ter permissão para visualizar este arquivo ou o link expirou.</p>
+              <div className="flex flex-col items-center justify-center h-full text-red-400 p-8 text-center" role="alert">
+                  <X size={48} className="mb-4" aria-hidden="true" />
+                  <p className="font-bold">{t('files.errorLoadingDocument')}</p>
+                  <p className="text-sm mt-2">{t('files.permissionOrExpiredLink')}</p>
               </div>
           );
       }
@@ -80,23 +80,24 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, isOpen
                 src={`${signedUrl}#toolbar=0&navpanes=0`} 
                 className="w-full h-full border-none"
                 title={file.name}
+                aria-label={t('files.documentPreview', { fileName: file.name })}
               />
           </div>
       );
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="file-preview-title">
       
       {/* TOOLBAR */}
       <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 shadow-lg z-20">
           <div className="flex items-center gap-4 text-white overflow-hidden flex-1">
               <div className="p-2 bg-slate-800 rounded-lg shrink-0">
-                  <FileText className="text-blue-400" size={20} />
+                  <FileText className="text-blue-400" size={20} aria-hidden="true" />
               </div>
               <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-sm truncate">{file.name}</span>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest">Visualização Autenticada</span>
+                  <span id="file-preview-title" className="font-bold text-sm truncate">{file.name}</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-widest">{t('files.authenticatedView')}</span>
               </div>
           </div>
 
@@ -105,8 +106,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, isOpen
                 onClick={handleDownload} 
                 disabled={isDownloading || !signedUrl}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                aria-label={t('common.download')}
               >
-                  {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  {isDownloading ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
                   <span>{t('common.download')}</span>
               </button>
               
@@ -114,15 +116,16 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, isOpen
                 onClick={() => window.open(signedUrl!, '_blank')}
                 disabled={!signedUrl}
                 className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
-                title="Abrir em nova aba"
+                title={t('files.openInNewTab')}
+                aria-label={t('files.openInNewTab')}
               >
-                  <ExternalLink size={20} />
+                  <ExternalLink size={20} aria-hidden="true" />
               </button>
 
-              <div className="w-px h-6 bg-slate-700 mx-2" />
+              <div className="w-px h-6 bg-slate-700 mx-2" aria-hidden="true" />
               
-              <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-all">
-                  <X size={24} />
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-all" aria-label={t('common.close')}>
+                  <X size={24} aria-hidden="true" />
               </button>
           </div>
       </div>

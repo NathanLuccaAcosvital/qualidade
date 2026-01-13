@@ -1,10 +1,12 @@
+
+
 export enum UserRole {
   ADMIN = 'ADMIN',
   QUALITY = 'QUALITY',
   CLIENT = 'CLIENT'
 }
 
-export const MASTER_ORG_ID = 'org-master-library';
+// REMOVIDO: MASTER_ORG_ID, pois a Biblioteca Mestra foi removida.
 
 export interface ClientOrganization {
   id: string;
@@ -15,6 +17,8 @@ export interface ClientOrganization {
   pendingDocs?: number; 
   complianceScore?: number; 
   lastAnalysisDate?: string; // NOVO: Data da última análise de conformidade
+  qualityAnalystId?: string; // NOVO: ID do analista de qualidade responsável
+  qualityAnalystName?: string; // NOVO: Nome do analista de qualidade responsável
 }
 
 export interface User {
@@ -22,7 +26,8 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  clientId?: string;
+  organizationId?: string; // ALTERADO: Antigo clientId, agora armazena o ID da organização
+  organizationName?: string; // NOVO: Nome da organização para exibição
   status?: 'ACTIVE' | 'BLOCKED';
   department?: string;
   lastLogin?: string;
@@ -79,14 +84,7 @@ export interface AuditLog {
   userAgent: string;
   device: string;
   metadata: Record<string, any>;
-  requestId: string;
-}
-
-export interface LibraryFilters {
-  startDate: string;
-  endDate: string;
-  status: 'ALL' | 'APPROVED' | 'PENDING' | 'REJECTED';
-  search: string;
+  requestId: string; // Adicionado requestId
 }
 
 export interface AppNotification {
@@ -98,24 +96,6 @@ export interface AppNotification {
   isRead: boolean;
   timestamp: string;
   link?: string;
-}
-
-export type TicketFlow = 'CLIENT_TO_QUALITY' | 'QUALITY_TO_ADMIN' | 'ADMIN_TO_DEV';
-
-export interface SupportTicket {
-  id: string;
-  flow: TicketFlow;
-  userId: string;
-  userName: string; 
-  clientId?: string;
-  clientName?: string; // NOVO: Adicionado para exibir o nome da empresa
-  subject: string;
-  description: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
-  resolutionNote?: string;
-  createdAt: string;
-  updatedAt?: string;
 }
 
 export interface MaintenanceEvent {
@@ -155,4 +135,12 @@ export interface FirewallRule {
   action: 'ALLOW' | 'DENY';
   active: boolean;
   priority: number;
+}
+
+// Fix: Define LibraryFilters interface
+export interface LibraryFilters {
+  startDate?: string;
+  endDate?: string;
+  status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  search: string;
 }

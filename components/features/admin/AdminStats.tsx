@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Users, Building2, LifeBuoy, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, subtext, icon: Icon, color }) => {
+    const { t } = useTranslation();
     // Mapeamento de cores seguro
     const getColors = (c: string) => {
         switch(c) {
@@ -25,12 +25,16 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, subtext, icon: Icon, 
     const colors = getColors(color);
 
     return (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-            <div className={`absolute -right-6 -top-6 p-4 transform scale-150 transition-opacity opacity-0 group-hover:opacity-100 ${colors.icon}`}>
+        <div 
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all"
+            role="region"
+            aria-label={`${label}: ${value}. ${subtext || ''}`}
+        >
+            <div className={`absolute -right-6 -top-6 p-4 transform scale-150 transition-opacity opacity-0 group-hover:opacity-100 ${colors.icon}`} aria-hidden="true">
                 <Icon size={120} />
             </div>
             <div className="relative z-10 flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${colors.bg} ${colors.text}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${colors.bg} ${colors.text}`} aria-hidden="true">
                     <Icon size={24} />
                 </div>
                 <div>
@@ -41,7 +45,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, subtext, icon: Icon, 
             {subtext && (
                 <div className="mt-4 pt-3 border-t border-slate-100">
                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${colors.circle}`}></span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${colors.circle}`} aria-hidden="true"></span>
                         {subtext}
                     </p>
                 </div>
@@ -54,20 +58,19 @@ interface AdminStatsProps {
     usersCount: number;
     activeUsersCount: number;
     clientsCount: number;
-    ticketsCount: number;
     logsCount: number;
 }
 
-export const AdminStats: React.FC<AdminStatsProps> = ({ usersCount, activeUsersCount, clientsCount, ticketsCount, logsCount }) => {
+export const AdminStats: React.FC<AdminStatsProps> = ({ usersCount, activeUsersCount, clientsCount, logsCount }) => {
     const { t } = useTranslation();
     
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500" role="region" aria-label={t('admin.tabs.overview')}>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <StatCard 
                     label={t('admin.stats.totalUsers')} 
                     value={usersCount} 
-                    subtext={`${activeUsersCount} Ativos`}
+                    subtext={`${activeUsersCount} ${t('common.statusActive')}`}
                     icon={Users} color="blue" 
                 />
                 <StatCard 
@@ -77,15 +80,9 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ usersCount, activeUsersC
                     icon={Building2} color="indigo" 
                 />
                 <StatCard 
-                    label={t('admin.tabs.tickets')} 
-                    value={ticketsCount}
-                    subtext="Pendentes de Resposta"
-                    icon={LifeBuoy} color="red" 
-                />
-                <StatCard 
                     label={t('admin.stats.activities')} 
                     value={logsCount > 99 ? '99+' : logsCount} 
-                    subtext="Logs nas últimas 24h"
+                    subtext={t('admin.stats.logsLast24hSubtext')} 
                     icon={Activity} color="orange" 
                 />
             </div>

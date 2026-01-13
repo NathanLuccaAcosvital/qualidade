@@ -26,13 +26,16 @@ import {
   MoreHorizontal,
   Home,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Hourglass,
+  FolderPlus
 } from 'lucide-react';
 import { useAuth } from '../../../context/authContext.tsx'; 
 import { useTranslation } from 'react-i18next';
 import { fileService } from '../../../lib/services/index.ts';
-import { FileNode, FileType, BreadcrumbItem, FileMetadata } from '../../../types.ts';
-import { useToast } from '../../../context/notificationContext.tsx'; // Importado
+import { FileNode, FileType, BreadcrumbItem, FileMetadata, UserRole } from '../../../types.ts';
+import { useToast } from '../../../context/notificationContext.tsx';
+import { PaginatedResponse } from '../../../lib/services/interfaces.ts';
 
 export interface FileExplorerHandle {
     triggerBulkDownload: () => Promise<void>;
@@ -43,21 +46,25 @@ type SortOption = 'NAME_ASC' | 'NAME_DESC' | 'DATE_NEW' | 'DATE_OLD' | 'STATUS';
 type GroupOption = 'NONE' | 'STATUS' | 'PRODUCT' | 'DATE';
 
 interface FileExplorerProps {
-  allowUpload?: boolean;
+  allowUpload?: boolean; // Mantido, mas a lógica de renderização do botão será ajustada
   externalFiles?: FileNode[]; 
   flatMode?: boolean; 
   onRefresh?: () => void; 
   initialFolderId?: string | null; 
   currentFolderId?: string | null; 
   onNavigate?: (folderId: string | null) => void; 
-  onDelete?: (file: FileNode) => void;
-  onEdit?: (file: FileNode) => void;
+  onDeleteFile?: (file: FileNode) => void; // Apenas para Admin ou casos específicos
+  onSetStatusToPending?: (file: FileNode) => void;
+  onEdit?: (file: FileNode) => void; // Edição de metadados de arquivo
   onUploadClick?: (currentFolderId: string | null) => void; 
   onFileSelect?: (file: FileNode | null) => void; 
   hideToolbar?: boolean; 
-  filterStatus?: 'ALL' | 'PENDING' | 'APPROVED'; 
+  filterStatus?: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'; 
   onSelectionChange?: (count: number) => void; 
   autoHeight?: boolean; 
+  refreshKey?: number;
+  externalSearchQuery?: string;
+  onCreateFolder?: (currentFolderId: string | null) => void; // NOVO: Para criar pasta
 }
 
 export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({ 
@@ -68,40 +75,45 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   initialFolderId = null,
   currentFolderId: controlledFolderId,
   onNavigate,
-  onDelete,
+  onDeleteFile, // REMOVIDO: Será tratado fora para Quality
+  onSetStatusToPending,
   onEdit,
   onUploadClick,
   onFileSelect,
   hideToolbar = false,
-  filterStatus = 'ALL',
+  filterStatus,
   onSelectionChange,
-  autoHeight = false
+  autoHeight = false,
+  refreshKey = 0,
+  externalSearchQuery,
+  onCreateFolder // NOVO
 }, ref: ForwardedRef<FileExplorerHandle>) => {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const { showToast } = useToast(); // Hook useToast
+  const { showToast } = useToast();
   
+  const [internalSearchQuery, setInternalSearchQuery] = useState(''); 
   const [internalFolderId, setInternalFolderId] = useState<string | null>(initialFolderId);
   const activeFolderId = controlledFolderId !== undefined ? controlledFolderId : internalFolderId;
 
-  // Pagination State
   const [files, setFiles] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   
-  const [searchQuery, searchQuerySet] = useState('');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list'); 
-  // Fix: Initialize with `useState<Set<string>>(new Set())` instead of `new Set<string>()`
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set()); 
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   
   const [sortBy, setSortBy] = useState<SortOption>('DATE_NEW');
   const [groupBy, setGroupBy] = useState<GroupOption>('NONE');
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [singleSelectedId, setSingleSelectedId] = useState<string | null>(null);
+
+  const effectiveSearchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
+  const effectiveFilterStatus: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = filterStatus || 'ALL';
 
   const observer = useRef<IntersectionObserver | null>(null);
   const lastElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -115,10 +127,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
       if (node) observer.current.observe(node);
   }, [loading, loadingMore, hasMore, externalFiles]);
 
-  // Expose methods via ref for parent components
   React.useImperativeHandle(ref, () => ({
       triggerBulkDownload: handleBulkDownload,
-      // Fix: Changed to clear the Set directly
       clearSelection: () => setSelectedFiles(new Set()), 
   }));
 
@@ -130,20 +140,18 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
       else setLoadingMore(true);
 
       try {
-          let result: FileNode[] | { items: FileNode[]; hasMore: boolean; total: number; } = { items: [], hasMore: false, total: 0 };
+          let result: PaginatedResponse<FileNode> = { items: [], hasMore: false, total: 0 };
 
           if (externalFiles) {
-            // If externalFiles are provided, we don't paginate or call the service directly
-            result = externalFiles;
-            setHasMore(false);
-          } else if (searchQuery) {
-            result = await fileService.searchFiles(user, searchQuery, currentPage);
+            result = { items: externalFiles, hasMore: false, total: externalFiles.length };
+          } else if (effectiveSearchQuery || effectiveFilterStatus !== 'ALL') {
+            result = await fileService.getLibraryFiles(user, { search: effectiveSearchQuery, status: effectiveFilterStatus }, currentPage);
           } else {
             result = await fileService.getFiles(user, activeFolderId, currentPage);
           }
 
-          const fetchedItems = (result as { items: FileNode[] }).items || (result as FileNode[]);
-          const newHasMore = (result as { hasMore: boolean }).hasMore ?? false;
+          const fetchedItems = result.items;
+          const newHasMore = result.hasMore ?? false;
 
           setFiles(prev => resetPage ? fetchedItems : [...prev, ...fetchedItems]);
           setHasMore(newHasMore);
@@ -155,13 +163,16 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
           if (resetPage) setLoading(false);
           else setLoadingMore(false);
       }
-  }, [user, page, searchQuery, activeFolderId, externalFiles, t, showToast]);
+  }, [user, page, activeFolderId, externalFiles, effectiveSearchQuery, effectiveFilterStatus, t, showToast]);
 
   const fetchBreadcrumbs = useCallback(async () => {
       if (!user || flatMode) return;
       try {
           const crumbs = await fileService.getBreadcrumbs(activeFolderId);
-          setBreadcrumbs(crumbs);
+          setBreadcrumbs(crumbs.map(crumb => ({
+            ...crumb,
+            name: crumb.id === 'root' ? t('common.home') : crumb.name
+          })));
       } catch (err) {
           console.error("Erro ao carregar breadcrumbs:", err);
           showToast(t('files.errorLoadingNavigation'), 'error');
@@ -169,9 +180,9 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   }, [user, activeFolderId, flatMode, t, showToast]);
 
   useEffect(() => {
-      fetchFiles(true); // Always reset files when folder, search or externalFiles change
+      fetchFiles(true); 
       fetchBreadcrumbs();
-  }, [activeFolderId, searchQuery, flatMode, externalFiles, filterStatus, fetchFiles, fetchBreadcrumbs]);
+  }, [activeFolderId, effectiveSearchQuery, effectiveFilterStatus, flatMode, externalFiles, refreshKey, fetchFiles, fetchBreadcrumbs]);
 
   useEffect(() => {
     if (onSelectionChange) {
@@ -180,8 +191,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   }, [selectedFiles, onSelectionChange]);
 
   const handleNavigate = (folderId: string | null) => {
-      // Fix: Used the correct setter `searchQuerySet` for `searchQuery` state.
-      searchQuerySet('');
+      setInternalSearchQuery('');
       setPage(1);
       if (onNavigate) onNavigate(folderId);
       else setInternalFolderId(folderId);
@@ -213,8 +223,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
       try {
           const isFavorite = await fileService.toggleFavorite(user, file.id);
           setFiles(prev => prev.map(f => f.id === file.id ? { ...f, isFavorite } : f));
-          showToast(isFavorite ? t('files.addFavorite', { fileName: file.name }) : t('files.toggleFavorite', { fileName: file.name }), 'info');
-          if (onRefresh) onRefresh(); // Notify parent to refresh if it's a favorites/recent view
+          showToast(isFavorite ? t('files.addFavorite') : t('files.toggleFavorite'), 'info');
+          if (onRefresh) onRefresh();
       } catch (err) {
           console.error("Erro ao alternar favorito:", err);
           showToast(t('files.errorToggleFavorite'), 'error');
@@ -239,49 +249,88 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   const handleBulkDownload = async () => {
       if (!user || selectedFiles.size === 0) return;
       showToast(t('files.downloading'), 'info');
-      // Lógica de download em massa (simulada ou via API de backend para zip)
-      // Exemplo: Iterar e baixar individualmente, ou enviar IDs para um endpoint de zip
-      // Fix: Changed to clear the Set directly
       setSelectedFiles(new Set());
       showToast(t('files.bulkDownloadStarted', { count: selectedFiles.size }), 'success');
   };
 
   const handleActionClick = (fileId: string) => {
       setActiveActionId(activeActionId === fileId ? null : fileId);
-      setSingleSelectedId(fileId); // Set single selected file for contextual menu
+      setSingleSelectedId(fileId);
   };
 
-  const handleDelete = async (file: FileNode) => {
-      if (!user || !onDelete) return;
-      if (!window.confirm(t('files.confirmDelete', { fileName: file.name }))) return;
-      try {
-          await fileService.deleteFile(user, file.id);
-          setFiles(prev => prev.filter(f => f.id !== file.id));
-          onDelete(file);
-          showToast(t('files.fileDeletedSuccess', { fileName: file.name }), 'success');
-      } catch (err) {
-          showToast(t('files.errorDeletingFile'), 'error');
-      } finally {
-          setActiveActionId(null);
-      }
+  const renderFileIcon = (file: FileNode) => {
+    if (file.type === FileType.FOLDER) return <Folder size={20} className="text-blue-500" aria-hidden="true" />;
+    if (file.type === FileType.PDF) return <FileText size={20} className="text-red-500" aria-hidden="true" />;
+    if (file.type === FileType.IMAGE) return <ImageIcon size={20} className="text-emerald-500" aria-hidden="true" />;
+    return <FileText size={20} className="text-slate-500" aria-hidden="true" />;
   };
 
-  const handleEdit = (file: FileNode) => {
-    if (onEdit) onEdit(file);
-    setActiveActionId(null);
+  const renderStatusBadge = (status?: string) => {
+    if (!status) return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-1.5 whitespace-nowrap" aria-label={t('files.pending')}>
+            <Clock size={10} aria-hidden="true"/> {t('files.pending')}
+        </span>
+    );
+
+    const isClient = user?.role === UserRole.CLIENT;
+
+    let displayStatusText: string;
+    let bgColor: string;
+    let textColor: string;
+    let borderColor: string;
+    let Icon: React.ElementType;
+    let ariaLabel: string;
+
+    switch (status) {
+        case 'APPROVED':
+            displayStatusText = isClient ? t('files.clientStatus.availableForDownload') : t('files.groups.approved');
+            bgColor = 'bg-emerald-50';
+            textColor = 'text-emerald-600';
+            borderColor = 'border-emerald-100';
+            Icon = CheckCircle2;
+            ariaLabel = isClient ? t('files.clientStatus.availableForDownload') : t('files.groups.approved');
+            break;
+        case 'PENDING':
+            displayStatusText = isClient ? t('files.clientStatus.processing') : t('files.groups.pending');
+            bgColor = 'bg-orange-50';
+            textColor = 'text-orange-600';
+            borderColor = 'border-orange-100';
+            Icon = Clock;
+            ariaLabel = isClient ? t('files.clientStatus.processing') : t('files.groups.pending');
+            break;
+        case 'REJECTED':
+            displayStatusText = isClient ? t('files.clientStatus.technicalConference') : t('files.groups.rejected');
+            bgColor = 'bg-red-50';
+            textColor = 'text-red-600';
+            borderColor = 'border-red-100';
+            Icon = AlertCircle;
+            ariaLabel = isClient ? t('files.clientStatus.technicalConference') : t('files.groups.rejected');
+            break;
+        default:
+            displayStatusText = t('files.pending'); // Fallback
+            bgColor = 'bg-orange-50';
+            textColor = 'text-orange-600';
+            borderColor = 'border-orange-100';
+            Icon = Clock;
+            ariaLabel = t('files.pending');
+            break;
+    }
+
+    return (
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${bgColor} ${textColor} ${borderColor} flex items-center gap-1.5 whitespace-nowrap`} aria-label={ariaLabel}>
+            <Icon size={10} aria-hidden="true"/> {displayStatusText}
+        </span>
+    );
   };
 
-  // Fix: Explicitly define the return type of useMemo to avoid `unknown` inference.
   const filteredAndSortedFiles: { [key: string]: FileNode[] } = useMemo(() => {
     let currentFiles = externalFiles || files;
-
-    if (filterStatus !== 'ALL') {
-        currentFiles = currentFiles.filter(f => f.metadata?.status === filterStatus);
+    
+    if (effectiveFilterStatus !== 'ALL') {
+        currentFiles = currentFiles.filter(f => f.metadata?.status === effectiveFilterStatus);
     }
     
-    // Sort
     const sorted = [...currentFiles].sort((a, b) => {
-        // Folders always first
         if (a.type === FileType.FOLDER && b.type !== FileType.FOLDER) return -1;
         if (a.type !== FileType.FOLDER && b.type === FileType.FOLDER) return 1;
 
@@ -293,7 +342,6 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
         return 0;
     });
 
-    // Group
     if (groupBy === 'NONE') return { Ungrouped: sorted };
 
     const groups: { [key: string]: FileNode[] } = {};
@@ -311,7 +359,6 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
         groups[groupKey].push(file);
     });
 
-    // Ensure folders are always first in groups too
     for (const key in groups) {
       groups[key].sort((a, b) => {
           if (a.type === FileType.FOLDER && b.type !== FileType.FOLDER) return -1;
@@ -321,48 +368,14 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(({
   }
 
     return groups;
-}, [files, externalFiles, sortBy, groupBy, filterStatus, t]);
-
-
-const renderFileIcon = (file: FileNode) => {
-    if (file.type === FileType.FOLDER) return <Folder size={20} className="text-blue-500" aria-hidden="true" />;
-    if (file.type === FileType.PDF) return <FileText size={20} className="text-red-500" aria-hidden="true" />;
-    if (file.type === FileType.IMAGE) return <ImageIcon size={20} className="text-emerald-500" aria-hidden="true" />;
-    return <FileText size={20} className="text-slate-500" aria-hidden="true" />;
-};
-
-const renderStatusBadge = (status?: string) => {
-    if (!status) return (
-        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-1.5 whitespace-nowrap">
-            <Clock size={10} aria-hidden="true"/> {t('files.pending')}
-        </span>
-    );
-    switch (status) {
-        case 'APPROVED': return (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center gap-1.5 whitespace-nowrap">
-                <CheckCircle2 size={10} aria-hidden="true"/> {t('files.groups.approved')}
-            </span>
-        );
-        case 'PENDING': return (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-1.5 whitespace-nowrap">
-                <Clock size={10} aria-hidden="true"/> {t('files.pending')}
-            </span>
-        );
-        case 'REJECTED': return (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-50 text-red-600 border border-red-100 flex items-center gap-1.5 whitespace-nowrap">
-                <AlertCircle size={10} aria-hidden="true"/> {t('files.groups.rejected')}
-            </span>
-        );
-        default: return null;
-    }
-};
+  }, [files, externalFiles, sortBy, groupBy, effectiveFilterStatus, t, user?.role]);
 
   return (
     <div className={`flex flex-col h-full bg-white rounded-2xl ${!autoHeight ? 'flex-1' : ''}`} role="region" aria-label={t('menu.library')}>
       {!hideToolbar && (
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-50">
             <div className="flex items-center gap-2 md:gap-4 flex-1 w-full md:w-auto" role="navigation" aria-label={t('files.breadcrumbs')}>
-                <button onClick={() => handleNavigate(null)} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" aria-label={t('menu.home')}>
+                <button onClick={() => handleNavigate(null)} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" aria-label={t('common.home')}>
                     <Home size={18} aria-hidden="true" />
                 </button>
                 <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar whitespace-nowrap flex-1">
@@ -384,15 +397,26 @@ const renderStatusBadge = (status?: string) => {
                         type="text"
                         placeholder={t('common.search')}
                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-                        value={searchQuery}
-                        onChange={e => searchQuerySet(e.target.value)}
+                        value={internalSearchQuery}
+                        onChange={e => setInternalSearchQuery(e.target.value)}
                         aria-label={t('common.search')}
                     />
                 </div>
                 
                 {selectedFiles.size > 0 && (
-                    <button onClick={handleBulkDownload} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg active:scale-95" aria-label={t('files.downloadSelected', { count: selectedFiles.size })}>
+                    <button onClick={handleBulkDownload} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg active:scale-95" aria-label={t('files.bulkDownload', { count: selectedFiles.size })}>
                         <Download size={16} aria-hidden="true" /> {t('files.download')} ({selectedFiles.size})
+                    </button>
+                )}
+
+                {/* NOVO: Botão de Criar Pasta, visível se `onCreateFolder` for fornecido */}
+                {onCreateFolder && (
+                    <button 
+                        onClick={() => onCreateFolder(activeFolderId)}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg active:scale-95"
+                        aria-label={t('quality.createFolder')}
+                    >
+                        <FolderPlus size={16} aria-hidden="true" /> {t('quality.createFolder')}
                     </button>
                 )}
 
@@ -478,108 +502,233 @@ const renderStatusBadge = (status?: string) => {
       ) : (
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6" role="list">
               {Object.entries(filteredAndSortedFiles).map(([groupName, groupFiles]) => (
-                  <div key={groupName} className="space-y-4" role="group" aria-labelledby={`group-label-${groupName}`}>
+                  <div key={groupName} className="space-y-4" role="group" aria-labelledby={`${groupName.replace(/\s/g, '-')}-heading`}>
                       {groupBy !== 'NONE' && (
-                          <div className="flex items-center gap-3">
-                              <div className="h-px flex-1 bg-slate-200" aria-hidden="true"></div>
-                              <span id={`group-label-${groupName}`} className="text-xs font-black text-slate-400 uppercase tracking-[4px]">{groupName}</span>
-                              <div className="h-px flex-1 bg-slate-200" aria-hidden="true"></div>
-                          </div>
+                          <h3 id={`${groupName.replace(/\s/g, '-')}-heading`} className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                              {groupName} <span className="text-slate-400 font-medium text-xs">({groupFiles.length})</span>
+                          </h3>
                       )}
-                      <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4' : 'space-y-2'}>
-                          {groupFiles.map((file, idx) => {
-                              const isLastItem = idx === groupFiles.length - 1;
-                              const isSelected = selectedFiles.has(file.id);
-                              // const ActionIcon = file.isFavorite ? Star : MoreHorizontal; // Example icon
-
-                              return (
+                      {viewMode === 'list' ? (
+                          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden" role="table">
+                              <table className="w-full text-left border-collapse" aria-label={`Arquivos do grupo ${groupName}`}>
+                                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                      <tr>
+                                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider w-1/2" scope="col">{t('files.name')}</th>
+                                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('files.productBatch')}</th>
+                                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('files.date')}</th>
+                                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" scope="col">{t('files.status')}</th>
+                                          <th className="px-6 py-4" scope="col"></th>
+                                      </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                      {groupFiles.map(file => (
+                                          <tr key={file.id} className="hover:bg-slate-50 transition-colors group" role="row">
+                                              <td className="px-6 py-3" role="cell" data-label={t('files.name')}>
+                                                  <div className="flex items-center gap-3">
+                                                      <input
+                                                          type="checkbox"
+                                                          className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500"
+                                                          checked={selectedFiles.has(file.id)}
+                                                          onChange={() => handleToggleSelect(file.id)}
+                                                          aria-label={selectedFiles.has(file.id) ? t('files.deselectFile', { fileName: file.name }) : t('files.selectFile', { fileName: file.name })}
+                                                      />
+                                                      {renderFileIcon(file)}
+                                                      <span className="text-sm font-bold text-slate-800 truncate">{file.name}</span>
+                                                  </div>
+                                              </td>
+                                              <td className="px-6 py-3 text-sm text-slate-500 font-mono" role="cell" data-label={t('files.productBatch')}>{file.metadata?.productName || file.metadata?.batchNumber || '-'}</td>
+                                              <td className="px-6 py-3 text-sm text-slate-500" role="cell" data-label={t('files.date')}>{file.updatedAt}</td>
+                                              <td className="px-6 py-3" role="cell" data-label={t('files.status')}>{renderStatusBadge(file.metadata?.status)}</td>
+                                              <td className="px-6 py-3 text-right" role="cell">
+                                                  <div className="flex items-center justify-end gap-2">
+                                                      {file.type !== FileType.FOLDER && (
+                                                          <button
+                                                              onClick={(e) => { e.stopPropagation(); handleToggleFavorite(file); }}
+                                                              className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-all"
+                                                              aria-label={file.isFavorite ? t('files.toggleFavorite') : t('files.addFavorite')}
+                                                          >
+                                                              <Star size={16} fill={file.isFavorite ? 'currentColor' : 'none'} strokeWidth={file.isFavorite ? 2.5 : 2} aria-hidden="true" />
+                                                          </button>
+                                                      )}
+                                                      <button 
+                                                          onClick={(e) => { e.stopPropagation(); handleFileClick(file); }}
+                                                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                                          aria-label={file.type === FileType.FOLDER ? t('common.open') : t('files.viewPDF')}
+                                                      >
+                                                          <MoreHorizontal size={16} aria-hidden="true" />
+                                                      </button>
+                                                      {allowUpload && file.type !== FileType.FOLDER && ( // allowUpload é uma prop do FileExplorer, se true, mostra o download
+                                                          <button 
+                                                              onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
+                                                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                                              aria-label={t('common.download')}
+                                                          >
+                                                              <Download size={16} aria-hidden="true" />
+                                                          </button>
+                                                      )}
+                                                      {(file.type !== FileType.FOLDER && (onDeleteFile || onSetStatusToPending || onEdit)) && (
+                                                          <div className="relative">
+                                                              <button
+                                                                  onClick={(e) => { e.stopPropagation(); handleActionClick(file.id); }}
+                                                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                                  aria-label={t('common.moreActions')}
+                                                                  aria-haspopup="true"
+                                                                  aria-expanded={activeActionId === file.id}
+                                                              >
+                                                                  <MoreVertical size={16} aria-hidden="true" />
+                                                              </button>
+                                                              {activeActionId === file.id && (
+                                                                  <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-lg border border-slate-100 z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200" role="menu" aria-orientation="vertical">
+                                                                      {onEdit && (
+                                                                          <button
+                                                                              onClick={(e) => { e.stopPropagation(); onEdit(file); setActiveActionId(null); }}
+                                                                              className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                                                                              role="menuitem"
+                                                                          >
+                                                                              <Edit2 size={14} aria-hidden="true" className="text-blue-500" /> {t('common.edit')}
+                                                                          </button>
+                                                                      )}
+                                                                      {onSetStatusToPending && file.metadata?.status !== 'PENDING' && (
+                                                                          <button
+                                                                              onClick={(e) => { e.stopPropagation(); onSetStatusToPending(file); setActiveActionId(null); }}
+                                                                              className="w-full text-left px-4 py-3 text-xs font-bold text-orange-600 hover:bg-orange-50 flex items-center gap-2 transition-colors"
+                                                                              role="menuitem"
+                                                                          >
+                                                                              <Hourglass size={14} aria-hidden="true" /> {t('quality.markAsPending')}
+                                                                          </button>
+                                                                      )}
+                                                                      {onDeleteFile && ( // onDeleteFile só será passado se for permitido pelo pai
+                                                                          <button
+                                                                              onClick={(e) => { e.stopPropagation(); onDeleteFile(file); setActiveActionId(null); }}
+                                                                              className="w-full text-left px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                                                                              role="menuitem"
+                                                                          >
+                                                                              <Trash2 size={14} aria-hidden="true" /> {t('common.delete')}
+                                                                          </button>
+                                                                      )}
+                                                                  </div>
+                                                              )}
+                                                          </div>
+                                                      )}
+                                                  </div>
+                                              </td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                              {groupFiles.map(file => (
                                   <div 
                                       key={file.id} 
-                                      className={`relative group p-3 ${viewMode === 'grid' ? 'bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center text-center hover:border-blue-300 hover:shadow-md' : 'bg-white rounded-xl border border-slate-200 shadow-sm flex items-center hover:border-blue-300 hover:shadow-md'} transition-all cursor-pointer`}
+                                      className="relative bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group flex flex-col items-start gap-3"
                                       onClick={() => handleFileClick(file)}
-                                      ref={!externalFiles && hasMore && isLastItem ? lastElementRef : null}
-                                      role="listitem"
-                                      aria-label={`${file.name}. ${t('files.type')}: ${file.type}. ${t('files.status')}: ${file.metadata?.status ? t(`files.groups.${file.metadata.status.toLowerCase()}`) : t('files.pending')}.`}
+                                      role="listitem button"
+                                      aria-label={`${file.name}, ${file.type === FileType.FOLDER ? 'Pasta' : 'Arquivo'}. Status: ${file.metadata?.status ? t(`files.groups.${file.metadata.status.toLowerCase()}`) : t('files.pending')}`}
                                   >
-                                      {/* Checkbox for selection */}
-                                      <input 
-                                          type="checkbox" 
-                                          checked={isSelected}
-                                          onChange={e => {e.stopPropagation(); handleToggleSelect(file.id);}}
-                                          className="absolute top-3 left-3 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer z-10"
-                                          aria-label={isSelected ? t('files.deselectFile', { fileName: file.name }) : t('files.selectFile', { fileName: file.name })}
-                                      />
+                                      <div className="absolute top-3 left-3">
+                                          <input
+                                              type="checkbox"
+                                              className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500"
+                                              checked={selectedFiles.has(file.id)}
+                                              onChange={(e) => { e.stopPropagation(); handleToggleSelect(file.id); }}
+                                              aria-label={selectedFiles.has(file.id) ? t('files.deselectFile', { fileName: file.name }) : t('files.selectFile', { fileName: file.name })}
+                                          />
+                                      </div>
                                       
-                                      {/* File/Folder Icon and Name */}
-                                      <div className={`flex items-center ${viewMode === 'grid' ? 'flex-col gap-3 pt-6' : 'gap-3 pl-8 flex-1'}`}>
-                                          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-slate-50 group-hover:bg-blue-50 transition-colors">
+                                      <div className="flex justify-between items-start w-full">
+                                          <div className={`p-3 rounded-lg ${file.type === FileType.FOLDER ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'} group-hover:scale-110 transition-transform`} aria-hidden="true">
                                               {renderFileIcon(file)}
                                           </div>
-                                          <div className={`min-w-0 ${viewMode === 'grid' ? 'text-center' : 'text-left flex-1'}`}>
-                                              <p className="font-semibold text-slate-800 text-sm truncate w-full" title={file.name}>{file.name}</p>
-                                              {viewMode === 'list' && (
-                                                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                                                      <span>{file.size}</span>
-                                                      <span className="w-1 h-1 bg-slate-200 rounded-full" aria-hidden="true"></span>
-                                                      <span>{file.updatedAt}</span>
-                                                  </div>
-                                              )}
-                                          </div>
+                                          {file.type !== FileType.FOLDER && (
+                                              <button
+                                                  onClick={(e) => { e.stopPropagation(); handleToggleFavorite(file); }}
+                                                  className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                  aria-label={file.isFavorite ? t('files.toggleFavorite') : t('files.addFavorite')}
+                                              >
+                                                  <Star size={18} fill={file.isFavorite ? 'currentColor' : 'none'} strokeWidth={file.isFavorite ? 2.5 : 2} aria-hidden="true" />
+                                              </button>
+                                          )}
                                       </div>
-
-                                      {/* Metadata and Actions (Grid View) */}
-                                      {viewMode === 'grid' && file.type !== FileType.FOLDER && (
-                                          <div className="mt-4 pt-3 border-t border-slate-100 w-full">
-                                              {renderStatusBadge(file.metadata?.status)}
-                                          </div>
-                                      )}
-
-                                      {/* Actions Dropdown */}
-                                      <div className={`absolute ${viewMode === 'grid' ? 'top-3 right-3' : 'right-3 top-1/2 -translate-y-1/2'} z-10`}>
-                                          <button 
-                                              onClick={(e) => { e.stopPropagation(); handleActionClick(file.id); }}
-                                              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all opacity-0 group-hover:opacity-100"
-                                              aria-label={t('common.moreActions')}
-                                              aria-haspopup="true"
-                                              aria-expanded={activeActionId === file.id}
-                                          >
-                                              <MoreVertical size={16} aria-hidden="true" />
-                                          </button>
-                                          {activeActionId === file.id && (
-                                              <>
-                                                  <div className="fixed inset-0 z-40" onClick={() => setActiveActionId(null)} aria-hidden="true" />
-                                                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right" role="menu" aria-orientation="vertical">
-                                                      {file.type !== FileType.FOLDER && (
-                                                          <button onClick={() => handleDownload(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors" role="menuitem">
-                                                              <Download size={14} className="text-blue-500" aria-hidden="true" /> {t('common.download')}
-                                                          </button>
-                                                      )}
-                                                      <button onClick={() => handleToggleFavorite(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors" role="menuitem">
-                                                              <Star size={14} className={file.isFavorite ? 'text-amber-500 fill-amber-500' : 'text-slate-400'} aria-hidden="true" /> {file.isFavorite ? t('files.toggleFavorite') : t('files.addFavorite')}
-                                                      </button>
-                                                      {onEdit && (
-                                                          <button onClick={() => handleEdit(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors" role="menuitem">
-                                                              <Edit2 size={14} className="text-blue-500" aria-hidden="true" /> {t('common.edit')}
-                                                          </button>
-                                                      )}
-                                                      {onDelete && (
-                                                          <button onClick={() => handleDelete(file)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 border-t border-slate-50" role="menuitem">
-                                                              <Trash2 size={14} aria-hidden="true" /> {t('common.delete')}
-                                                          </button>
-                                                      )}
-                                                  </div>
-                                              </>
+                                      
+                                      <p className="text-sm font-bold text-slate-800 truncate w-full pr-8">{file.name}</p>
+                                      <div className="flex items-center gap-2 text-slate-400 text-xs mt-auto w-full">
+                                          <Clock size={12} aria-hidden="true" />
+                                          <span>{file.updatedAt}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between w-full mt-2">
+                                          {renderStatusBadge(file.metadata?.status)}
+                                          {allowUpload && file.type !== FileType.FOLDER && (
+                                              <button 
+                                                  onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
+                                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                  aria-label={t('common.download')}
+                                              >
+                                                  <Download size={16} aria-hidden="true" />
+                                              </button>
+                                          )}
+                                          {(file.type !== FileType.FOLDER && (onDeleteFile || onSetStatusToPending || onEdit)) && (
+                                              <div className="relative">
+                                                  <button
+                                                      onClick={(e) => { e.stopPropagation(); handleActionClick(file.id); }}
+                                                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                      aria-label={t('common.moreActions')}
+                                                      aria-haspopup="true"
+                                                      aria-expanded={activeActionId === file.id}
+                                                  >
+                                                      <MoreVertical size={16} aria-hidden="true" />
+                                                  </button>
+                                                  {activeActionId === file.id && (
+                                                      <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-lg border border-slate-100 z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200" role="menu" aria-orientation="vertical">
+                                                          {onEdit && (
+                                                              <button
+                                                                  onClick={(e) => { e.stopPropagation(); onEdit(file); setActiveActionId(null); }}
+                                                                  className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                                                                  role="menuitem"
+                                                              >
+                                                                  <Edit2 size={14} aria-hidden="true" className="text-blue-500" /> {t('common.edit')}
+                                                              </button>
+                                                          )}
+                                                          {onSetStatusToPending && file.metadata?.status !== 'PENDING' && (
+                                                              <button
+                                                                  onClick={(e) => { e.stopPropagation(); onSetStatusToPending(file); setActiveActionId(null); }}
+                                                                  className="w-full text-left px-4 py-3 text-xs font-bold text-orange-600 hover:bg-orange-50 flex items-center gap-2 transition-colors"
+                                                                  role="menuitem"
+                                                              >
+                                                                  <Hourglass size={14} aria-hidden="true" /> {t('quality.markAsPending')}
+                                                              </button>
+                                                          )}
+                                                          {onDeleteFile && (
+                                                              <button
+                                                                  onClick={(e) => { e.stopPropagation(); onDeleteFile(file); setActiveActionId(null); }}
+                                                                  className="w-full text-left px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                                                                  role="menuitem"
+                                                              >
+                                                                  <Trash2 size={14} aria-hidden="true" /> {t('common.delete')}
+                                                              </button>
+                                                          )}
+                                                      </div>
+                                                  )}
+                                              </div>
                                           )}
                                       </div>
                                   </div>
-                              );
-                          })}
-                      </div>
+                              ))}
+                          </div>
+                      )}
                   </div>
               ))}
-              {loadingMore && (
-                  <div className="flex justify-center py-4" role="status">
-                      <Loader2 size={24} className="animate-spin text-blue-500" aria-hidden="true" />
+
+              {hasMore && !externalFiles && (
+                  <div ref={lastElementRef} className="py-8 flex justify-center">
+                      {loadingMore ? (
+                          <Loader2 size={24} className="animate-spin text-blue-500" aria-hidden="true" />
+                      ) : (
+                          <button onClick={() => setPage(prevPage => prevPage + 1)} className="px-6 py-2 bg-blue-500 text-white rounded-full text-sm font-bold hover:bg-blue-600 transition-all">
+                              {t('common.loading')}...
+                          </button>
+                      )}
                   </div>
               )}
           </div>

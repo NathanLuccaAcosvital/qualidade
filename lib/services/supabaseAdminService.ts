@@ -1,8 +1,11 @@
+
+
 import { IAdminService, AdminStatsData, PaginatedResponse } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
-import { SupportTicket, SystemStatus, ClientOrganization, UserRole } from '../../types.ts';
-import { SupabaseNotificationService } from './supabaseNotificationService.ts'; // Import corrected
-import { SupabaseUserService } from './supabaseUserService.ts'; // Import corrected
+import { SystemStatus, ClientOrganization, UserRole, MaintenanceEvent } from '../../types.ts';
+import { SupabaseFileService } from './supabaseFileService.ts'; // Import for logAction
+
+const _logAction = SupabaseFileService.logAction; // Access the internal logAction
 
 export const SupabaseAdminService: IAdminService = {
     getSystemStatus: async () => {
@@ -13,32 +16,52 @@ export const SupabaseAdminService: IAdminService = {
                 mode: data.mode,
                 message: data.message,
                 scheduledStart: data.scheduled_start,
-                scheduledEnd: data.scheduled_end
+                scheduledEnd: data.scheduled_end,
+                updatedBy: data.updated_by // Adicionado para consistência
             };
         } catch (e) {
+            console.error("Erro ao buscar status do sistema:", e);
             return { mode: 'ONLINE' };
         }
     },
 
     updateSystemStatus: async (user, newStatus) => {
-        if (user.role !== UserRole.ADMIN) throw new Error("Apenas administradores podem alterar o status do sistema.");
+        if (user.role !== UserRole.ADMIN) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'SYSTEM_STATUS_UPDATE', `Mode: ${newStatus.mode}`, 'SECURITY', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
+            throw new Error("Apenas administradores podem alterar o status do sistema.");
+        }
 
-        const { data, error } = await supabase.from('system_settings').update({
-            mode: newStatus.mode,
-            message: newStatus.message,
-            scheduled_start: newStatus.scheduledStart,
-            scheduled_end: newStatus.scheduledEnd,
-            updated_by: user.id,
-            updated_at: new Date().toISOString()
-        }).eq('id', 1).select().single();
-        
-        if (error) throw error;
-        return {
-            mode: data.mode,
-            message: newStatus.message,
-            scheduledStart: newStatus.scheduledStart,
-            scheduledEnd: newStatus.scheduledEnd
-        } as SystemStatus;
+        let oldStatus: SystemStatus = { mode: 'ONLINE' };
+        try {
+            const { data: currentStatusData } = await supabase.from('system_settings').select('mode').single();
+            if (currentStatusData) oldStatus.mode = currentStatusData.mode;
+
+            const { data, error } = await supabase.from('system_settings').update({
+                mode: newStatus.mode,
+                message: newStatus.message,
+                scheduled_start: newStatus.scheduledStart, // Passa scheduledStart
+                scheduled_end: newStatus.scheduledEnd,     // Passa scheduledEnd
+                updated_by: user.id,
+                updated_at: new Date().toISOString()
+            }).eq('id', 1).select().single();
+            
+            if (error) throw error;
+
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'SYSTEM_STATUS_UPDATE', `Mode: ${newStatus.mode}`, 'SYSTEM', 'WARNING', 'SUCCESS', { oldMode: oldStatus.mode, newMode: newStatus.mode, message: newStatus.message, scheduledStart: newStatus.scheduledStart, scheduledEnd: newStatus.scheduledEnd });
+            return {
+                mode: data.mode,
+                message: data.message, // Usa a mensagem retornada pelo DB
+                scheduledStart: data.scheduled_start,
+                scheduledEnd: data.scheduled_end,
+                updatedBy: data.updated_by
+            } as SystemStatus;
+        } catch (e: any) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'SYSTEM_STATUS_UPDATE', `Mode: ${newStatus.mode}`, 'SYSTEM', 'CRITICAL', 'FAILURE', { oldMode: oldStatus.mode, newMode: newStatus.mode, reason: e.message });
+            throw e;
+        }
     },
 
     subscribeToSystemStatus: (listener) => {
@@ -50,7 +73,8 @@ export const SupabaseAdminService: IAdminService = {
                     mode: s.mode,
                     message: s.message,
                     scheduledStart: s.scheduled_start,
-                    scheduledEnd: s.scheduled_end
+                    scheduledEnd: s.scheduled_end,
+                    updatedBy: s.updated_by
                 } as SystemStatus);
             })
             .subscribe();
@@ -72,7 +96,6 @@ export const SupabaseAdminService: IAdminService = {
                 totalUsers: 0,
                 activeUsers: 0,
                 activeClients: 0,
-                openTickets: 0,
                 logsLast24h: 0,
                 systemHealthStatus: 'HEALTHY',
                 ...simulatedInfra
@@ -83,7 +106,6 @@ export const SupabaseAdminService: IAdminService = {
             totalUsers: data.total_users,
             activeUsers: data.active_users,
             activeClients: data.active_clients,
-            openTickets: data.open_tickets,
             logsLast24h: data.logs_last_24_h,
             systemHealthStatus: data.system_health_status as any,
             ...simulatedInfra
@@ -95,7 +117,11 @@ export const SupabaseAdminService: IAdminService = {
         
         let query = supabase
             .from('organizations')
-            .select('*', { count: 'exact' });
+            .select(`
+                *,
+                quality_analyst_profile:profiles!quality_analyst_id(full_name)
+            `, { count: 'exact' }); // ALTERADO: Usa sintaxe explícita para o FK 'quality_analyst_id' na tabela organizations.
+                                    // Assumindo que organizations tem uma coluna 'quality_analyst_id' que é FK para profiles(id)
 
         if (filters?.search) {
             query = query.or(`name.ilike.%${filters.search}%,cnpj.ilike.%${filters.search}%`);
@@ -123,6 +149,8 @@ export const SupabaseAdminService: IAdminService = {
             cnpj: c.cnpj || '00.000.000/0000-00',
             status: (c.status || 'ACTIVE') as any,
             contractDate: c.contract_date || new Date().toISOString().split('T')[0],
+            qualityAnalystId: c.quality_analyst_id, // Inclui o ID
+            qualityAnalystName: c.quality_analyst_profile ? c.quality_analyst_profile.full_name : undefined, // Acessa o nome do perfil pelo alias
         }));
 
         const clientIds = itemsWithoutStats.map(c => c.id);
@@ -189,288 +217,90 @@ export const SupabaseAdminService: IAdminService = {
     },
 
     saveClient: async (user, data) => {
-        if (user.role !== UserRole.ADMIN) throw new Error("Permissão negada para gerenciar organizações.");
+        if (user.role !== UserRole.ADMIN) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'CLIENT_SAVE', data.name || 'New Client', 'SECURITY', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
+            throw new Error("Permissão negada para gerenciar organizações.");
+        }
 
         const payload = {
             name: data.name,
             cnpj: data.cnpj,
             status: data.status,
             contract_date: data.contractDate,
-            // pending_docs e compliance_score removidos daqui também
+            quality_analyst_id: data.qualityAnalystId || null, // NOVO: Persiste o ID do analista
         };
 
-        let query;
-        if (data.id) {
-            query = supabase.from('organizations').update(payload).eq('id', data.id);
-        } else {
-            query = supabase.from('organizations').insert(payload);
+        try {
+            let query;
+            let actionType = data.id ? 'CLIENT_UPDATED' : 'CLIENT_CREATED';
+            let oldData: any = {};
+
+            if (data.id) {
+                const { data: existingClient } = await supabase.from('organizations').select('*').eq('id', data.id).single();
+                oldData = existingClient || {};
+                query = supabase.from('organizations').update(payload).eq('id', data.id);
+            } else {
+                query = supabase.from('organizations').insert(payload);
+            }
+
+            const { data: client, error } = await query.select().single();
+            if (error) throw error;
+            
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, actionType, client.name, 'DATA', 'INFO', 'SUCCESS', { 
+                clientId: client.id, new: payload, old: oldData,
+                qualityAnalystId: client.quality_analyst_id, // Adiciona ao log
+                qualityAnalystName: data.qualityAnalystName // Adiciona ao log
+            });
+
+            return {
+                id: client.id,
+                name: client.name,
+                cnpj: client.cnpj,
+                status: client.status as any,
+                contractDate: client.contract_date,
+                pendingDocs: 0,
+                complianceScore: 100,
+                lastAnalysisDate: undefined,
+                qualityAnalystId: client.quality_analyst_id, // Retorna o ID do analista
+                qualityAnalystName: data.qualityAnalystName // Retorna o nome do analista
+            };
+        } catch (e: any) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, data.id ? 'CLIENT_UPDATED' : 'CLIENT_CREATED', data.name || 'New Client', 'DATA', 'ERROR', 'FAILURE', { clientId: data.id, reason: e.message });
+            throw e;
         }
-
-        const { data: client, error } = await query.select().single();
-        if (error) throw error;
-        
-        return {
-            id: client.id,
-            name: client.name,
-            cnpj: client.cnpj,
-            status: client.status as any,
-            contractDate: client.contract_date,
-            // Valores default ou null para campos não selecionados/salvos
-            pendingDocs: 0, // Definido como 0 por padrão para novos/atualizados
-            complianceScore: 100, // Definido como 100 por padrão
-            lastAnalysisDate: undefined // Definido como undefined por padrão
-        };
     },
 
     deleteClient: async (user, id) => {
-        if (user.role !== UserRole.ADMIN) throw new Error("Apenas administradores podem excluir organizações.");
-        const { error } = await supabase.from('organizations').delete().eq('id', id);
-        if (error) throw error;
-    },
-
-    getTickets: async () => {
-        const { data, error } = await supabase
-            .from('tickets')
-            .select(`
-                *,
-                profiles (full_name),
-                organizations (name)
-            `)
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-
-        return (data || []).map(t => ({
-            id: t.id,
-            flow: t.flow,
-            userId: t.user_id,
-            userName: t.profiles?.full_name || 'Usuário Desconhecido',
-            clientId: t.organization_id,
-            clientName: t.organizations?.name || 'N/A', // Add clientName
-            subject: t.subject,
-            description: t.description,
-            priority: t.priority,
-            status: (t.status as string).toUpperCase() as SupportTicket['status'], // Normalize status
-            resolutionNote: t.resolution_note,
-            createdAt: new Date(t.created_at).toLocaleString(),
-            updatedAt: t.updated_at ? new Date(t.updated_at).toLocaleString() : undefined
-        })) as any;
-    },
-
-    getMyTickets: async (user, filters) => {
-        let query = supabase
-            .from('tickets')
-            .select('*')
-            .eq('user_id', user.id);
-        
-        if (filters?.status && filters.status !== 'ALL') {
-            // Usa toUpperCase() para garantir que a comparação do enum seja case-sensitive com o DB
-            query = query.eq('status', filters.status.toUpperCase());
+        if (user.role !== UserRole.ADMIN) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'CLIENT_DELETE', `ID: ${id}`, 'SECURITY', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
+            throw new Error("Apenas administradores podem excluir organizações.");
         }
+        let clientName = `ID: ${id}`;
+        let qualityAnalystId: string | undefined = undefined;
+        try {
+            const { data: clientData } = await supabase.from('organizations').select('name, quality_analyst_id').eq('id', id).single();
+            if (clientData) {
+                clientName = clientData.name;
+                qualityAnalystId = clientData.quality_analyst_id;
+            }
 
-        const { data, error } = await query.order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        return (data || []).map(t => ({ 
-            ...t, 
-            userName: user.name,
-            status: (t.status as string).toUpperCase() as SupportTicket['status'], // Normalize status
-            createdAt: new Date(t.created_at).toLocaleString() 
-        })) as any;
-    },
+            const { error } = await supabase.from('organizations').delete().eq('id', id);
+            if (error) throw error;
 
-    getUserTickets: async (userId) => {
-        const { data, error } = await supabase
-            .from('tickets')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        return (data || []).map(t => ({ 
-            ...t, 
-            status: (t.status as string).toUpperCase() as SupportTicket['status'], // Normalize status
-            createdAt: new Date(t.created_at).toLocaleString() 
-        })) as any;
-    },
-
-    getQualityInbox: async (filters?: { search?: string; status?: string }): Promise<SupportTicket[]> => {
-        let query = supabase
-            .from('tickets')
-            .select(`
-                *,
-                profiles (full_name),
-                organizations (name)
-            `)
-            .eq('flow', 'CLIENT_TO_QUALITY')
-            .order('created_at', { ascending: false });
-        
-        if (filters?.search) {
-            query = query.or(`subject.ilike.%${filters.search}%,description.ilike.%${filters.search}%,profiles.full_name.ilike.%${filters.search}%,organizations.name.ilike.%${filters.search}%`);
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'CLIENT_DELETE', clientName, 'DATA', 'INFO', 'SUCCESS', { 
+                clientId: id, 
+                qualityAnalystId // Adiciona ao log
+            });
+        } catch (e: any) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'CLIENT_DELETE', clientName, 'DATA', 'ERROR', 'FAILURE', { clientId: id, reason: e.message });
+            throw e;
         }
-
-        if (filters?.status && filters.status !== 'ALL') {
-            // Usa toUpperCase() para garantir que a comparação do enum seja case-sensitive com o DB
-            query = query.eq('status', filters.status.toUpperCase());
-        }
-
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        return (data || []).map(t => ({ 
-            id: t.id,
-            flow: t.flow,
-            userId: t.user_id,
-            userName: t.profiles?.full_name || 'N/A',
-            clientId: t.organization_id,
-            clientName: t.organizations?.name || 'N/A', // Adicionado nome da organização
-            subject: t.subject,
-            description: t.description,
-            priority: t.priority,
-            status: (t.status as string).toUpperCase() as SupportTicket['status'], // Normalize status
-            resolutionNote: t.resolution_note,
-            createdAt: new Date(t.created_at).toLocaleString(),
-            updatedAt: t.updated_at ? new Date(t.updated_at).toLocaleString() : undefined
-        })) as any;
-    },
-
-    getAdminInbox: async () => {
-        const { data, error } = await supabase
-            .from('tickets')
-            .select(`
-                *,
-                profiles (full_name)
-            `)
-            .eq('flow', 'QUALITY_TO_ADMIN')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        return (data || []).map(t => ({ 
-            ...t, 
-            userName: t.profiles?.full_name,
-            status: (t.status as string).toUpperCase() as SupportTicket['status'], // Normalize status
-            createdAt: new Date(t.created_at).toLocaleString() 
-        })) as any;
-    },
-
-    createTicket: async (user, data) => {
-        const flow = user.role === UserRole.QUALITY ? 'QUALITY_TO_ADMIN' : 'CLIENT_TO_QUALITY';
-        
-        const { data: ticket, error } = await supabase.from('tickets').insert({
-            user_id: user.id,
-            organization_id: user.clientId,
-            subject: data.subject,
-            description: data.description,
-            priority: data.priority,
-            status: 'OPEN', // Alterado para CAIXA ALTA
-            flow
-        }).select().single();
-        
-        if (error) throw error;
-        return {
-            ...ticket,
-            userName: user.name,
-            status: (ticket.status as string).toUpperCase() as SupportTicket['status'], // Normalize status
-            createdAt: new Date(ticket.created_at).toLocaleString()
-        } as any;
-    },
-
-    resolveTicket: async (user, id, status, note) => {
-        if (user.role !== UserRole.ADMIN && user.role !== UserRole.QUALITY) {
-            throw new Error("Permissão negada para resolver tickets.");
-        }
-
-        const { data: existingTicket, error: fetchError } = await supabase
-            .from('tickets')
-            .select('user_id, subject')
-            .eq('id', id)
-            .single();
-
-        if (fetchError) throw fetchError;
-        if (!existingTicket) throw new Error("Ticket não encontrado.");
-
-        const { error } = await supabase
-            .from('tickets')
-            .update({ 
-                status: status.toUpperCase(), // Converte para CAIXA ALTA
-                resolution_note: note, 
-                updated_at: new Date().toISOString() 
-            })
-            .eq('id', id);
-        if (error) throw error;
-
-        // Notify the client that their ticket has been resolved
-        await SupabaseNotificationService.addNotification(
-            existingTicket.user_id,
-            `Chamado #${id.slice(-4)} Resolvido!`,
-            `Seu chamado "${existingTicket.subject}" foi resolvido com sucesso pela equipe de Qualidade.`,
-            'SUCCESS',
-            '/dashboard?view=tickets'
-        );
-    },
-
-    updateTicketStatus: async (user, id, status, resolutionNote?) => {
-        if (user.role !== UserRole.ADMIN && user.role !== UserRole.QUALITY) {
-            throw new Error("Permissão negada para atualizar tickets.");
-        }
-
-        const { error } = await supabase
-            .from('tickets')
-            .update({ 
-                status: status.toUpperCase(), // Converte para CAIXA ALTA
-                resolution_note: resolutionNote, // Optional resolution note
-                updated_at: new Date().toISOString() 
-            })
-            .eq('id', id);
-        if (error) throw error;
-    },
-
-    escalateTicketToAdmin: async (user, id, note) => {
-        if (user.role !== UserRole.QUALITY) {
-            throw new Error("Permissão negada. Apenas Analistas de Qualidade podem escalar tickets.");
-        }
-
-        const { data: existingTicket, error: fetchError } = await supabase
-            .from('tickets')
-            .select('user_id, subject, organization_id')
-            .eq('id', id)
-            .single();
-        
-        if (fetchError) throw fetchError;
-        if (!existingTicket) throw new Error("Ticket não encontrado para escalonamento.");
-
-        const { error } = await supabase
-            .from('tickets')
-            .update({
-                flow: 'QUALITY_TO_ADMIN',
-                status: 'OPEN', // Alterado para CAIXA ALTA
-                updated_at: new Date().toISOString(),
-                resolution_note: note || 'Escalado para administração.'
-            })
-            .eq('id', id);
-        
-        if (error) throw error;
-
-        // Notify all administrators
-        const adminUsers = await SupabaseUserService.getUsersByRole(UserRole.ADMIN);
-        for (const admin of adminUsers) {
-            await SupabaseNotificationService.addNotification(
-                admin.id,
-                `Chamado #${id.slice(-4)} Escalado!`,
-                `Um chamado do cliente (${existingTicket.organization_id || 'N/A'}) "${existingTicket.subject}" foi escalado para sua revisão.`,
-                'ALERT',
-                '/admin?tab=tickets'
-            );
-        }
-
-        // Also notify the original client about the escalation (optional, but good practice)
-        await SupabaseNotificationService.addNotification(
-            existingTicket.user_id,
-            `Chamado #${id.slice(-4)} Em Revisão`,
-            `Seu chamado "${existingTicket.subject}" foi escalado para a equipe de administração para revisão aprofundada.`,
-            'INFO',
-            '/dashboard?view=tickets'
-        );
     },
 
     getFirewallRules: async () => {
@@ -485,32 +315,65 @@ export const SupabaseAdminService: IAdminService = {
 
     getMaintenanceEvents: async () => {
         const { data } = await supabase.from('maintenance_events').select('*').order('scheduled_date', { ascending: false });
-        return (data || []);
+        return (data || []).map(event => ({
+            id: event.id,
+            title: event.title,
+            scheduledDate: event.scheduled_date,
+            durationMinutes: event.duration_minutes,
+            description: event.description,
+            status: event.status,
+            createdBy: event.created_by
+        }));
     },
 
     scheduleMaintenance: async (user, event) => {
-        if (user.role !== UserRole.ADMIN) throw new Error("Ação exclusiva para administradores.");
-
-        const { data, error } = await supabase.from('maintenance_events').insert({
-            ...event,
-            created_by: user.id
-        }).select().single();
-        if (error) throw error;
-        return data as any;
+        if (user.role !== UserRole.ADMIN) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'MAINTENANCE_SCHEDULE', event.title || 'New Event', 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
+            throw new Error("Ação exclusiva para administradores.");
+        }
+        try {
+            const { data, error } = await supabase.from('maintenance_events').insert({
+                title: event.title,
+                scheduled_date: event.scheduledDate, // Usar scheduledDate diretamente
+                duration_minutes: event.durationMinutes,
+                description: event.description,
+                status: 'SCHEDULED', // Definir status como SCHEDULED
+                created_by: user.id
+            }).select().single();
+            if (error) throw error;
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'MAINTENANCE_SCHEDULE', data.title, 'SYSTEM', 'WARNING', 'SUCCESS', { eventId: data.id, scheduledDate: data.scheduled_date });
+            return {
+                id: data.id,
+                title: data.title,
+                scheduledDate: data.scheduled_date,
+                durationMinutes: data.duration_minutes,
+                description: data.description,
+                status: data.status,
+                createdBy: data.created_by
+            } as MaintenanceEvent;
+        } catch (e: any) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'MAINTENANCE_SCHEDULE', event.title || 'New Event', 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: e.message });
+            throw e;
+        }
     },
 
     cancelMaintenance: async (user, id) => {
-        await supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id);
+        if (user.role !== UserRole.ADMIN) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'MAINTENANCE_CANCEL', `ID: ${id}`, 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: "Permission denied" });
+            throw new Error("Ação exclusiva para administradores.");
+        }
+        try {
+            await supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id);
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'MAINTENANCE_CANCEL', `ID: ${id}`, 'SYSTEM', 'WARNING', 'SUCCESS', { eventId: id });
+        } catch (e: any) {
+            // Fix: Ensure all 7 arguments are passed to _logAction
+            await _logAction(user, 'MAINTENANCE_CANCEL', `ID: ${id}`, 'SYSTEM', 'CRITICAL', 'FAILURE', { reason: e.message });
+            throw e;
+        }
     },
-
-    requestInfrastructureSupport: async (user, data) => {
-        const { data: req, error } = await supabase.from('external_support_requests').insert({
-            user_id: user.id,
-            payload: data,
-            status: 'PENDING'
-        }).select().single();
-        
-        if (error) throw error;
-        return req.id;
-    }
 };

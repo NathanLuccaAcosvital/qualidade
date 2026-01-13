@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { AlertTriangle, Hammer, X, CalendarClock, Info } from 'lucide-react';
 import { SystemStatus } from '../../types.ts';
@@ -13,9 +14,9 @@ export const MaintenanceBanner: React.FC<MaintenanceBannerProps> = ({ status, is
 
     if (status.mode === 'ONLINE' || !isVisible) return null;
 
-    // Common Glassmorphism Base Styles - Reduced padding/height for a narrower look
-    const containerClasses = "mx-4 mt-3 mb-1 rounded-xl p-0.5 relative z-30 overflow-hidden shadow-lg animate-in slide-in-from-top-4 duration-500 group";
-    const glassContentClasses = "relative px-3 py-1.5 rounded-[10px] flex items-center justify-between backdrop-blur-md border-t border-white/20";
+    // Common Glassmorphism Base Styles - Removed mx-4 for full width
+    const containerClasses = "top-0 left-0 right-0 rounded-b-xl relative z-30 overflow-hidden shadow-lg animate-in slide-in-from-top-4 duration-500 group";
+    const glassContentClasses = "relative px-3 py-1.5 rounded-b-[10px] flex items-center justify-between backdrop-blur-md border-t border-white/20"; // Adjust rounded corners
 
     if (status.mode === 'MAINTENANCE') {
         if (!isAdmin) return null;

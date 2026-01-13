@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types.ts';
 import { userService } from '../lib/services/index.ts';
@@ -36,14 +37,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-        const success = await userService.authenticate(email, password);
-        if (success) {
+        const result = await userService.authenticate(email, password); // Changed to result for error message
+        if (result.success) {
           // Após autenticar (Cookie definido), busca o perfil do usuário
           const profile = await userService.getCurrentUser();
           setUser(profile);
           return { success: true };
         }
-        return { success: false, error: 'Credenciais inválidas.' };
+        return { success: false, error: result.error || 'Credenciais inválidas.' }; // Use result.error
     } catch (e: any) {
         return { success: false, error: e.message };
     } finally {

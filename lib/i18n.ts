@@ -36,12 +36,27 @@ const resources = {
         filter: "Filtrar",
         description: "Descrição",
         priority: "Prioridade",
-        user: "Usuário", // NOVO
-        dateToday: "{{date}}", // NOVO
-        goodMorning: "Bom dia", // NOVO
-        goodAfternoon: "Boa tarde", // NOVO
-        goodEvening: "Boa noite", // NOVO
-        filterByStatus: "Filtrar por status" // NOVO
+        user: "Usuário",
+        dateToday: "{{date}}",
+        goodMorning: "Bom dia",
+        goodAfternoon: "Boa tarde",
+        goodEvening: "Boa noite",
+        filterByStatus: "Filtrar por status",
+        hidePassword: "Esconder senha",
+        showPassword: "Mostrar senha",
+        backToLogin: "Voltar para Login",
+        mainNavigation: "Navegação Principal",
+        expandSidebar: "Expandir barra lateral",
+        collapseSidebar: "Recolher barra lateral",
+        userMenu: "Menu do Usuário",
+        mobileNavigation: "Navegação Mobile",
+        moreActions: "Mais ações",
+        na: "N/A",
+        updatingDatabase: "Atualizando base de dados...",
+        statusActive: "Ativo",
+        statusBlocked: "Bloqueado",
+        statusInactive: "Inativo",
+        home: "Início" // Adicionado para uso genérico de 'home' como breadcrumb
       },
       files: {
         name: "Nome do Arquivo",
@@ -60,7 +75,7 @@ const resources = {
         zipGenerating: "Gerando arquivo compactado para",
         permissionError: "Erro de permissão ou arquivo não encontrado.",
         fileDetected: "Arquivo detectado",
-        viewOptions: "Opções de Visualização",
+        viewOptions: "Oções de Visualização",
         sortBy: "Ordenar por",
         groupBy: "Agrupar por",
         groups: {
@@ -68,7 +83,7 @@ const resources = {
           approved: "Aprovados",
           pending: "Pendentes",
           ungrouped: "Sem grupo",
-          rejected: "Recusados" // NOVO
+          rejected: "Recusados"
         },
         sort: {
           nameAsc: "Nome (A-Z)",
@@ -77,8 +92,36 @@ const resources = {
           dateOld: "Data (Mais antigo)",
           status: "Status"
         },
-        toggleFavorite: "Desfavoritar", // NOVO
-        addFavorite: "Adicionar aos favoritos" // NOVO
+        toggleFavorite: "Desfavoritar",
+        addFavorite: "Adicionar aos favoritos",
+        certification: "Certificação",
+        secureData: "Dados Seguros",
+        errorLoadingFiles: "Erro ao carregar arquivos.",
+        errorLoadingNavigation: "Erro ao carregar navegação.",
+        downloadingFile: "Baixando arquivo {{fileName}}...",
+        bulkDownloadStarted: "Download em massa iniciado para {{count}} arquivos.",
+        confirmDelete: "Tem certeza que deseja excluir {{fileName}}?",
+        fileDeletedSuccess: "Arquivo {{fileName}} excluído com sucesso!",
+        errorDeletingFile: "Erro ao excluir arquivo.",
+        viewMode: "Modo de visualização",
+        listView: "Visualização em lista",
+        gridView: "Visualização em grade",
+        deselectFile: "Desselecionar arquivo {{fileName}}",
+        selectFile: "Selecionar arquivo {{fileName}}",
+        type: "Tipo",
+        errorToggleFavorite: "Erro ao alternar favorito.",
+        authenticatingAccess: "Autenticando acesso...",
+        documentPreview: "Pré-visualização do documento: {{fileName}}",
+        authenticatedView: "Visualização Autenticada",
+        openInNewTab: "Abrir em nova aba",
+        errorLoadingDocument: "Erro ao carregar documento.",
+        permissionOrExpiredLink: "Verifique suas permissões ou se o link não expirou.",
+        searchPlaceholder: "Buscar por nome do arquivo, lote ou NF...", // NOVO
+        clientStatus: { // NOVO: Máscara de status para o cliente
+          processing: "Em processamento",
+          technicalConference: "Em conferência técnica",
+          availableForDownload: "Disponível para Download"
+        }
       },
       cookie: {
         title: "Segurança e Dados",
@@ -87,25 +130,22 @@ const resources = {
       },
       menu: {
         main: "Principal",
-        home: "Início",
+        home: "Início", // Mantido para o menu de navegação
         library: "Biblioteca",
         quickAccess: "Acesso Rápido",
         recent: "Recentes",
         favorites: "Favoritos",
-        tickets: "Suporte Técnico",
         dashboard: "Dashboard",
         documents: "Documentos",
         management: "Gestão Corporativa",
         portalName: "Portal da Qualidade",
         brand: "Aços Vital",
-        support: "Suporte",
         system: "Sistema",
-        portalNameShort: "Vital Link", // NOVO
-        qualityManagement: "Gestão da Qualidade", // NOVO
-        clientPortfolio: "Carteira de Clientes", // NOVO
-        masterLibrary: "Biblioteca Mestra", // NOVO
-        serviceDesk: "Service Desk", // NOVO
-        systemMonitoring: "Sistemas Monitorados", // NOVO
+        portalNameShort: "Vital Link",
+        qualityManagement: "Gestão da Qualidade",
+        clientPortfolio: "Carteira de Clientes",
+        // REMOVIDO: masterLibrary: "Biblioteca Mestra",
+        systemMonitoring: "Sistemas Monitorados",
       },
       dashboard: {
         hello: "Olá",
@@ -117,89 +157,63 @@ const resources = {
         libraryHeader: "Repositório de Documentos",
         favoritesHeader: "Acesso Rápido",
         historyHeader: "Histórico",
-        ticketsHeader: "Central de Suporte",
         filters: "Filtros Avançados",
         period: "Período",
         clear: "Limpar Filtros",
-        openTicket: "Abrir Novo Chamado",
-        noTickets: "Sem chamados ativos no momento.",
         regular: "Operação Normal",
         homeTitle: "Dashboard",
         filesTitle: "Minha Biblioteca",
         favoritesTitle: "Meus Favoritos",
         recentTitle: "Arquivos Recentes",
-        ticketsTitle: "Central de Suporte",
-        heroDescription: "Centralize seus certificados de qualidade e garanta a rastreabilidade total de seus materiais.", // NOVO
-        status: { // NOVO
+        heroDescription: "Centralize seus certificados de qualidade e garanta a rastreabilidade total de seus materiais.",
+        status: {
           scheduled: "Manutenção Agendada",
           normal: "Operação Normal",
           scheduledDefaultMessage: "Sistema em atualização programada.",
           monitoringActive: "Monitoramento Vital Ativo"
         },
-        kpi: { // NOVO
+        kpi: {
           libraryLabel: "Biblioteca",
           activeDocsSubtext: "Docs. Ativos",
           pendingLabel: "Pendências",
           awaitingSubtext: "Aguardando",
-          ticketsLabel: "Chamados",
-          openTicketsSubtext: "Em aberto"
         },
-        noTicketsRegistered: "Nenhum chamado registrado.", // NOVO
-        exploreAll: "Explorar Tudo", // NOVO
-        emptyFlatView: { // NOVO
+        exploreAll: "Explorar Tudo",
+        emptyFlatView: {
             message: "Nenhum documento aqui ainda.",
             subtextFavorites: "Marque documentos com estrela para encontrá-los rapidamente.",
             subtextRecent: "Seus documentos mais recentes aparecerão aqui."
         },
-        supportCenter: "Central de Suporte", // NOVO
-        myTickets: "Meus Chamados", // NOVO
-        noSupportTickets: "Nenhum chamado registrado.", // NOVO
-        openNewTicket: "Abrir Novo Chamado", // NOVO
-        ticket: { // NOVO
-          id: "ID",
-          subject: "Assunto",
-          priority: "Prioridade",
-          status: "Status",
-          createdAt: "Criado em",
-          resolutionNote: "Nota de Resolução", // NOVO
-          details: "Detalhes do Chamado", // NOVO
-          requester: "Solicitante", // NOVO
-          user: "Usuário", // NOVO
-          company: "Empresa", // NOVO
-          history: "Histórico", // NOVO
-          updatedStatus: "Atualizar Status", // NOVO
-          saveChanges: "Salvar Alterações", // NOVO
-          requiredResolutionNote: "É necessário adicionar uma nota de resolução para fechar o chamado.", // NOVO
-        },
-        accessingAuditRecords: "Acessando registros de auditoria...", // NOVO
-        noRecordsFound: "Nenhum registro encontrado para auditoria.", // NOVO
-        auditMoreClients: "Auditar mais clientes", // NOVO
-        auditedRecords: "Auditado • {{count}} Registros", // NOVO
-        pendingStatus: "{{count}} Pendências", // NOVO
-        complianceHealth: "Saúde Compliance", // NOVO
-        lastAnalysis: "Última Análise", // NOVO
-        criticalPendencies: "Críticas", // NOVO
-        upToDate: "Em Dia", // NOVO
-        organization: "Organização / Razão Social", // NOVO
-        fiscalID: "ID Fiscal", // NOVO
-        activeClients: "Ativos", // NOVO
-        allClients: "Todos" // NOVO
+        accessingAuditRecords: "Acessando registros de auditoria...",
+        noRecordsFound: "Nenhum registro encontrado para auditoria.",
+        auditMoreClients: "Auditar mais clientes",
+        auditedRecords: "Auditado • {{count}} Registros",
+        pendingStatus: "{{count}} Pendências",
+        complianceHealth: "Saúde Compliance",
+        lastAnalysis: "Última Análise",
+        criticalPendencies: "Críticas",
+        upToDate: "Em Dia",
+        organization: "Organização / Razão Social",
+        fiscalID: "ID Fiscal",
+        activeClients: "Ativos",
+        allClients: "Todos",
+        contractDate: "Data do Contrato",
       },
       login: {
         welcomeBack: "Acesso Restrito",
         enterCredentials: "Use suas credenciais fornecidas pela TI Aços Vital.",
         emailLabel: "E-mail Profissional",
         passwordLabel: "Senha de Acesso",
-        forgotPassword: "Esqueceu?", // NOVO
+        forgotPassword: "Esqueceu?",
         accessPortal: "Entrar no Portal",
         sloganTitle: "Conformidade e Rastreabilidade Industrial.",
         sloganText: "Plataforma centralizada para gestão de certificados de qualidade e laudos técnicos Aços Vital S.A.",
-        authenticateAccess: "Autenticar Acesso", // NOVO
-        newUser: "Novo por aqui?", // NOVO
-        requestRegister: "Solicitar Registro", // NOVO
-        corpEmail: "E-mail Corporativo", // NOVO
-        accessPassword: "Senha de Acesso", // NOVO
-        connectionError: "Erro de conexão com o servidor." // NOVO
+        authenticateAccess: "Autenticar Acesso",
+        newUser: "Novo por aqui?",
+        requestRegister: "Solicitar Registro",
+        corpEmail: "E-mail Corporativo",
+        accessPassword: "Senha de Acesso",
+        connectionError: "Erro de conexão com o servidor."
       },
       roles: {
         ADMIN: "Administrador",
@@ -211,12 +225,12 @@ const resources = {
           overview: "Visão Geral",
           users: "Usuários",
           clients: "Clientes",
-          tickets: "Chamados",
           logs: "Logs de Auditoria",
           settings: "Configurações"
         },
         settings: {
-          techSupport: "Suporte N3 Infra"
+          techSupport: "Suporte N3 Infra",
+          externalTeam: "Equipe Externa"
         },
         users: {
           createTitle: "Novo Acesso",
@@ -230,7 +244,11 @@ const resources = {
           roleLabel: "Nível de Acesso",
           department: "Departamento",
           orgLink: "Vincular Organização",
-          filters: "Filtros de Lista"
+          filters: "Filtros de Lista",
+          departmentPlaceholder: "Ex: Compras",
+          resendAccess: "Reenviar Acesso",
+          removeUser: "Remover Usuário",
+          noUsersFound: "Nenhum usuário encontrado na base de dados."
         },
         stats: {
           totalUsers: "Total de Usuários",
@@ -246,57 +264,34 @@ const resources = {
             target: "Alvo",
             ip: "Endereço IP",
             severity: "Severidade"
-          }
+          },
+          pendingTicketsSubtext: "Pendentes de Resposta", // This will be removed, but the reference in AdminStats still uses it
+          logsLast24hSubtext: "Logs nas últimas 24h"
         },
-        n3Support: {
-          title: "Suporte N3 - Infraestrutura",
-          subtitle: "Solicitação direta para equipe técnica externa",
-          component: "Componente Afetado",
-          impact: "Impacto no Negócio",
-          context: "Contexto",
-          module: "Módulo",
-          steps: "Passos para Reproduzir",
-          submit: "Enviar para N3",
-          success: "Solicitação enviada com sucesso ID:",
-          components: {
-            INFRA_UP: "Infraestrutura / Cloud",
-            DB_MOD: "Banco de Dados",
-            SECURITY_INC: "Incidente de Segurança",
-            BACKUP_RESTORE: "Backup / Restauração",
-            CUSTOM_DEV: "Desenvolvimento Customizado"
-          },
-          contexts: {
-            SYSTEM: "Global (Sistema Inteiro)",
-            CLIENT: "Específico por Cliente",
-            INTERNAL: "Uso Interno Vital"
-          },
-          modules: {
-            AUTH: "Autenticação / Login",
-            DASHBOARD: "Dashboard / Home",
-            FILES: "Storage / Arquivos",
-            API: "Conectividade API"
-          }
+        clients: {
+          createTitle: "Nova Organização",
+          editTitle: "Editar Organização"
         },
-        tickets: {
-          newTicket: "Novo Chamado",
-          subject: "Assunto",
-          status: {
-            OPEN: "Aberto",
-            IN_PROGRESS: "Em Atendimento",
-            RESOLVED: "Resolvido"
+        logs: {
+          filterBySeverity: "Filtrar por severidade",
+          allSeverities: "Todas Severidades",
+          severity: {
+            INFO: "Info",
+            WARNING: "Warning",
+            ERROR: "Error",
+            CRITICAL: "Critical"
           },
-          priority: {
-            LOW: "Baixa",
-            MEDIUM: "Média",
-            HIGH: "Alta",
-            CRITICAL: "Crítica"
-          }
+          investigate: "Investigar",
+          noLogsFound: "Nenhum log de auditoria encontrado."
         }
       },
       notifications: {
         title: "Notificações",
         empty: "Nenhuma notificação nova",
-        markAll: "Ler Todas"
+        markAll: "Ler Todas",
+        read: "Lida",
+        unread: "Não lida",
+        unreadCount: "{{count}} notificações não lidas"
       },
       privacy: {
         title: "Políticas e Privacidade",
@@ -315,9 +310,10 @@ const resources = {
         confirm: "Confirmar Nova Senha",
         submit: "Atualizar Senha",
         matchError: "As senhas não coincidem.",
-        success: "Senha alterada com sucesso."
+        success: "Senha alterada com sucesso.",
+        errorUpdatingPassword: "Erro ao atualizar a senha."
       },
-      maintenance: { // NOVO: Para MaintenanceScreen
+      maintenance: {
         title: "Sistema em Manutenção",
         message: "Estamos realizando atualizações críticas de segurança e infraestrutura. O acesso está temporariamente suspenso para garantir a integridade dos dados.",
         returnEstimate: "Previsão de Retorno",
@@ -327,7 +323,7 @@ const resources = {
         contact: "Contato",
         systemId: "ID do Sistema: AV-SYS-LOCKDOWN-001"
       },
-      signup: { // NOVO
+      signup: {
         newRegister: "Novo Registro",
         fillFields: "Preencha os campos abaixo com seus dados profissionais.",
         fullName: "Nome Completo",
@@ -343,14 +339,14 @@ const resources = {
         requestSent: "Solicitação Enviada!",
         validationPending: "Seu pedido está sendo validado pela equipe técnica.",
         alreadyHaveAccount: "Já possui uma conta?",
-        login: "Fazer Login"
+        login: "Fazer Login",
+        passwordPlaceholder: "Defina a senha (mín. 6 caracteres)"
       },
-      quality: { // NOVO
+      quality: {
         overview: "Visão Geral",
         activePortfolio: "Carteira Ativa",
         pendingDocs: "Docs. Pendentes",
-        openTickets: "Chamados Abertos",
-        masterRepository: "Repositório Mestre",
+        // REMOVIDO: masterRepository: "Repositorio Mestre",
         accessFiles: "Acessar Arquivos",
         recentActivity: "Atividade Recente",
         activityHistory: "Histórico de análise carregado em tempo real.",
@@ -358,8 +354,8 @@ const resources = {
         complianceISO: "Conformidade ISO 9001",
         biannualCheck: "Verificação semestral agendada para o próximo mês.",
         b2bPortfolio: "Carteira B2B",
-        masterLibrary: "Biblioteca Mestra",
-        masterLibrarySubtitle: "Modelos de certificados e especificações técnicas globais.",
+        // REMOVIDO: masterLibrary: "Biblioteca Mestra",
+        // REMOVIDO: masterLibrarySubtitle: "Modelos de certificados e especificações técnicas globais.",
         sendNewCertificate: "Enviar Novo Certificado",
         pdfImageFile: "Arquivo PDF/Imagem",
         product: "Produto",
@@ -373,6 +369,7 @@ const resources = {
         confirmRejection: "Confirmar Recusa",
         batchData: "Dados do Lote",
         productLabel: "Produto",
+        productPlaceholder: "Ex: Aço SAE 1045, Arame Recozido",
         batchLabel: "Nº Corrida",
         invoiceLabel: "Nota Fiscal",
         lastAnalysis: "Última Análise",
@@ -384,19 +381,61 @@ const resources = {
         errorProcessingInspection: "Erro ao processar inspeção.",
         reasonRequired: "Por favor, informe o motivo da rejeição.",
         documentUploadedSuccess: "Arquivo enviado com sucesso!",
-        errorUploadingFile: "Erro no upload do arquivo.",
-        myClients: "Meus Clientes", // NOVO
-        searchClient: "Auditar cliente por nome ou CNPJ...", // NOVO
-        healthCompliance: "Saúde Compliance", // NOVO
-        critical: "Críticas", // NOVO
-        upToDate: "Em Dia", // NOVO
-        lastUpdate: "Última atualização", // NOVO
-        escalateToAdmin: "Escalonar para Administração", // NOVO
-        escalateReason: "Motivo do escalonamento para Admin...", // NOVO
-        escalateWarning: "Se o chamado exige intervenção administrativa ou técnica de nível 3, você pode escalá-lo. Um motivo é obrigatório.", // NOVO
-        escalateTicket: "Escalar Chamado", // NOVO
-        serviceDeskLoading: "Carregando Service Desk...", // NOVO
-        noTicketsFoundQuality: "Nenhum chamado pendente ou registrado." // NOVO
+        errorUploadingFile: "Erro no upload do arquivo. Detalhes: {{message}}",
+        myClients: "Meus Clientes",
+        searchClient: "Auditar cliente por nome ou CNPJ...",
+        healthCompliance: "Saúde Compliance",
+        critical: "Críticas",
+        upToDate: "Em Dia",
+        lastUpdate: "Última atualização",
+        errorLoadingQualityData: "Erro ao carregar dados do portal da qualidade.",
+        errorLoadingClients: "Erro ao carregar clientes: {{message}}",
+        errorLoadingMoreClients: "Erro ao carregar mais clientes: {{message}",
+        documentApprovedTitle: "Documento Aprovado",
+        documentRejectedTitle: "Documento Recusado",
+        documentInspectedMessage: "O documento '{{fileName}}' (lote: {{batchNumber}}) foi inspecionado.",
+        markAsPending: "Marcar como Pendente", // NEW TRANSLATION
+        confirmSetPending: "Tem certeza que deseja marcar {{fileName}} como pendente?", // NEW TRANSLATION
+        fileSetPendingSuccess: "Arquivo {{fileName}} marcado como pendente com sucesso!", // NEW TRANSLATION
+        errorSettingPending: "Erro ao marcar arquivo como pendente.", // NEW TRANSLATION
+        alreadyPending: "O arquivo já está com status 'Pendente'.", // NEW TRANSLATION
+        selectClient: "Selecione um cliente para fazer o upload do arquivo.", // NEW TRANSLATION (Adjusted for client-only upload)
+        newClientUser: "Novo Usuário Cliente", // NOVO
+        newCompany: "Nova Empresa", // NOVO
+        createFolder: "Nova Pasta", // NOVO
+        createFolderTitle: "Criar Nova Pasta", // NOVO
+        folderName: "Nome da Pasta", // NOVO
+        createFolderButton: "Criar Pasta", // NOVO
+        folderCreatedSuccess: "Pasta '{{folderName}}' criada com sucesso!", // NOVO
+        errorCreatingFolder: "Erro ao criar pasta: {{message}}", // NOVO
+        confirmActionTitle: "Confirmar Ação de Segurança", // NOVO
+        confirmEmailLabel: "E-mail para Confirmação", // NOVO
+        confirmPasswordLabel: "Senha para Confirmação", // NOVO
+        invalidConfirmationCredentials: "Credenciais de confirmação inválidas ou não correspondem ao usuário atual.", // NOVO
+        emailMismatchError: "O e-mail de confirmação não corresponde à sua conta atual.", // NOVO
+        myAuditLog: "Meu Log de Auditoria", // NOVO
+        allActivities: "Todas as Atividades", // NOVO
+        noQualityLogsFound: "Nenhum log de auditoria encontrado para sua carteira.", // NOVO
+      },
+      maintenanceSchedule: { // NOVO
+        title: "Agendar Manutenção",
+        eventTitle: "Título do Evento",
+        date: "Data",
+        time: "Hora de Início",
+        duration: "Duração (minutos)",
+        predefinedMessage: "Mensagem Padrão",
+        customMessage: "Observações / Mensagem Customizada",
+        predefined: {
+            none: "Nenhuma",
+            criticalUpdate: "Atualização de Segurança Crítica",
+            routineMaintenance: "Manutenção de Rotina do Sistema",
+            securityPatch: "Aplicação de Patch de Segurança",
+            infraUpgrade: "Upgrade de Infraestrutura"
+        },
+        scheduleButton: "Agendar Manutenção",
+        scheduledSuccess: "Manutenção '{{title}}' agendada com sucesso!",
+        scheduledError: "Erro ao agendar manutenção: {{message}}",
+        eventTitlePlaceholder: "Ex: Manutenção Mensal do DB"
       }
     }
   },
@@ -431,12 +470,27 @@ const resources = {
         filter: "Filter",
         description: "Description",
         priority: "Priority",
-        user: "User", // NOVO
-        dateToday: "{{date}}", // NOVO
-        goodMorning: "Good morning", // NOVO
-        goodAfternoon: "Good afternoon", // NOVO
-        goodEvening: "Good evening", // NOVO
-        filterByStatus: "Filter by status" // NOVO
+        user: "User",
+        dateToday: "{{date}}",
+        goodMorning: "Good morning",
+        goodAfternoon: "Good afternoon",
+        goodEvening: "Good evening",
+        filterByStatus: "Filter by status",
+        hidePassword: "Hide password",
+        showPassword: "Show password",
+        backToLogin: "Back to Login",
+        mainNavigation: "Main Navigation",
+        expandSidebar: "Expand sidebar",
+        collapseSidebar: "Collapse sidebar",
+        userMenu: "User Menu",
+        mobileNavigation: "Mobile Navigation",
+        moreActions: "More actions",
+        na: "N/A",
+        updatingDatabase: "Updating database...",
+        statusActive: "Active",
+        statusBlocked: "Blocked",
+        statusInactive: "Inactive",
+        home: "Home" // Adicionado para uso genérico de 'home' como breadcrumb
       },
       files: {
         name: "File Name",
@@ -463,7 +517,7 @@ const resources = {
           approved: "Approved",
           pending: "Pending",
           ungrouped: "Ungrouped",
-          rejected: "Rejected" // NOVO
+          rejected: "Rejected"
         },
         sort: {
           nameAsc: "Name (A-Z)",
@@ -472,8 +526,36 @@ const resources = {
           dateOld: "Date (Oldest)",
           status: "Status"
         },
-        toggleFavorite: "Unfavorite", // NOVO
-        addFavorite: "Add to favorites" // NOVO
+        toggleFavorite: "Unfavorite",
+        addFavorite: "Add to favorites",
+        certification: "Certification",
+        secureData: "Secure Data",
+        errorLoadingFiles: "Error loading files.",
+        errorLoadingNavigation: "Error loading navigation.",
+        downloadingFile: "Downloading file {{fileName}}...",
+        bulkDownloadStarted: "Bulk download started for {{count}} files.",
+        confirmDelete: "Are you sure you want to delete {{fileName}}?",
+        fileDeletedSuccess: "File {{fileName}} deleted successfully!",
+        errorDeletingFile: "Error deleting file.",
+        viewMode: "View mode",
+        listView: "List view",
+        gridView: "Grid view",
+        deselectFile: "Deselect file {{fileName}}",
+        selectFile: "Select file {{fileName}}",
+        type: "Type",
+        errorToggleFavorite: "Error toggling favorite.",
+        authenticatingAccess: "Authenticating access...",
+        documentPreview: "Document preview: {{fileName}}",
+        authenticatedView: "Authenticated View",
+        openInNewTab: "Open in new tab",
+        errorLoadingDocument: "Error loading document.",
+        permissionOrExpiredLink: "Check your permissions or if the link has not expired.",
+        searchPlaceholder: "Search by file name, batch or invoice...", // NOVO
+        clientStatus: { // NOVO: Máscara de status para o cliente
+          processing: "In Processing",
+          technicalConference: "In Technical Conference",
+          availableForDownload: "Available for Download"
+        }
       },
       cookie: {
         title: "Security & Data",
@@ -482,25 +564,22 @@ const resources = {
       },
       menu: {
         main: "Main",
-        home: "Home",
+        home: "Home", // Mantido para o menu de navegação
         library: "Library",
         quickAccess: "Quick Access",
         recent: "Recent",
         favorites: "Favorites",
-        tickets: "Support",
         dashboard: "Dashboard",
         documents: "Documents",
         management: "Management",
         portalName: "Quality Portal",
         brand: "Vital Steels",
-        support: "Support",
         system: "System",
-        portalNameShort: "Vital Link", // NOVO
-        qualityManagement: "Quality Management", // NOVO
-        clientPortfolio: "Client Portfolio", // NOVO
-        masterLibrary: "Master Library", // NOVO
-        serviceDesk: "Service Desk", // NOVO
-        systemMonitoring: "Systems Monitored", // NOVO
+        portalNameShort: "Vital Link",
+        qualityManagement: "Quality Management",
+        clientPortfolio: "Client Portfolio",
+        // REMOVIDO: masterLibrary: "Master Library",
+        systemMonitoring: "Systems Monitored",
       },
       dashboard: {
         hello: "Hello",
@@ -512,89 +591,63 @@ const resources = {
         libraryHeader: "Document Repository",
         favoritesHeader: "Quick Access",
         historyHeader: "History",
-        ticketsHeader: "Support Center",
         filters: "Advanced Filters",
         period: "Period",
         clear: "Clear Filters",
-        openTicket: "Open New Ticket",
-        noTickets: "No active tickets at the moment.",
         regular: "Normal Operation",
         homeTitle: "Dashboard",
         filesTitle: "My Library",
         favoritesTitle: "My Favorites",
         recentTitle: "Recent Files",
-        ticketsTitle: "Support Center",
-        heroDescription: "Centralize your quality certificates and ensure total traceability of your materials.", // NOVO
-        status: { // NOVO
+        heroDescription: "Centralize your quality certificates and ensure total traceability of your materials.",
+        status: {
           scheduled: "Scheduled Maintenance",
           normal: "Normal Operation",
           scheduledDefaultMessage: "System undergoing scheduled update.",
           monitoringActive: "Vital Monitoring Active"
         },
-        kpi: { // NOVO
+        kpi: {
           libraryLabel: "Library",
           activeDocsSubtext: "Active Docs",
           pendingLabel: "Pending",
           awaitingSubtext: "Awaiting",
-          ticketsLabel: "Tickets",
-          openTicketsSubtext: "Open"
         },
-        noTicketsRegistered: "No tickets registered.", // NOVO
-        exploreAll: "Explore All", // NOVO
-        emptyFlatView: { // NOVO
+        exploreAll: "Explore All",
+        emptyFlatView: {
             message: "No documents here yet.",
             subtextFavorites: "Star documents to find them quickly.",
             subtextRecent: "Your most recent documents will appear here."
         },
-        supportCenter: "Support Center", // NOVO
-        myTickets: "My Tickets", // NOVO
-        noSupportTickets: "No tickets registered.", // NOVO
-        openNewTicket: "Open New Ticket", // NOVO
-        ticket: { // NOVO
-          id: "ID",
-          subject: "Subject",
-          priority: "Priority",
-          status: "Status",
-          createdAt: "Created At",
-          resolutionNote: "Resolution Note", // NOVO
-          details: "Ticket Details", // NOVO
-          requester: "Requester", // NOVO
-          user: "User", // NOVO
-          company: "Company", // NOVO
-          history: "History", // NOVO
-          updatedStatus: "Update Status", // NOVO
-          saveChanges: "Save Changes", // NOVO
-          requiredResolutionNote: "A resolution note is required to close the ticket.", // NOVO
-        },
-        accessingAuditRecords: "Accessing audit records...", // NOVO
-        noRecordsFound: "No audit records found.", // NOVO
-        auditMoreClients: "Audit more clients", // NOVO
-        auditedRecords: "Audited • {{count}} Records", // NOVO
-        pendingStatus: "{{count}} Pending", // NOVO
-        complianceHealth: "Compliance Health", // NOVO
-        lastAnalysis: "Last Analysis", // NOVO
-        criticalPendencies: "Critical", // NOVO
-        upToDate: "Up to Date", // NOVO
-        organization: "Organization / Company Name", // NOVO
-        fiscalID: "Fiscal ID", // NOVO
-        activeClients: "Active", // NOVO
-        allClients: "All" // NOVO
+        accessingAuditRecords: "Accessing audit records...",
+        noRecordsFound: "No audit records found.",
+        auditMoreClients: "Audit more clients",
+        auditedRecords: "Audited • {{count}} Records",
+        pendingStatus: "{{count}} Pending",
+        complianceHealth: "Compliance Health",
+        lastAnalysis: "Last Analysis",
+        criticalPendencies: "Critical",
+        upToDate: "Up to Date",
+        organization: "Organization / Company Name",
+        fiscalID: "Fiscal ID",
+        activeClients: "Active",
+        allClients: "All",
+        contractDate: "Contract Date",
       },
       login: {
         welcomeBack: "Restricted Access",
         enterCredentials: "Use your credentials provided by Vital IT.",
         emailLabel: "Work Email",
         passwordLabel: "Access Password",
-        forgotPassword: "Forgot?", // NOVO
+        forgotPassword: "Forgot?",
         accessPortal: "Enter Portal",
         sloganTitle: "Industrial Compliance and Traceability.",
         sloganText: "Centralized platform for managing quality certificates and technical reports for Vital Steels S.A.",
-        authenticateAccess: "Authenticate Access", // NOVO
-        newUser: "New here?", // NOVO
-        requestRegister: "Request Registration", // NOVO
-        corpEmail: "Corporate Email", // NOVO
-        accessPassword: "Access Password", // NOVO
-        connectionError: "Connection error with the server." // NOVO
+        authenticateAccess: "Authenticate Access",
+        newUser: "New here?",
+        requestRegister: "Request Registration",
+        corpEmail: "Corporate Email",
+        accessPassword: "Access Password",
+        connectionError: "Connection error with the server."
       },
       roles: {
         ADMIN: "Administrator",
@@ -606,12 +659,12 @@ const resources = {
           overview: "Overview",
           users: "Users",
           clients: "Clients",
-          tickets: "Tickets",
           logs: "Audit Logs",
           settings: "Settings"
         },
         settings: {
-          techSupport: "L3 Infra Support"
+          techSupport: "L3 Infra Support",
+          externalTeam: "External Team"
         },
         users: {
           createTitle: "New Access",
@@ -625,7 +678,11 @@ const resources = {
           roleLabel: "Access Level",
           department: "Department",
           orgLink: "Link Organization",
-          filters: "List Filters"
+          filters: "List Filters",
+          departmentPlaceholder: "e.g., Procurement",
+          resendAccess: "Resend Access",
+          removeUser: "Remove User",
+          noUsersFound: "No users found in the database."
         },
         stats: {
           totalUsers: "Total Users",
@@ -641,57 +698,34 @@ const resources = {
             target: "Target",
             ip: "IP Address",
             severity: "Severity"
-          }
+          },
+          pendingTicketsSubtext: "Pending Response",
+          logsLast24hSubtext: "Logs in the last 24h"
         },
-        n3Support: {
-          title: "L3 Support - Infrastructure",
-          subtitle: "Direct request to external technical team",
-          component: "Affected Component",
-          impact: "Impact on the Business",
-          context: "Context",
-          module: "Module",
-          steps: "Steps to Reproduce",
-          submit: "Send to L3",
-          success: "Request sent successfully ID:",
-          components: {
-            INFRA_UP: "Infrastructure / Cloud",
-            DB_MOD: "Database",
-            SECURITY_INC: "Security Incident",
-            BACKUP_RESTORE: "Backup / Restore",
-            CUSTOM_DEV: "Custom Development"
-          },
-          contexts: {
-            SYSTEM: "Global (Entire System)",
-            CLIENT: "Client Specific",
-            INTERNAL: "Vital Internal Use"
-          },
-          modules: {
-            AUTH: "Authentication / Login",
-            DASHBOARD: "Dashboard / Home",
-            FILES: "Storage / Files",
-            API: "API Connectivity"
-          }
+        clients: {
+          createTitle: "New Organization",
+          editTitle: "Edit Organization"
         },
-        tickets: {
-          newTicket: "New Ticket",
-          subject: "Subject",
-          status: {
-            OPEN: "Open",
-            IN_PROGRESS: "In Progress",
-            RESOLVED: "Resolved"
-          },
-          priority: {
-            LOW: "Low",
-            MEDIUM: "Medium",
-            HIGH: "High",
+        logs: {
+          filterBySeverity: "Filter by severity",
+          allSeverities: "All Severities",
+          severity: {
+            INFO: "Info",
+            WARNING: "Warning",
+            ERROR: "Error",
             CRITICAL: "Critical"
-          }
+          },
+          investigate: "Investigate",
+          noLogsFound: "No audit logs found."
         }
       },
       notifications: {
         title: "Notifications",
         empty: "No new notifications",
-        markAll: "Mark All Read"
+        markAll: "Mark All Read",
+        read: "Read",
+        unread: "Unread",
+        unreadCount: "{{count}} unread notifications"
       },
       privacy: {
         title: "Privacy & Policies",
@@ -710,9 +744,10 @@ const resources = {
         confirm: "Confirm New Password",
         submit: "Update Password",
         matchError: "Passwords do not match.",
-        success: "Password updated successfully."
+        success: "Password updated successfully.",
+        errorUpdatingPassword: "Error updating password."
       },
-      maintenance: { // NOVO: Para MaintenanceScreen
+      maintenance: {
         title: "System Under Maintenance",
         message: "We are performing critical security and infrastructure updates. Access is temporarily suspended to ensure data integrity.",
         returnEstimate: "Return Estimate",
@@ -722,7 +757,7 @@ const resources = {
         contact: "Contact",
         systemId: "System ID: AV-SYS-LOCKDOWN-001"
       },
-      signup: { // NOVO
+      signup: {
         newRegister: "New Registration",
         fillFields: "Fill in the fields below with your professional data.",
         fullName: "Full Name",
@@ -738,14 +773,14 @@ const resources = {
         requestSent: "Request Sent!",
         validationPending: "Your request is being validated by the technical team.",
         alreadyHaveAccount: "Already have an account?",
-        login: "Login"
+        login: "Login",
+        passwordPlaceholder: "Set password (min. 6 characters)"
       },
-      quality: { // NOVO
+      quality: {
         overview: "Overview",
         activePortfolio: "Active Portfolio",
         pendingDocs: "Pending Docs.",
-        openTickets: "Open Tickets",
-        masterRepository: "Master Repository",
+        // REMOVIDO: masterRepository: "Master Repository",
         accessFiles: "Access Files",
         recentActivity: "Recent Activity",
         activityHistory: "Analysis history loaded in real-time.",
@@ -753,8 +788,8 @@ const resources = {
         complianceISO: "ISO 9001 Compliance",
         biannualCheck: "Biannual verification scheduled for next month.",
         b2bPortfolio: "B2B Portfolio",
-        masterLibrary: "Master Library",
-        masterLibrarySubtitle: "Global certificate templates and technical specifications.",
+        // REMOVIDO: masterLibrary: "Master Library",
+        // REMOVIDO: masterLibrarySubtitle: "Global certificate templates and technical specifications.",
         sendNewCertificate: "Send New Certificate",
         pdfImageFile: "PDF/Image File",
         product: "Product",
@@ -768,6 +803,7 @@ const resources = {
         confirmRejection: "Confirm Rejection",
         batchData: "Batch Data",
         productLabel: "Product",
+        productPlaceholder: "e.g., SAE 1045 Steel, Annealed Wire",
         batchLabel: "Batch No.",
         invoiceLabel: "Invoice No.",
         lastAnalysis: "Last Analysis",
@@ -779,19 +815,61 @@ const resources = {
         errorProcessingInspection: "Error processing inspection.",
         reasonRequired: "Please state the reason for rejection.",
         documentUploadedSuccess: "File uploaded successfully!",
-        errorUploadingFile: "Error uploading file.",
-        myClients: "My Clients", // NOVO
-        searchClient: "Audit client by name or CNPJ...", // NOVO
-        healthCompliance: "Compliance Health", // NOVO
-        critical: "Critical", // NOVO
-        upToDate: "Up to Date", // NOVO
-        lastUpdate: "Last update", // NOVO
-        escalateToAdmin: "Escalate to Admin", // NOVO
-        escalateReason: "Reason for escalation to Admin...", // NOVO
-        escalateWarning: "If the ticket requires administrative or level 3 technical intervention, you can escalate it. A reason is mandatory.", // NOVO
-        escalateTicket: "Escalate Ticket", // NOVO
-        serviceDeskLoading: "Loading Service Desk...", // NOVO
-        noTicketsFoundQuality: "No pending or registered tickets." // NOVO
+        errorUploadingFile: "Error uploading file. Details: {{message}}",
+        myClients: "My Clients",
+        searchClient: "Audit client by name or CNPJ...",
+        healthCompliance: "Compliance Health",
+        critical: "Critical",
+        upToDate: "Up to Date",
+        lastUpdate: "Last update",
+        errorLoadingQualityData: "Error loading quality portal data.",
+        errorLoadingClients: "Error loading clients: {{message}}",
+        errorLoadingMoreClients: "Error loading more clients: {{message}",
+        documentApprovedTitle: "Document Approved",
+        documentRejectedTitle: "Document Rejected",
+        documentInspectedMessage: "Document '{{fileName}}' (batch: {{batchNumber}}) has been inspected.",
+        markAsPending: "Mark as Pending", // NEW TRANSLATION
+        confirmSetPending: "Are you sure you want to mark {{fileName}} as pending?", // NEW TRANSLATION
+        fileSetPendingSuccess: "File {{fileName}} marked as pending successfully!", // NEW TRANSLATION
+        errorSettingPending: "Error marking file as pending.", // NEW TRANSLATION
+        alreadyPending: "The file is already 'Pending'.", // NEW TRANSLATION
+        selectClient: "Select a client to upload the file.", // NEW TRANSLATION (Adjusted for client-only upload)
+        newClientUser: "New Client User", // NOVO
+        newCompany: "New Company", // NOVO
+        createFolder: "New Folder", // NOVO
+        createFolderTitle: "Create New Folder", // NOVO
+        folderName: "Folder Name", // NOVO
+        createFolderButton: "Create Folder", // NOVO
+        folderCreatedSuccess: "Folder '{{folderName}}' created successfully!", // NOVO
+        errorCreatingFolder: "Error creating folder: {{message}}", // NOVO
+        confirmActionTitle: "Confirm Security Action", // NOVO
+        confirmEmailLabel: "Confirmation Email", // NOVO
+        confirmPasswordLabel: "Confirmation Password", // NOVO
+        invalidConfirmationCredentials: "Invalid confirmation credentials or they do not match the current user.", // NOVO
+        emailMismatchError: "The confirmation email does not match your current account.", // NOVO
+        myAuditLog: "My Audit Log", // NOVO
+        allActivities: "All Activities", // NOVO
+        noQualityLogsFound: "No audit logs found for your portfolio.", // NOVO
+      },
+      maintenanceSchedule: { // NOVO
+        title: "Schedule Maintenance",
+        eventTitle: "Event Title",
+        date: "Date",
+        time: "Start Time",
+        duration: "Duration (minutes)",
+        predefinedMessage: "Standard Message",
+        customMessage: "Observations / Custom Message",
+        predefined: {
+            none: "None",
+            criticalUpdate: "Critical Security Update",
+            routineMaintenance: "Routine System Maintenance",
+            securityPatch: "Security Patch Application",
+            infraUpgrade: "Infrastructure Upgrade"
+        },
+        scheduleButton: "Schedule Maintenance",
+        scheduledSuccess: "Maintenance '{{title}}' scheduled successfully!",
+        scheduledError: "Error scheduling maintenance: {{message}",
+        eventTitlePlaceholder: "Ex: Monthly DB Maintenance"
       }
     }
   },
@@ -825,13 +903,28 @@ const resources = {
         all: "Todos",
         filter: "Filtrar",
         description: "Descripción",
-        priority: "Prioridade",
-        user: "Usuario", // NOVO
-        dateToday: "{{date}}", // NOVO
-        goodMorning: "Buenos días", // NOVO
-        goodAfternoon: "Buenas tardes", // NOVO
-        goodEvening: "Buenas noches", // NOVO
-        filterByStatus: "Filtrar por estado" // NOVO
+        priority: "Prioridad",
+        user: "Usuario",
+        dateToday: "{{date}}",
+        goodMorning: "Buenos días",
+        goodAfternoon: "Buenas tardes",
+        goodEvening: "Buenas noches",
+        filterByStatus: "Filtrar por estado",
+        hidePassword: "Esconder contraseña",
+        showPassword: "Mostrar contraseña",
+        backToLogin: "Volver a Iniciar Sesión",
+        mainNavigation: "Navegación Principal",
+        expandSidebar: "Expandir barra lateral",
+        collapseSidebar: "Contraer barra lateral",
+        userMenu: "Menú de Usuario",
+        mobileNavigation: "Navegación Móvil",
+        moreActions: "Más acciones",
+        na: "N/A",
+        updatingDatabase: "Actualizando base de datos...",
+        statusActive: "Activo",
+        statusBlocked: "Bloqueado",
+        statusInactive: "Inactivo",
+        home: "Inicio" // Adicionado para uso genérico de 'home' como breadcrumb
       },
       files: {
         name: "Nombre del Archivo",
@@ -858,7 +951,7 @@ const resources = {
           approved: "Aprobados",
           pending: "Pendientes",
           ungrouped: "Sin grupo",
-          rejected: "Rechazados" // NOVO
+          rejected: "Rechazados"
         },
         sort: {
           nameAsc: "Nombre (A-Z)",
@@ -867,8 +960,36 @@ const resources = {
           dateOld: "Fecha (Más antiguo)",
           status: "Estado"
         },
-        toggleFavorite: "Quitar de favoritos", // NOVO
-        addFavorite: "Agregar a favoritos" // NOVO
+        toggleFavorite: "Quitar de favoritos",
+        addFavorite: "Agregar a favoritos",
+        certification: "Certificación",
+        secureData: "Datos Seguros",
+        errorLoadingFiles: "Error al cargar archivos.",
+        errorLoadingNavigation: "Error al cargar navegación.",
+        downloadingFile: "Descargando archivo {{fileName}}...",
+        bulkDownloadStarted: "Descarga masiva iniciada para {{count}} archivos.",
+        confirmDelete: "¿Está seguro de que desea eliminar {{fileName}}?",
+        fileDeletedSuccess: "¡Archivo {{fileName}} eliminado con éxito!",
+        errorDeletingFile: "Error al eliminar archivo.",
+        viewMode: "Modo de vista",
+        listView: "Vista de lista",
+        gridView: "Vista de cuadrícula",
+        deselectFile: "Deseleccionar archivo {{fileName}}",
+        selectFile: "Seleccionar archivo {{fileName}}",
+        type: "Tipo",
+        errorToggleFavorite: "Error al alternar favorito.",
+        authenticatingAccess: "Autenticando acceso...",
+        documentPreview: "Vista previa del documento: {{fileName}}",
+        authenticatedView: "Vista Autenticada",
+        openInNewTab: "Abrir en nueva pestaña",
+        errorLoadingDocument: "Error al cargar documento.",
+        permissionOrExpiredLink: "Verifique sus permisos o si el enlace no ha caducado.",
+        searchPlaceholder: "Buscar por nombre del archivo, lote o NF...", // NOVO
+        clientStatus: { // NOVO: Máscara de status para el cliente
+          processing: "En procesamiento",
+          technicalConference: "En conferencia técnica",
+          availableForDownload: "Disponible para Descarga"
+        }
       },
       cookie: {
         title: "Seguridad y Datos",
@@ -877,25 +998,22 @@ const resources = {
       },
       menu: {
         main: "Principal",
-        home: "Inicio",
+        home: "Inicio", // Mantido para o menu de navegação
         library: "Biblioteca",
         quickAccess: "Acceso Rápido",
         recent: "Recientes",
         favorites: "Favoritos",
-        tickets: "Soporte",
         dashboard: "Dashboard",
         documents: "Documentos",
         management: "Gestión",
         portalName: "Portal de Calidad",
         brand: "Aceros Vital",
-        support: "Soporte",
         system: "Sistema",
-        portalNameShort: "Vital Link", // NOVO
-        qualityManagement: "Gestión de Calidad", // NOVO
-        clientPortfolio: "Cartera de Clientes", // NOVO
-        masterLibrary: "Biblioteca Maestra", // NOVO
-        serviceDesk: "Mesa de Servicio", // NOVO
-        systemMonitoring: "Sistemas Monitorizados", // NOVO
+        portalNameShort: "Vital Link",
+        qualityManagement: "Gestión de Calidad",
+        clientPortfolio: "Cartera de Clientes",
+        // REMOVIDO: masterLibrary: "Biblioteca Maestra",
+        systemMonitoring: "Sistemas Monitorizados",
       },
       dashboard: {
         hello: "Hola",
@@ -907,89 +1025,63 @@ const resources = {
         libraryHeader: "Repositorio de Documentos",
         favoritesHeader: "Acceso Rápido",
         historyHeader: "Historial",
-        ticketsHeader: "Centro de Soporte",
         filters: "Filtros Avanzados",
         period: "Período",
         clear: "Limpar Filtros",
-        openTicket: "Abrir Nuevo Ticket",
-        noTickets: "Sin tickets activos en este momento.",
         regular: "Operación Normal",
         homeTitle: "Dashboard",
         filesTitle: "Mi Biblioteca",
         favoritesTitle: "Mis Favoritos",
         recentTitle: "Archivos Recentes",
-        ticketsTitle: "Centro de Soporte",
-        heroDescription: "Centralice sus certificados de calidad y garantice la trazabilidad total de sus materiales.", // NOVO
-        status: { // NOVO
+        heroDescription: "Centralice sus certificados de calidad y garantice la trazabilidad total de sus materiales.",
+        status: {
           scheduled: "Mantenimiento Programado",
           normal: "Operación Normal",
           scheduledDefaultMessage: "Sistema en actualización programada.",
           monitoringActive: "Monitoreo Vital Activo"
         },
-        kpi: { // NOVO
+        kpi: {
           libraryLabel: "Biblioteca",
           activeDocsSubtext: "Docs. Activos",
           pendingLabel: "Pendientes",
           awaitingSubtext: "Esperando",
-          ticketsLabel: "Tickets",
-          openTicketsSubtext: "Abiertos"
         },
-        noTicketsRegistered: "Ningún ticket registrado.", // NOVO
-        exploreAll: "Explorar Todo", // NOVO
-        emptyFlatView: { // NOVO
+        exploreAll: "Explorar Todo",
+        emptyFlatView: {
             message: "Ningún documento aquí todavía.",
             subtextFavorites: "Marque documentos con estrella para encontrarlos rápidamente.",
             subtextRecent: "Sus documentos más recientes aparecerán aquí."
         },
-        supportCenter: "Centro de Soporte", // NOVO
-        myTickets: "Mis Tickets", // NOVO
-        noSupportTickets: "Ningún ticket registrado.", // NOVO
-        openNewTicket: "Abrir Nuevo Ticket", // NOVO
-        ticket: { // NOVO
-          id: "ID",
-          subject: "Asunto",
-          priority: "Prioridad",
-          status: "Estado",
-          createdAt: "Creado En",
-          resolutionNote: "Nota de Resolución", // NOVO
-          details: "Detalles del Ticket", // NOVO
-          requester: "Solicitante", // NOVO
-          user: "Usuario", // NOVO
-          company: "Empresa", // NOVO
-          history: "Historial", // NOVO
-          updatedStatus: "Actualizar Estado", // NOVO
-          saveChanges: "Guardar Cambios", // NOVO
-          requiredResolutionNote: "Se requiere una nota de resolución para cerrar el ticket.", // NOVO
-        },
-        accessingAuditRecords: "Accediendo a los registros de auditoría...", // NOVO
-        noRecordsFound: "No se encontraron registros de auditoría.", // NOVO
-        auditMoreClients: "Auditar más clientes", // NOVO
-        auditedRecords: "Auditado • {{count}} Registros", // NOVO
-        pendingStatus: "{{count}} Pendientes", // NOVO
-        complianceHealth: "Salud de Cumplimiento", // NOVO
-        lastAnalysis: "Último Análisis", // NOVO
-        criticalPendencies: "Críticos", // NOVO
-        upToDate: "Al Día", // NOVO
-        organization: "Organización / Razón Social", // NOVO
-        fiscalID: "ID Fiscal", // NOVO
-        activeClients: "Activos", // NOVO
-        allClients: "Todos" // NOVO
+        accessingAuditRecords: "Accediendo a los registros de auditoría...",
+        noRecordsFound: "No se encontraron registros de auditoría.",
+        auditMoreClients: "Auditar más clientes",
+        auditedRecords: "Auditado • {{count}} Registros",
+        pendingStatus: "{{count}} Pendientes",
+        complianceHealth: "Salud de Cumplimiento",
+        lastAnalysis: "Último Análisis",
+        criticalPendencies: "Críticos",
+        upToDate: "Al Día",
+        organization: "Organización / Razón Social",
+        fiscalID: "ID Fiscal",
+        activeClients: "Activos",
+        allClients: "Todos",
+        contractDate: "Fecha de Contrato",
       },
       login: {
         welcomeBack: "Acceso Restringido",
         enterCredentials: "Use sus credenciales proporcionadas por IT de Vital.",
         emailLabel: "Correo Profesional",
         passwordLabel: "Contraseña de Acceso",
-        forgotPassword: "¿Olvidó?", // NOVO
+        forgotPassword: "¿Olvidó?",
         accessPortal: "Entrar al Portal",
         sloganTitle: "Cumplimiento y Trazabilidad Industrial.",
         sloganText: "Plataforma centralizada para la gestión de certificados de calidad e informes técnicos de Aceros Vital S.A.",
-        authenticateAccess: "Autenticar Acceso", // NOVO
-        newUser: "¿Nuevo aquí?", // NOVO
-        requestRegister: "Solicitar Registro", // NOVO
-        corpEmail: "Correo Corporativo", // NOVO
-        accessPassword: "Contraseña de Acceso", // NOVO
-        connectionError: "Error de conexión con el servidor." // NOVO
+        authenticateAccess: "Autenticar Acceso",
+        newUser: "¿Nuevo aquí?",
+        requestRegister: "Solicitar Registro",
+        corpEmail: "Correo Corporativo",
+        accessPassword: "Contraseña de Acceso",
+        connectionError: "Error de conexión con el servidor."
       },
       roles: {
         ADMIN: "Administrador",
@@ -1001,12 +1093,12 @@ const resources = {
           overview: "Resumen",
           users: "Usuarios",
           clients: "Clientes",
-          tickets: "Tickets",
           logs: "Logs de Auditoría",
           settings: "Configuración"
         },
         settings: {
-          techSupport: "Soporte L3 Infra"
+          techSupport: "Soporte L3 Infra",
+          externalTeam: "Equipo Externo"
         },
         users: {
           createTitle: "Nuevo Acceso",
@@ -1020,7 +1112,11 @@ const resources = {
           roleLabel: "Nivel de Acceso",
           department: "Departamento",
           orgLink: "Vincular Organización",
-          filters: "Filtros de Lista"
+          filters: "Filtros de Lista",
+          departmentPlaceholder: "Ej: Compras",
+          resendAccess: "Reenviar Acceso",
+          removeUser: "Eliminar Usuario",
+          noUsersFound: "No se encontraron usuarios en la base de datos."
         },
         stats: {
           totalUsers: "Total Usuarios",
@@ -1036,57 +1132,34 @@ const resources = {
             target: "Objetivo",
             ip: "Dirección IP",
             severity: "Severidad"
-          }
+          },
+          pendingTicketsSubtext: "Pendientes de Respuesta",
+          logsLast24hSubtext: "Registros en las últimas 24h"
         },
-        n3Support: {
-          title: "Soporte L3 - Infraestructura",
-          subtitle: "Solicitud directa al equipo técnico externo",
-          component: "Componente Afectado",
-          impact: "Impacto en el Negocio",
-          context: "Contexto",
-          module: "Módulo",
-          steps: "Pasos para Reproducir",
-          submit: "Enviar a L3",
-          success: "Solicitud enviada con éxito ID:",
-          components: {
-            INFRA_UP: "Infraestructura / Cloud",
-            DB_MOD: "Base de Datos",
-            SECURITY_INC: "Incidente de Seguridad",
-            BACKUP_RESTORE: "Backup / Restauración",
-            CUSTOM_DEV: "Desarrollo Personalizado"
-          },
-          contexts: {
-            SYSTEM: "Global (Todo el sistema)",
-            CLIENT: "Específico por Cliente",
-            INTERNAL: "Uso Interno Vital"
-          },
-          modules: {
-            AUTH: "Autenticación / Login",
-            DASHBOARD: "Dashboard / Home",
-            FILES: "Almacenamiento / Archivos",
-            API: "Conectividad API"
-          }
+        clients: {
+          createTitle: "Nueva Organización",
+          editTitle: "Editar Organización"
         },
-        tickets: {
-          newTicket: "Nuevo Ticket",
-          subject: "Asunto",
-          status: {
-            OPEN: "Abierto",
-            IN_PROGRESS: "En Proceso",
-            RESOLVED: "Resuelto"
+        logs: {
+          filterBySeverity: "Filtrar por severidad",
+          allSeverities: "Todas las Severidades",
+          severity: {
+            INFO: "Info",
+            WARNING: "Advertencia",
+            ERROR: "Error",
+            CRITICAL: "Crítico"
           },
-          priority: {
-            LOW: "Baja",
-            MEDIUM: "Media",
-            HIGH: "Alta",
-            CRITICAL: "Crítica"
-          }
+          investigate: "Investigar",
+          noLogsFound: "No se encontraron registros de auditoría."
         }
       },
       notifications: {
         title: "Notificaciones",
         empty: "Sin notificaciones nuevas",
-        markAll: "Leer Todas"
+        markAll: "Leer Todas",
+        read: "Leída",
+        unread: "No leída",
+        unreadCount: "{{count}} notificaciones no leídas"
       },
       privacy: {
         title: "Políticas y Privacidad",
@@ -1095,7 +1168,7 @@ const resources = {
         section2: "Recolección de Datos",
         section3: "Seguridad",
         section4: "Uso de Cookies",
-        section5: "Dereitos do Titular",
+        section5: "Direitos do Titular",
         close: "He Leído y Acepto"
       },
       changePassword: {
@@ -1105,9 +1178,10 @@ const resources = {
         confirm: "Confirmar Nueva Contraseña",
         submit: "Actualizar Contraseña",
         matchError: "Las contraseñas no coinciden.",
-        success: "Contraseña cambiada con éxito."
+        success: "Contraseña cambiada con éxito.",
+        errorUpdatingPassword: "Error updating password."
       },
-      maintenance: { // NOVO: Para MaintenanceScreen
+      maintenance: {
         title: "Sistema en Mantenimiento",
         message: "Estamos realizando actualizaciones críticas de seguridad e infraestructura. El acceso está temporalmente suspendido para garantizar la integridad de los datos.",
         returnEstimate: "Estimación de Regreso",
@@ -1115,78 +1189,121 @@ const resources = {
         todayAt: "Hoy a las {{time}}",
         retry: "Intentar de Nuevo",
         contact: "Contacto",
-        systemId: "ID del Sistema: AV-SYS-LOCKDOWN-001"
+        systemId: "System ID: AV-SYS-LOCKDOWN-001"
       },
-      signup: { // NOVO
-        newRegister: "Nuevo Registro",
+      signup: {
+        newRegister: "New Registration",
         fillFields: "Rellene los campos a continuación con sus datos profesionales.",
-        fullName: "Nombre Completo",
-        corpEmail: "Correo Corporativo",
-        password: "Contraseña de Acceso",
-        confirmPassword: "Confirmar Contraseña",
-        organization: "Organización",
-        department: "Departamento",
-        select: "Seleccione...",
-        companyNotListed: "Mi empresa no está en la lista",
-        requestAccess: "Solicite su acceso corporativo.",
+        fullName: "Full Name",
+        corpEmail: "Corporate Email",
+        password: "Access Password",
+        confirmPassword: "Confirm ConfirmPassword",
+        organization: "Organization",
+        department: "Department",
+        select: "Select...",
+        companyNotListed: "My company is not listed",
+        requestAccess: "Request your corporate access.",
         joinNetwork: "Únase a la red de cumplimiento de Aceros Vital.",
         requestSent: "¡Solicitud Enviada!",
         validationPending: "Su solicitud está siendo validada por el equipo técnico.",
         alreadyHaveAccount: "¿Ya tienes una cuenta?",
-        login: "Iniciar Sesión"
+        login: "Login",
+        passwordPlaceholder: "Set password (min. 6 characters)"
       },
-      quality: { // NOVO
+      quality: {
         overview: "Resumen",
-        activePortfolio: "Cartera Activa",
-        pendingDocs: "Docs. Pendientes",
-        openTickets: "Tickets Abiertos",
-        masterRepository: "Repositorio Maestro",
-        accessFiles: "Acceder a Archivos",
-        recentActivity: "Actividad Reciente",
-        activityHistory: "Historial de análisis cargado en tiempo real.",
-        systemAlerts: "Alertas del Sistema",
-        complianceISO: "Cumplimiento ISO 9001",
-        biannualCheck: "Verificación semestral programada para el próximo mes.",
-        b2bPortfolio: "Cartera B2B",
-        masterLibrary: "Biblioteca Maestra",
-        masterLibrarySubtitle: "Plantillas de certificados y especificaciones técnicas globales.",
-        sendNewCertificate: "Enviar Nuevo Certificado",
-        pdfImageFile: "Archivo PDF/Imagen",
-        product: "Producto",
-        batchNumber: "No. Lote/Colada",
-        invoiceNumber: "No. Factura vinculada",
-        currentStatus: "Estado Actual",
-        approve: "Aprobar",
-        reject: "Rechazar",
-        justification: "Justificación",
-        rejectionReasonPlaceholder: "Describa el motivo de la no conformidad...",
-        confirmRejection: "Confirmar Rechazo",
-        batchData: "Datos del Lote",
-        productLabel: "Producto",
-        batchLabel: "No. Lote",
-        invoiceLabel: "No. Factura",
-        lastAnalysis: "Último Análisis",
-        viewPDF: "Ver PDF",
-        uploadFile: "Realizar Carga",
-        uploading: "Subiendo...",
-        documentApprovedSuccess: "¡Documento {{fileName}} aprobado con éxito!",
-        documentRejectedSuccess: "¡Documento {{fileName}} rechazado con éxito!",
-        errorProcessingInspection: "Error al procesar la inspección.",
-        reasonRequired: "Por favor, indique el motivo del rechazo.",
-        documentUploadedSuccess: "¡Archivo subido con éxito!",
-        errorUploadingFile: "Error al subir el archivo.",
-        myClients: "Mis Clientes", // NOVO
-        searchClient: "Auditar cliente por nombre o CNPJ...", // NOVO
-        healthCompliance: "Salud de Cumplimiento", // NOVO
-        critical: "Críticos", // NOVO
-        upToDate: "Al Día", // NOVO
-        lastUpdate: "Última actualización", // NOVO
-        escalateToAdmin: "Escalar a Administrador", // NOVO
-        escalateReason: "Motivo de la escalada al Administrador...", // NOVO
-        escalateWarning: "Si el ticket requiere intervención administrativa o técnica de nivel 3, puede escalarlo. Es obligatorio un motivo.", // NOVO
-        escalateTicket: "Escalar Ticket", // NOVO
-        serviceDeskLoading: "Cargando Mesa de Servicio...", // NOVO
-        noTicketsFoundQuality: "No hay tickets pendientes o registrados." // NOVO
+        activePortfolio: "Active Portfolio",
+        pendingDocs: "Pending Docs.",
+        // REMOVIDO: masterRepository: "Master Repository",
+        accessFiles: "Access Files",
+        recentActivity: "Recent Activity",
+        activityHistory: "Analysis history loaded in real-time.",
+        systemAlerts: "System Alerts",
+        complianceISO: "ISO 9001 Compliance",
+        biannualCheck: "Biannual verification scheduled for next month.",
+        b2bPortfolio: "B2B Portfolio",
+        // REMOVIDO: masterLibrary: "Master Library",
+        // REMOVIDO: masterLibrarySubtitle: "Global certificate templates and technical specifications.",
+        sendNewCertificate: "Send New Certificate",
+        pdfImageFile: "PDF/Image File",
+        product: "Product",
+        batchNumber: "Batch/Lot No.",
+        invoiceNumber: "Linked Invoice No.",
+        currentStatus: "Current Status",
+        approve: "Approve",
+        reject: "Reject",
+        justification: "Justification",
+        rejectionReasonPlaceholder: "Describe the reason for non-conformity...",
+        confirmRejection: "Confirm Rejection",
+        batchData: "Batch Data",
+        productLabel: "Product",
+        productPlaceholder: "e.g., SAE 1045 Steel, Annealed Wire",
+        batchLabel: "Batch No.",
+        invoiceLabel: "Invoice No.",
+        lastAnalysis: "Last Analysis",
+        viewPDF: "View PDF",
+        uploadFile: "Perform Upload",
+        uploading: "Uploading...",
+        documentApprovedSuccess: "Document {{fileName}} approved successfully!",
+        documentRejectedSuccess: "Document {{fileName}} rejected successfully!",
+        errorProcessingInspection: "Error processing inspection.",
+        reasonRequired: "Please state the reason for rejection.",
+        documentUploadedSuccess: "File uploaded successfully!",
+        errorUploadingFile: "Error uploading file. Details: {{message}}",
+        myClients: "My Clients",
+        searchClient: "Audit client by name or CNPJ...",
+        healthCompliance: "Compliance Health",
+        critical: "Critical",
+        upToDate: "Up to Date",
+        lastUpdate: "Last update",
+        errorLoadingQualityData: "Error loading quality portal data.",
+        errorLoadingClients: "Error loading clients: {{message}",
+        errorLoadingMoreClients: "Error loading more clients: {{message}",
+        documentApprovedTitle: "Document Approved",
+        documentRejectedTitle: "Document Rejected",
+        documentInspectedMessage: "Document '{{fileName}}' (batch: {{batchNumber}}) has been inspected.",
+        markAsPending: "Mark as Pending", // NEW TRANSLATION
+        confirmSetPending: "Are you sure you want to mark {{fileName}} as pending?", // NEW TRANSLATION
+        fileSetPendingSuccess: "File {{fileName}} marked as pending successfully!", // NEW TRANSLATION
+        errorSettingPending: "Error marking file as pending.", // NEW TRANSLATION
+        alreadyPending: "The file is already 'Pending'.", // NEW TRANSLATION
+        selectClient: "Select a client to upload the file.", // NEW TRANSLATION (Adjusted for client-only upload)
+        newClientUser: "New Client User", // NOVO
+        newCompany: "New Company", // NOVO
+        createFolder: "New Folder", // NOVO
+        createFolderTitle: "Create New Folder", // NOVO
+        folderName: "Folder Name", // NOVO
+        createFolderButton: "Create Folder", // NOVO
+        folderCreatedSuccess: "Folder '{{folderName}}' created successfully!", // NOVO
+        errorCreatingFolder: "Error creating folder: {{message}}", // NOVO
+        confirmActionTitle: "Confirm Security Action", // NOVO
+        confirmEmailLabel: "Confirmation Email", // NOVO
+        confirmPasswordLabel: "Confirmation Password", // NOVO
+        invalidConfirmationCredentials: "Invalid confirmation credentials or they do not match the current user.", // NOVO
+        emailMismatchError: "The confirmation email does not match your current account.", // NOVO
+        myAuditLog: "My Audit Log", // NOVO
+        allActivities: "All Activities", // NOVO
+        noQualityLogsFound: "No audit logs found for your portfolio.", // NOVO
+      },
+      maintenanceSchedule: { // NOVO
+        title: "Schedule Maintenance",
+        eventTitle: "Event Title",
+        date: "Date",
+        time: "Start Time",
+        duration: "Duration (minutes)",
+        predefinedMessage: "Standard Message",
+        customMessage: "Observations / Custom Message",
+        predefined: {
+            none: "None",
+            criticalUpdate: "Critical Security Update",
+            routineMaintenance: "Routine System Maintenance",
+            securityPatch: "Security Patch Application",
+            infraUpgrade: "Infrastructure Upgrade"
+        },
+        scheduleButton: "Schedule Maintenance",
+        scheduledSuccess: "Maintenance '{{title}}' scheduled successfully!",
+        scheduledError: "Error scheduling maintenance: {{message}",
+        eventTitlePlaceholder: "Ex: Monthly DB Maintenance"
       }
     }
   }

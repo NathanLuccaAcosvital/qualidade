@@ -5,8 +5,6 @@ import { notificationService, adminService } from '../../lib/services/index.ts';
 import { AppNotification, UserRole, SystemStatus } from '../../types.ts';
 import { CookieBanner } from '../common/CookieBanner.tsx';
 import { PrivacyModal } from '../common/PrivacyModal.tsx';
-import { SupportModal } from '../features/support/SupportModal.tsx';
-import { N3SupportModal } from '../features/support/N3SupportModal.tsx';
 import { ChangePasswordModal } from '../features/auth/ChangePasswordModal.tsx';
 import { MaintenanceBanner } from '../common/MaintenanceBanner.tsx';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +15,6 @@ import {
   ShieldCheck,
   Bell,
   Search,
-  Phone,
   FileBadge,
   ChevronLeft,
   ChevronRight,
@@ -36,12 +33,11 @@ import {
   BarChart3,
   Users,
   Building2,
-  LifeBuoy,
   ShieldAlert,
   Server,
   Lock,
-  Database,
-  Inbox
+  Activity, // NOVO: Importa Activity icon
+  // REMOVIDO: Database, pois não é mais usado para a Biblioteca Mestra
 } from 'lucide-react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 
@@ -72,8 +68,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
-  const [isSupportOpen, setIsSupportOpen] = useState(false);
-  const [isN3SupportOpen, setIsN3SupportOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({ mode: 'ONLINE' });
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -100,6 +94,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           });
           return () => {
               unsubStatus();
+              // Fix: Corrected typo from `unifNotifs()` to `unsubNotifs()`
               unsubNotifs();
           };
       }
@@ -176,7 +171,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         {
           title: t('menu.quickAccess'),
           items: [
-            { label: t('menu.tickets'), icon: LifeBuoy, path: '/dashboard?view=tickets' },
             { label: t('menu.recent'), icon: History, path: '/dashboard?view=recent' },
             { label: t('menu.favorites'), icon: Star, path: '/dashboard?view=favorites' },
           ]
@@ -191,8 +185,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           items: [
             { label: t('quality.overview'), icon: LayoutDashboard, path: '/quality?view=overview' },
             { label: t('menu.clientPortfolio'), icon: Users, path: '/quality?view=clients' },
-            { label: t('menu.masterLibrary'), icon: Database, path: '/quality?view=master' },
-            { label: t('menu.serviceDesk'), icon: Inbox, path: '/quality?view=tickets' }, // NOVO: Service Desk para Qualidade
+            { label: t('quality.myAuditLog'), icon: Activity, path: '/quality?view=audit-log' }, // NOVO ITEM DE MENU
+            // REMOVIDO: { label: t('menu.masterLibrary'), icon: Database, path: '/quality?view=master' },
           ]
         }
       ];
@@ -206,14 +200,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             { label: t('admin.tabs.overview'), icon: BarChart3, path: '/admin?tab=overview' },
             { label: t('admin.tabs.users'), icon: Users, path: '/admin?tab=users' },
             { label: t('admin.tabs.clients'), icon: Building2, path: '/admin?tab=clients' },
-            { label: t('admin.tabs.tickets'), icon: LifeBuoy, path: '/admin?tab=tickets' },
           ]
         },
         {
           title: t('menu.system'),
           items: [
             { label: t('admin.tabs.logs'), icon: ShieldAlert, path: '/admin?tab=logs' },
-            { label: t('admin.tabs.settings'), icon: Settings, path: '/admin?tab=settings' }
+            { label: t('admin.tabs.settings'), icon: Settings, path: '/admin?tab=settings' },
+            { label: t('quality.myAuditLog'), icon: Activity, path: '/quality?view=audit-log' }, // ADMIN também pode ver seu log individual
           ]
         }
       ];
@@ -236,12 +230,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
 
       if (role === UserRole.CLIENT) {
           items.push({ label: t('menu.library'), icon: Library, path: '/dashboard?view=files', exact: false });
-          items.push({ label: t('menu.tickets'), icon: LifeBuoy, path: '/dashboard?view=tickets', exact: false });
       } else if (role === UserRole.ADMIN) {
           items.push({ label: 'Admin', icon: BarChart3, path: '/admin?tab=overview', exact: false }); // Updated path
       } else if (role === UserRole.QUALITY) {
           items.push({ label: t('menu.clientPortfolio'), icon: Users, path: '/quality?view=clients', exact: false });
-          items.push({ label: t('menu.masterLibrary'), icon: Database, path: '/quality?view=master', exact: false });
+          items.push({ label: t('quality.myAuditLog'), icon: Activity, path: '/quality?view=audit-log', exact: false }); // NOVO: Log de Auditoria
+          // REMOVIDO: items.push({ label: t('menu.masterLibrary'), icon: Database, path: '/quality?view=master', exact: false });
       }
 
       return items;
@@ -268,26 +262,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   };
 
   const renderAdminSupportWidget = () => {
-      if (isCollapsed) return null;
-      return (
-          <div className="mx-3 mt-4 pt-3 border-t border-slate-800/50 relative z-10">
-              <button 
-                onClick={() => setIsN3SupportOpen(true)} 
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 p-0.5 rounded-xl group relative overflow-hidden shadow-lg hover:shadow-orange-900/40 transition-all"
-                aria-label={t('admin.settings.techSupport')}
-              >
-                  <div className="bg-slate-950 rounded-[10px] p-2.5 flex items-center gap-2 relative z-10 group-hover:bg-opacity-90 transition-all">
-                      <div className="p-1.5 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg text-white shadow-inner shrink-0">
-                          <Server size={14} aria-hidden="true" />
-                      </div>
-                      <div className="text-left min-w-0">
-                          <span className="font-bold text-white text-xs block truncate">{t('admin.settings.techSupport')}</span>
-                          <span className="text-[9px] text-slate-400 block">{t('admin.settings.externalTeam')}</span>
-                      </div>
-                  </div>
-              </button>
-          </div>
-      );
+      // N3 Support and external team widget is removed as part of ticket removal
+      return null; 
   };
 
   const NotificationButton = ({ mobile = false }) => {
@@ -410,17 +386,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       <CookieBanner />
       <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
-      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
-      <N3SupportModal isOpen={isN3SupportOpen} onClose={() => setIsN3SupportOpen(false)} user={user} />
       <ChangePasswordModal isOpen={isChangePasswordOpen} onClose={() => setIsChangePasswordOpen(false)} />
 
       <aside className={`hidden md:flex flex-col bg-[#0f172a] text-slate-300 shadow-2xl z-[60] relative transition-all duration-500 ease-in-out ${isCollapsed ? 'w-20' : 'w-72'} overflow-visible h-screen`}>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0f172a] to-[#0f172a] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0f172a] to-[#0f172a] pointer-events-none" aria-hidden="true"></div>
         <button onClick={toggleSidebar} className="absolute -right-3 top-8 z-[70] bg-white/90 backdrop-blur-md text-slate-600 border border-slate-200/60 rounded-full h-7 w-7 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.1)] hover:text-blue-600 hover:border-blue-400 hover:scale-110 transition-all cursor-pointer" title={isCollapsed ? t('common.expand') : t('common.collapse')} aria-label={isCollapsed ? t('common.expandSidebar') : t('common.collapseSidebar')}>
             {isCollapsed ? <ChevronRight size={14} strokeWidth={3} aria-hidden="true" /> : <ChevronLeft size={14} strokeWidth={3} aria-hidden="true" />}
         </button>
         <div className={`h-28 flex items-center border-b border-slate-800/60 bg-[#0f172a]/50 backdrop-blur-sm shrink-0 transition-all duration-500 relative z-10 ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
-            <img src={LOGO_URL} alt="Logo" className={`transition-all duration-500 object-contain drop-shadow-[0_4px_12px_rgba(255,255,255,0.1)] ${isCollapsed ? 'h-12 w-12' : 'h-16'}`} />
+            <img src={LOGO_URL} alt={t('menu.portalNameShort')} className={`transition-all duration-500 object-contain drop-shadow-[0_4px_12px_rgba(255,255,255,0.1)] ${isCollapsed ? 'h-12 w-12' : 'h-16'}`} />
         </div>
         <nav className="flex-1 py-3 space-y-1 relative z-10 overflow-y-auto sidebar-scrollbar overflow-x-hidden min-h-0" aria-label={t('common.mainNavigation')}>
           {menuSections.map((section, idx) => (
@@ -430,7 +404,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                     {section.title}
                  </div>
                )}
-               {isCollapsed && section.title && idx > 0 && <div className="my-3 border-t border-slate-800/50 mx-2" role="separator" />}
+               {isCollapsed && section.title && idx > 0 && <div className="my-3 border-t border-slate-800/50 mx-2" role="separator" aria-hidden="true" />}
                <div className="space-y-1" role="menu">
                  {section.items.map((item) => {
                     const active = isActive(item.path, item.exact);
@@ -470,11 +444,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                     <button onClick={() => setIsChangePasswordOpen(true)} className="w-full text-left px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-3 transition-colors" role="menuitem">
                         <Lock size={14} className="text-blue-500" aria-hidden="true" /> {t('common.changePassword')}
                     </button>
-                    <div className="h-px bg-slate-700/50" role="separator" />
+                    <div className="h-px bg-slate-700/50" role="separator" aria-hidden="true" />
                     <button onClick={() => setIsPrivacyOpen(true)} className="w-full text-left px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-3 transition-colors" role="menuitem">
                         <Shield size={14} className="text-blue-500" aria-hidden="true" /> {t('common.privacy')}
                     </button>
-                    <div className="h-px bg-slate-700/50" role="separator" />
+                    <div className="h-px bg-slate-700/50" role="separator" aria-hidden="true" />
                     <button onClick={logout} className="w-full text-left px-5 py-3 text-xs font-bold text-red-400 hover:bg-red-900/20 flex items-center gap-3 transition-colors" role="menuitem">
                         <LogOut size={14} aria-hidden="true" /> {t('common.logout')}
                     </button>
@@ -490,9 +464,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50 w-full min-w-0">
-        <MaintenanceBanner status={systemStatus} isAdmin={user?.role?.toUpperCase() === UserRole.ADMIN} />
+        {/* Removido mx-4 para banner cobrir a largura total da área de conteúdo */}
+        <div className="w-full relative z-30"> 
+            <MaintenanceBanner status={systemStatus} isAdmin={user?.role?.toUpperCase() === UserRole.ADMIN} />
+        </div>
         <header className="md:hidden h-20 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md z-20 shrink-0">
-          <img src={LOGO_URL} alt="Logo" className="h-12 object-contain" />
+          <img src={LOGO_URL} alt={t('menu.portalNameShort')} className="h-12 object-contain" />
           <NotificationButton mobile={true} />
         </header>
 
@@ -527,13 +504,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                         </div>
                     </div>
                     <div className="space-y-2" role="menu">
-                        {user?.role?.toUpperCase() === UserRole.ADMIN && (
-                            <button onClick={() => { setIsN3SupportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 px-4 py-4 w-full text-slate-600 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
-                                <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><Server size={20} aria-hidden="true" /></div> {t('admin.settings.techSupport')}
-                            </button>
-                        )}
-                        <button onClick={() => { setIsSupportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 px-4 py-4 w-full text-slate-600 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
-                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Phone size={20} aria-hidden="true" /></div> {t('menu.support')}
+                        <button onClick={() => setIsChangePasswordOpen(true)} className="flex items-center gap-4 px-4 py-4 w-full text-slate-700 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
+                            <div className="p-2 bg-slate-50 text-blue-600 rounded-lg"><Lock size={20} aria-hidden="true" /></div> {t('common.changePassword')}
+                        </button>
+                        <button onClick={() => setIsPrivacyOpen(true)} className="flex items-center gap-4 px-4 py-4 w-full text-slate-700 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all font-medium" role="menuitem">
+                            <div className="p-2 bg-slate-50 text-blue-600 rounded-lg"><Shield size={20} aria-hidden="true" /></div> {t('common.privacy')}
                         </button>
                         <button onClick={logout} className="flex items-center gap-4 px-4 py-4 w-full text-red-600 hover:bg-red-50 rounded-2xl border border-transparent hover:border-red-100 transition-all font-medium" role="menuitem">
                             <div className="p-2 bg-red-50 text-red-600 rounded-lg"><LogOut size={20} aria-hidden="true" /></div> {t('common.logout')}
@@ -550,6 +525,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                     <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{t('menu.portalName')}</span>
                     <span className="text-slate-300" aria-hidden="true">/</span>
                     <span className="font-medium text-blue-600">{roleLabel}</span>
+                    {user?.organizationName && ( // NOVO: Mostra o nome da organização se existir
+                      <>
+                        <span className="text-slate-300" aria-hidden="true">/</span>
+                        <span className="font-medium text-slate-600">{user.organizationName}</span>
+                      </>
+                    )}
                 </div>
             </div>
             <div className="flex items-center gap-6">
