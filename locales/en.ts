@@ -1,0 +1,147 @@
+import { pt } from './pt.ts';
+
+export const en: typeof pt = {
+  common: {
+    welcome: "Welcome",
+    loading: "Loading...",
+    privacy: "Privacy",
+    logout: "Logout",
+    edit: "Edit",
+    save: "Save",
+    cancel: "Cancel",
+    back: "Back",
+    na: "N/A",
+    status: "Status",
+    statusActive: "Active",
+    statusInactive: "Inactive",
+    uploaded: "Upload Completed",
+    updatingDatabase: "Updating database...",
+    errorLoadingLogs: "Error loading logs: {{message}}",
+    changePassword: "Change Password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    close: "Close",
+    language: {
+      pt: "Portuguese",
+      en: "English",
+      es: "Spanish"
+    }
+  },
+  login: {
+    title: "Quality Portal",
+    subtitle: "QUALITY MANAGEMENT SYSTEM",
+    corpEmail: "Corporate Email",
+    accessPassword: "Access Password",
+    forgotPassword: "Forgot password?",
+    authenticate: "Authenticate Access",
+    authenticateAccess: "Authenticate Access",
+    enterCredentials: "Use your credentials provided by Aços Vital.",
+    heroSubtitle: "Central repository for technical documents and certificates. Industrial precision in every data point.",
+    footerNote: "MONITORED SYSTEMS • PRIVACY • © 2026 AÇOS VITAL",
+    slogan: "Steel you can trust, Certified quality",
+    certification: "ISO 9001:2015 CERTIFIED",
+    secureData: "SECURE B2B LINK",
+    monitoring: "MONITORED SYSTEMS",
+    error: "Portal authentication failed.",
+    restrictedAccess: "Restricted Access",
+    identifyToAccess: "Identify yourself to access the certificate panel."
+  },
+  admin: {
+    tabs: {
+      overview: "Overview",
+      users: "Users",
+      logs: "Logs",
+      settings: "Settings"
+    },
+    stats: {
+      totalUsers: "Total Users",
+      organizations: "Active Companies",
+      activities: "Activities (24h)",
+      activeClientsSummary: "{{count}} companies in portfolio",
+      logsLast24hSummary: "{{count}} registered events",
+      headers: {
+        timestamp: "Date/Time",
+        user: "User",
+        action: "Action",
+        target: "Target",
+        ip: "IP",
+        severity: "Level"
+      }
+    },
+    users: {
+      identity: "Identity",
+      role: "Role",
+      roleLabel: "Access Level",
+      department: "Department",
+      createTitle: "New Access",
+      editTitle: "Edit Profile",
+      name: "Full Name",
+      email: "Corporate Email",
+      org: "Linked Company",
+      filters: "Filter by"
+    }
+  },
+  quality: {
+    overview: "Overview",
+    myAuditLog: "My Audit Log",
+    activePortfolio: "Active Portfolio",
+    pendingDocs: "Pending Docs",
+    complianceISO: "ISO Compliance",
+    searchClient: "Search by company name or CNPJ...",
+    newClientUser: "New Client User",
+    newCompany: "New Company",
+    allActivities: "Search user, action or IP...",
+    errorLoadingClients: "Error loading clients",
+    errorLoadingQualityData: "Failed to sync quality indicators.",
+    noQualityLogsFound: "No quality logs found.",
+    invalidConfirmationCredentials: "Invalid confirmation credentials."
+  },
+  roles: {
+    ADMIN: "Administrator",
+    QUALITY: "Quality Analyst",
+    CLIENT: "B2B Client"
+  },
+  dashboard: {
+    status: {
+      monitoringActive: "SYSTEMS MONITORED"
+    },
+    kpi: {
+      libraryLabel: "My Library",
+      activeDocsSubtext: "Active Certificates"
+    },
+    exploreAll: "Explore All",
+    fileStatusTimeline: "Certificate Timeline",
+    organization: "Company Name",
+    fiscalID: "Tax ID",
+    contractDate: "Contract Start"
+  },
+  cookie: {
+    title: "Privacy & Security",
+    text: "We use essential cookies to ensure authentication security and the integrity of technical certificates. By continuing to browse the Vital Steels portal, you agree to our data management policy.",
+    accept: "Accept and Continue"
+  },
+  menu: {
+    dashboard: "Home",
+    library: "Library",
+    favorites: "Favorites",
+    management: "Management",
+    qualityManagement: "Quality Management",
+    portalName: "Quality Portal",
+    brand: "Aços Vital"
+  },
+  files: {
+    authenticatingAccess: "Authenticating Access...",
+    authenticatedView: "Authenticated View",
+    errorLoadingDocument: "Error loading technical document.",
+    errorLoadingFiles: "Error listing files from server.",
+    openInNewTab: "Open in new tab",
+    pending: "Awaiting Inspection",
+    groups: {
+      approved: "Approved",
+      rejected: "Non-Compliant"
+    },
+    sort: {
+      nameAsc: "Name (A-Z)"
+    }
+  }
+};

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/authContext.tsx';
 import { CookieBanner } from '../components/common/CookieBanner.tsx';
@@ -188,7 +187,7 @@ const Login: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Campo Senha Premium */}
+                {/* Campo Senha de Acesso */}
                 <div className="space-y-2 group">
                     <div className="flex justify-between items-end px-1">
                         <label htmlFor="password-input" className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] transition-colors group-focus-within:text-[#62A5FA]">
@@ -255,10 +254,8 @@ const Login: React.FC = () => {
             </form>
 
             <div className="text-center pt-8 border-t border-slate-50">
-                <p className="text-[12px] text-slate-400 font-medium">
-                  {t('login.newUser')} <Link to="/signup" className="text-[#081437] font-black hover:text-[#B23C0E] transition-colors ml-1 uppercase tracking-wider" aria-label={t('login.requestRegister')}>
-                      {t('login.requestRegister')}
-                  </Link>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                   Acessos gerenciados pelo Administrador do Sistema.
                 </p>
             </div>
         </div>

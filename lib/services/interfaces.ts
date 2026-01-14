@@ -1,9 +1,19 @@
 
 import { 
-  User, UserRole, FileNode, FileType, AuditLog, LibraryFilters, 
-  ClientOrganization, SystemStatus, NetworkPort, 
-  FirewallRule, MaintenanceEvent, AppNotification 
-} from '../../types.ts';
+  User, 
+  UserRole, 
+  ClientOrganization,
+  FileNode, 
+  FileType, 
+  LibraryFilters, 
+  BreadcrumbItem,
+  AuditLog, 
+  SystemStatus, 
+  NetworkPort, 
+  FirewallRule, 
+  MaintenanceEvent, 
+  AppNotification 
+} from '../../types/index.ts';
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -23,7 +33,6 @@ export interface AdminStatsData {
   dbMaxConnections: number;
 }
 
-// NOVO: Interface para as estatísticas do Dashboard do Cliente
 export interface DashboardStatsData {
   mainValue: number;
   subValue: number;
@@ -34,7 +43,6 @@ export interface DashboardStatsData {
   activeClients?: number;
 }
 
-// NOVO: Interface para as estatísticas da Visão Geral da Qualidade
 export interface QualityOverviewStats {
   pendingDocs: number;
   totalActiveClients: number;
@@ -42,12 +50,12 @@ export interface QualityOverviewStats {
 
 export interface IUserService {
   authenticate: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (email: string, password: string, fullName: string, organizationId?: string, department?: string) => Promise<void>; // ALTERADO: clientId para organizationId
+  signUp: (email: string, password: string, fullName: string, organizationId?: string, department?: string, role?: UserRole) => Promise<void>;
   getCurrentUser: () => Promise<User | null>;
   logout: () => Promise<void>;
   getUsers: () => Promise<User[]>;
-  getUsersByRole: (role: UserRole) => Promise<User[]>; // Adicionado
-  saveUser: (user: User, initialPassword?: string) => Promise<void>; // ALTERADO: user: User agora tem organizationId
+  getUsersByRole: (role: UserRole) => Promise<User[]>;
+  saveUser: (user: User, initialPassword?: string) => Promise<void>;
   changePassword: (userId: string, current: string, newPass: string) => Promise<boolean>;
   deleteUser: (userId: string) => Promise<void>;
   blockUserById: (adminUser: User, targetUserId: string, reason: string) => Promise<void>;
@@ -58,21 +66,18 @@ export interface IUserService {
 export interface IFileService {
   getFiles: (user: User, folderId: string | null, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
   getFilesByOwner: (ownerId: string) => Promise<FileNode[]>;
-  // REMOVIDO: getMasterLibraryFiles: () => Promise<FileNode[]>;
-  // REMOVIDO: importFilesFromMaster: (user: User, fileIds: string[], targetFolderId: string, targetOwnerId: string) => Promise<void>;
   getRecentFiles: (user: User, limit?: number) => Promise<FileNode[]>;
   getLibraryFiles: (user: User, filters: LibraryFilters, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
-  getDashboardStats: (user: User) => Promise<DashboardStatsData>; // Atualizado para usar a nova interface
+  getDashboardStats: (user: User) => Promise<DashboardStatsData>;
   createFolder: (user: User, parentId: string | null, name: string, ownerId?: string) => Promise<FileNode | null>;
   uploadFile: (user: User, fileData: Partial<FileNode> & { fileBlob?: Blob }, ownerId: string) => Promise<FileNode>;
   updateFile: (user: User, fileId: string, updates: Partial<FileNode>) => Promise<void>;
   deleteFile: (user: User, fileId: string) => Promise<void>;
   searchFiles: (user: User, query: string, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
-  getBreadcrumbs: (folderId: string | null) => Promise<{ id: string; name: string }[]>;
+  getBreadcrumbs: (folderId: string | null) => Promise<BreadcrumbItem[]>;
   toggleFavorite: (user: User, fileId: string) => Promise<boolean>;
   getFavorites: (user: User) => Promise<FileNode[]>;
   getFileSignedUrl: (user: User, fileId: string) => Promise<string>;
-  // Fix: Updated logAction signature to match the implementation in supabaseFileService.ts
   logAction: (
     user: User | null,
     action: string,
@@ -83,7 +88,7 @@ export interface IFileService {
     metadata?: Record<string, any>
   ) => Promise<void>;
   getAuditLogs: (user: User) => Promise<AuditLog[]>;
-  getQualityAuditLogs: (user: User, filters?: { search?: string; severity?: AuditLog['severity'] | 'ALL' }) => Promise<AuditLog[]>; // NOVO
+  getQualityAuditLogs: (user: User, filters?: { search?: string; severity?: AuditLog['severity'] | 'ALL' }) => Promise<AuditLog[]>;
 }
 
 export interface IAdminService {

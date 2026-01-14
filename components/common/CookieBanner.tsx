@@ -1,62 +1,78 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Cookie, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export const CookieBanner: React.FC = () => {
+const useCookieConsent = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const { t } = useTranslation();
 
   useEffect(() => {
     const consent = localStorage.getItem('lgpd_consent');
     if (!consent) {
-      // Small delay for better UX entrance
-      const timer = setTimeout(() => setIsVisible(true), 1000);
+      const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
     }
   }, []);
 
-  const handleAccept = () => {
+  const acceptConsent = useCallback(() => {
     localStorage.setItem('lgpd_consent', 'true');
     localStorage.setItem('lgpd_consent_date', new Date().toISOString());
     setIsVisible(false);
-  };
+  }, []);
+
+  const rejectConsent = useCallback(() => {
+    window.location.href = 'https://acosvital.com.br/';
+  }, []);
+
+  return { isVisible, acceptConsent, rejectConsent };
+};
+
+export const CookieBanner: React.FC = () => {
+  const { t } = useTranslation();
+  const { isVisible, acceptConsent, rejectConsent } = useCookieConsent();
 
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[90] p-4 md:p-6 flex justify-center animate-in slide-in-from-bottom-10 duration-500">
-      <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6 border border-slate-700/50">
+    <div 
+      className="fixed bottom-0 left-0 right-0 z-[120] p-4 md:p-6 flex justify-center animate-in slide-in-from-bottom-10 duration-500"
+      role="complementary"
+    >
+      <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-[2rem] shadow-2xl max-w-5xl w-full p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-8 border border-white/10">
         
-        <div className="bg-slate-800 p-3 rounded-xl shrink-0 hidden md:block">
-            <Cookie className="text-blue-400" size={32} />
+        <div className="bg-white/5 p-4 rounded-2xl shrink-0 hidden md:block border border-white/10">
+            <Cookie className="text-blue-400" size={36} />
         </div>
 
         <div className="flex-1">
-            <h4 className="text-lg font-bold mb-2 flex items-center gap-2">
-                <Cookie className="text-blue-400 md:hidden" size={20} />
+            <h4 className="text-lg font-black mb-2 flex items-center gap-2 uppercase tracking-tighter">
                 {t('cookie.title')}
             </h4>
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-slate-300 leading-relaxed font-medium">
                 {t('cookie.text')}
             </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto">
             <button 
-                onClick={handleAccept}
-                className="flex-1 md:flex-none px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-900/30 whitespace-nowrap"
+                onClick={rejectConsent}
+                className="flex-1 md:flex-none px-6 py-3.5 bg-transparent hover:bg-white/10 text-slate-300 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border border-white/10"
+            >
+                Recusar
+            </button>
+            <button 
+                onClick={acceptConsent}
+                className="flex-1 md:flex-none px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-600/20 active:scale-95 border border-transparent"
             >
                 {t('cookie.accept')}
             </button>
             <button 
-                onClick={() => setIsVisible(false)}
-                className="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors md:hidden"
+                onClick={rejectConsent}
+                className="hidden md:flex p-3 text-slate-500 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                aria-label="Recusar e sair"
             >
                 <X size={20} />
             </button>
         </div>
-
       </div>
     </div>
   );

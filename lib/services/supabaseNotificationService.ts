@@ -1,5 +1,5 @@
 
-import { AppNotification, User } from '../../types.ts';
+import { AppNotification, User } from '../../types/index.ts';
 import { INotificationService } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
 
@@ -30,7 +30,7 @@ export const SupabaseNotificationService: INotificationService = {
             message: n.message,
             type: n.type as any,
             isRead: n.is_read,
-            timestamp: new Date(n.created_at).toLocaleString(),
+            timestamp: n.created_at,
             link: n.link
         }));
     },

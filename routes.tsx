@@ -1,114 +1,94 @@
-import React, { Suspense } from 'react';
+
+import React, { Suspense, useMemo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-// --- Imports Estruturais ---
-import { Layout as MainLayout } from './components/layout/MainLayout';
-import { AuthMiddleware } from './middlewares/AuthMiddleware';
-import { RoleMiddleware } from './middlewares/RoleMiddleware';
-import { MaintenanceMiddleware } from './middlewares/MaintenanceMiddleware';
+import { AuthMiddleware } from './middlewares/AuthMiddleware.tsx';
+import { RoleMiddleware } from './middlewares/RoleMiddleware.tsx';
+import { MaintenanceMiddleware } from './middlewares/MaintenanceMiddleware.tsx';
 import { useAuth } from './context/authContext.tsx';
-import { UserRole } from './types';
+import { UserRole, normalizeRole } from './types/index.ts';
 
-// --- Lazy Load Pages ---
-const Login = React.lazy(() => import('./pages/Login'));
-const SignUp = React.lazy(() => import('./pages/SignUp'));
-const Dashboard = React.lazy(() => import('./pages/Dashboard')); // View Cliente
-const Quality = React.lazy(() => import('./pages/Quality'));     // View Qualidade
-const Admin = React.lazy(() => import('./pages/Admin'));         // View Admin
-const NotFound = React.lazy(() => import('./pages/NotFound'));
+// Lazy loading das páginas
+const ClientLoginPage = React.lazy(() => import('./pages/ClientLoginPage.tsx'));
 
-const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
+const AdminDashboard = React.lazy(() => import('./pages/dashboards/AdminDashboard.tsx'));
+const QualityDashboard = React.lazy(() => import('./pages/dashboards/QualityDashboard.tsx'));
+const ClientPage = React.lazy(() => import('./pages/ClientPage.tsx'));
+const QualityPage = React.lazy(() => import('./pages/QualityPage.tsx'));
+const AdminPage = React.lazy(() => import('./pages/AdminPage.tsx'));
+const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage.tsx'));
 
-// --- Internal Components ---
-
-const LoadingScreen = ({ message = "Carregando Portal" }: { message?: string }) => (
-  <div className="h-screen w-screen bg-slate-900 flex flex-col items-center justify-center text-white relative">
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 animate-pulse"></div>
-        <img src={LOGO_URL} alt="Loading Logo" className="h-32 relative z-10 drop-shadow-2xl" />
-      </div>
-      <Loader2 size={32} className="animate-spin text-blue-400 mb-4" />
-      <p className="text-[10px] font-black text-slate-500 tracking-[4px] uppercase animate-pulse">{message}</p>
+/**
+ * Loader minimalista para transições de módulos
+ */
+const PageLoader = ({ message = "Sincronizando" }: { message?: string }) => (
+  <div className="h-screen w-screen bg-white flex flex-col items-center justify-center text-[#081437]">
+      <Loader2 size={32} className="animate-spin text-blue-500 mb-6" />
+      <p className="text-[10px] font-black text-slate-400 tracking-[6px] uppercase animate-pulse">{message}</p>
   </div>
 );
 
-// Redireciona usuários logados para sua área correta ao tentar acessar Login/Signup
-const PublicRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-    const { user, isLoading } = useAuth();
-
-    if (isLoading) return <LoadingScreen />;
-    
-    if (user) {
-        // Redirecionamento Inteligente por Role
-        // Fix: Added default tab/view for admin and quality redirects.
-        switch (user.role) {
-            case UserRole.ADMIN: return <Navigate to="/admin?tab=overview" replace />;
-            case UserRole.QUALITY: return <Navigate to="/quality?view=overview" replace />;
-            default: return <Navigate to="/dashboard" replace />; // Clientes (Role 3)
-        }
-    }
-
-    return children;
-};
-
-// Redireciona a raiz "/" para a home correta do usuário
+/**
+ * Componente de Decisão de Destino (Após Auth)
+ */
 const RootRedirect = () => {
-    const { user, isLoading } = useAuth();
-    if (isLoading) return <LoadingScreen />;
-    if (!user) return <Navigate to="/login" replace />;
+    const { user } = useAuth();
+    
+    return useMemo(() => {
+        if (!user) return <ClientLoginPage />;
+        
+        const role = normalizeRole(user.role);
+        const roleRoutes: Record<UserRole, string> = {
+          [UserRole.ADMIN]: '/admin/dashboard',
+          [UserRole.QUALITY]: '/quality/dashboard',
+          [UserRole.CLIENT]: '/client/dashboard'
+        };
 
-    // Fix: Added default tab/view for admin and quality redirects.
-    switch (user.role) {
-        case UserRole.ADMIN: return <Navigate to="/admin?tab=overview" replace />;
-        case UserRole.QUALITY: return <Navigate to="/quality?view=overview" replace />;
-        default: return <Navigate to="/dashboard" replace />;
-    }
+        return <Navigate to={roleRoutes[role] || '/'} replace />;
+    }, [user]);
 };
-
-// --- Main Routes Definition ---
 
 export const AppRoutes: React.FC = () => {
-  const { isLoading } = useAuth();
-
-  if (isLoading) return <LoadingScreen />;
+  const { user, isLoading } = useAuth();
+  
+  // Durante o carregamento inicial da sessão, mostramos um estado neutro 
+  if (isLoading) return <PageLoader message="Aços Vital" />;
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<PageLoader message="Carregando Camada" />}>
       <Routes>
-        {/* Rotas Públicas (Login/Signup) */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+        {/* A PRIMEIRA PÁGINA: Login do Cliente na Raiz */}
+        <Route path="/" element={user ? <RootRedirect /> : <ClientLoginPage />} />
+        
+        {/* Compatibilidade de URL anterior */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
 
-        {/* Rotas Protegidas */}
+        {/* Middlewares de Segurança e Manutenção */}
         <Route element={<MaintenanceMiddleware />}> 
             <Route element={<AuthMiddleware />}>
-                {/* Removed redundant <MainLayout> wrapper. Each page component (Dashboard, Quality, Admin)
-                    already renders the <Layout> component with its specific 'title' prop internally. */}
-                    
-                    {/* Role 3: Cliente (Dashboard) */}
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    
-                    {/* Role 2: Qualidade (Acesso também para Admin) */}
-                    <Route element={<RoleMiddleware allowedRoles={[UserRole.QUALITY, UserRole.ADMIN]} />}>
-                        <Route path="/quality" element={<Quality />} />
-                    </Route>
-
-                    {/* Role 1: Admin (Exclusivo) */}
-                    <Route element={<RoleMiddleware allowedRoles={[UserRole.ADMIN]} />}>
-                        <Route path="/admin" element={<Admin />} />
-                    </Route>
-
-                    {/* Root Redirect Inteligente */}
-                    <Route path="/" element={<RootRedirect />} />
                 
+                {/* Rotas Administrativas */}
+                <Route element={<RoleMiddleware allowedRoles={[UserRole.ADMIN]} />}>
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin" element={<AdminPage />} /> 
+                </Route>
+
+                {/* Rotas Qualidade */}
+                <Route element={<RoleMiddleware allowedRoles={[UserRole.QUALITY, UserRole.ADMIN]} />}>
+                    <Route path="/quality/dashboard" element={<QualityDashboard />} />
+                    <Route path="/quality" element={<QualityPage />} />
+                </Route>
+
+                {/* Rotas de Cliente */}
+                <Route element={<RoleMiddleware allowedRoles={[UserRole.CLIENT, UserRole.ADMIN]} />}>
+                    <Route path="/client/dashboard" element={<ClientPage />} />
+                </Route>
             </Route>
         </Route>
 
-        {/* Rotas de Erro */}
-        <Route path="/404" element={<NotFound />} />
-        <Route path="*" element={<Navigate to="/404" replace />} />
+        <Route path="/404" element={<NotFoundPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

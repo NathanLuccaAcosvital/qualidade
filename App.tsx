@@ -1,32 +1,39 @@
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { HashRouter } from 'react-router-dom';
 import { AuthProvider } from './context/authContext.tsx';
 import { AppRoutes } from './routes.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
-import { NotificationProvider } from './context/notificationContext.tsx'; // Importado
-import './lib/i18n.ts'; // Initialize i18n service before rendering
+import { NotificationProvider } from './context/notificationContext.tsx';
+import { Loader2 } from 'lucide-react';
+import './lib/i18n.ts';
 
-/**
- * Componente Raiz da Aplicação
- * Hierarquia de Provedores:
- * 1. ErrorBoundary: Captura falhas críticas em toda a árvore.
- * 2. HashRouter: Prover contexto de navegação para todos os sub-componentes.
- * 3. NotificationProvider: Prover sistema de notificações toast.
- * 4. AuthProvider: Prover estado de autenticação (agora com acesso ao Router).
- * 5. AppRoutes: Definição lógica das rotas e telas.
- */
-const App: React.FC = () => {
-  return (
-    <ErrorBoundary>
+const GlobalSuspenseFallback = () => (
+  <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#081437]">
+    <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
+    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[4px]">Injetando Camadas</p>
+  </div>
+);
+
+const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<GlobalSuspenseFallback />}>
       <HashRouter>
-        <NotificationProvider> {/* Adicionado NotificationProvider */}
+        <NotificationProvider>
           <AuthProvider>
-            <AppRoutes />
+            {children}
           </AuthProvider>
         </NotificationProvider>
       </HashRouter>
-    </ErrorBoundary>
+    </Suspense>
+  </ErrorBoundary>
+);
+
+const App: React.FC = () => {
+  return (
+    <AppProviders>
+      <AppRoutes />
+    </AppProviders>
   );
 };
 

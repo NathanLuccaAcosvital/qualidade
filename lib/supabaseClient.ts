@@ -2,18 +2,23 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * Cliente Supabase configurado via variáveis de ambiente.
- * Para produção, utilize as variáveis injetadas pelo provider de CI/CD.
+ * Supabase Client Initialization
+ * Centraliza a conexão com o backend.
  */
 
-const supabaseUrl = "https://wtydnzqianhahiiasows.supabase.co";
-const supabaseKey = "sb_publishable_G-talSR4UyXl42B2jzglow_EB0ainxc";
+// const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+
+  const supabaseUrl = 'https://wtydnzqianhahiiasows.supabase.co';
+  const supabaseKey = 'sb_publishable_G-talSR4UyXl42B2jzglow_EB0ainxc';
+
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error("CONFIGURAÇÃO CRÍTICA AUSENTE: Supabase URL ou Key não encontradas no ambiente.");
+  console.warn("SUPABASE_CONFIG_MISSING: As variáveis de ambiente do Supabase não foram detectadas. Certifique-se de configurar o arquivo .env.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
