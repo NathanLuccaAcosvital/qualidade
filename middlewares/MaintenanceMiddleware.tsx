@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../context/authContext.tsx';
 import { adminService } from '../lib/services/index.ts';
@@ -10,57 +10,46 @@ import { MaintenanceScreen } from '../components/common/MaintenanceScreen.tsx';
  * Otimizado para não causar flicker com o Auth.
  */
 export const MaintenanceMiddleware: React.FC = () => {
-  const { user, isLoading: authLoading, systemStatus } = useAuth(); // Get systemStatus from useAuth
+  const { user, isLoading: authLoading, systemStatus: initialSystemStatusFromAuth } = useAuth();
   
-  // No longer fetching status internally, it comes from AuthContext
-  // const [status, setStatus] = useState<SystemStatus | null>(null);
-  // const isFetching = useRef(false);
+  // Local state para segurar o status do sistema "ao vivo", inicializado do AuthContext
+  const [liveSystemStatus, setLiveSystemStatus] = useState<SystemStatus | null>(initialSystemStatusFromAuth);
 
-  // const fetchStatus = useCallback(async () => {
-  //   if (isFetching.current) return;
-  //   isFetching.current = true;
-  //   try {
-  //     const s = await adminService.getSystemStatus();
-  //     setStatus(s);
-  //   } finally {
-  //     isFetching.current = false;
-  //   }
-  // }, []);
-
+  // Sincroniza o estado local `liveSystemStatus` com o `initialSystemStatusFromAuth` do AuthContext
+  // Isso garante que `liveSystemStatus` esteja sempre atualizado com o valor mais recente do AuthContext
   useEffect(() => {
-    // Only subscribe to real-time updates here, initial status is provided by AuthContext
-    if (systemStatus) { // Ensure initial systemStatus is present before subscribing
-      const unsubscribe = adminService.subscribeToSystemStatus(setStatusFromSubscription);
+    setLiveSystemStatus(initialSystemStatusFromAuth);
+  }, [initialSystemStatusFromAuth]);
+
+  // Efeito para se inscrever em atualizações em tempo real do status do sistema
+  useEffect(() => {
+    // Apenas se inscreve se houver um status inicial do AuthContext (indicando que ele carregou)
+    if (initialSystemStatusFromAuth) {
+      const unsubscribe = adminService.subscribeToSystemStatus(setLiveSystemStatus);
       return () => unsubscribe();
     }
-  }, [systemStatus]);
-
-  // Use a local state to capture updates from subscription, but initialize from AuthContext
-  const [currentSystemStatus, setCurrentSystemStatus] = useState<SystemStatus | null>(systemStatus);
-
-  useEffect(() => {
-    setCurrentSystemStatus(systemStatus);
-  }, [systemStatus]);
-
-  const setStatusFromSubscription = useCallback((s: SystemStatus) => {
-    setCurrentSystemStatus(s);
-  }, []);
+    // Se initialSystemStatusFromAuth for null (ex: após logout), reseta o status local
+    if (!initialSystemStatusFromAuth && liveSystemStatus) {
+      setLiveSystemStatus(null);
+    }
+  }, [initialSystemStatusFromAuth, liveSystemStatus]); // Adicionado liveSystemStatus para dependências para resetar no logout se necessário
 
   const handleRetry = useCallback(async () => {
+    // Força uma nova busca do status e atualiza o estado local
     const s = await adminService.getSystemStatus();
-    setCurrentSystemStatus(s);
+    setLiveSystemStatus(s);
   }, []);
 
-  // Se o Auth ainda está carregando ou o status do sistema ainda não veio,
-  // não renderizamos nada para o AuthProvider gerenciar o splash screen único.
-  if (authLoading || !currentSystemStatus) return null;
+  // Se o Auth ainda está carregando ou o status do sistema "ao vivo" ainda não foi determinado,
+  // retorna null para permitir que o AuthProvider gerencie o splash screen único.
+  if (authLoading || !liveSystemStatus) return null;
 
   const isAuthorizedToBypass = user && normalizeRole(user.role) === UserRole.ADMIN;
-  const isSystemLocked = currentSystemStatus.mode === 'MAINTENANCE';
+  const isSystemLocked = liveSystemStatus.mode === 'MAINTENANCE';
 
   if (isSystemLocked && !isAuthorizedToBypass) {
-    return <MaintenanceScreen status={currentSystemStatus} onRetry={handleRetry} />;
+    return <MaintenanceScreen status={liveSystemStatus} onRetry={handleRetry} />;
   }
 
-  return <Outlet context={{ systemStatus: currentSystemStatus }} />;
+  return <Outlet context={{ systemStatus: liveSystemStatus }} />;
 };

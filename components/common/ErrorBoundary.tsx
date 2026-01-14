@@ -17,7 +17,8 @@ interface State {
  */
 export class ErrorBoundary extends Component<Props, State> {
   // Fix: Initialize state as a class property for better type inference
-  public state: State = {
+  // Fix: Removed 'public' keyword to resolve TypeScript errors with 'this.setState' and 'this.props'
+  state: State = {
     hasError: false
   };
 
