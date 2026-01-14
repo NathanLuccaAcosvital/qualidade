@@ -39,19 +39,19 @@ export const LoginHero: React.FC = () => {
           <div className="space-y-2 lg:space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-[2px] w-8 bg-[#ff6b2b] shadow-[0_0_12px_rgba(255,107,43,0.4)]" aria-hidden="true"></div>
-              <span className="text-[#ff6b2b] text-[8px] xl:text-[9px] font-black uppercase tracking-[3px]">
+              <span className="text-[#ff6b2b] text-xs lg:text-sm xl:text-base font-black uppercase tracking-[3px]">
                 {t('login.subtitle')}
               </span>
             </div>
             
-            <h1 className="text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-6xl font-black leading-[1.1] tracking-tighter uppercase max-w-lg lg:max-w-2xl">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-7xl font-black leading-[1.1] tracking-tighter uppercase max-w-lg lg:max-w-2xl">
               ESTRUTURAS<br/>
               <span className="text-slate-300">DE CONFIANÇA.</span><br/>
               <span className="text-white/20">DADOS DE PRECISÃO.</span>
             </h1>
           </div>
           
-          <p className="text-[11px] md:text-xs xl:text-sm text-slate-300/80 font-medium leading-relaxed max-w-sm lg:max-w-md xl:max-w-lg">
+          <p className="text-sm md:text-base xl:text-lg text-slate-300/80 font-medium leading-relaxed max-w-sm lg:max-w-md xl:max-w-lg">
             {t('login.heroSubtitle')}
           </p>
           
@@ -61,7 +61,7 @@ export const LoginHero: React.FC = () => {
              <StatusTag icon={ShieldCheck} label={t('login.secureData')} />
              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-white/70 group cursor-default transition-all hover:bg-white/10" role="listitem">
                 <Cpu size={10} className="text-blue-400 opacity-70" aria-hidden="true" />
-                <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-[1.5px]">Real-Time Monitoring</span>
+                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px]">Real-Time Monitoring</span>
              </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export const LoginHero: React.FC = () => {
 };
 
 const StatusTag = ({ icon: Icon, label }: { icon: any, label: string }) => (
-  <div className="flex items-center gap-2 text-[7px] lg:text-[8px] font-black uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 transition-all hover:border-white/20" role="listitem">
+  <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 transition-all hover:border-white/20" role="listitem">
     <Icon size={10} className="text-blue-400 opacity-70" aria-hidden="true" /> 
     {label}
   </div>
