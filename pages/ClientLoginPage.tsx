@@ -61,14 +61,12 @@ const ClientLoginPage: React.FC = () => {
               error={error}
             />
 
-            <footer className="pt-6 border-t border-slate-100 flex items-center justify-between">
-               <div className="space-y-0.5">
-                  <p className="text-[9px] font-black text-slate-900 uppercase tracking-[2px]">{t('login.accessManagedByVital')}</p>
-               </div>
+            <footer className="pt-6 border-t border-slate-100 text-center relative"> {/* Changed to relative and text-center */}
+               <p className="text-[9px] font-medium text-slate-500 uppercase tracking-[2px]">{t('login.accessManagedByVital')}</p>
                <img 
                  src="https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png" 
                  alt="" 
-                 className="h-3 opacity-20 grayscale hidden sm:block" 
+                 className="h-3 opacity-20 grayscale hidden sm:block absolute right-0 top-1/2 -translate-y-1/2" {/* Absolute position */}
                  aria-hidden="true" 
                />
             </footer>

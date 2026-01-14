@@ -111,7 +111,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           {isLoading ? <Loader2 size={20} className="animate-spin" /> : (
             <>
-              <span className="uppercase tracking-[4px] text-[10px] md:text-sm">{t('login.authenticate')}</span>
+              <span className="uppercase tracking-[4px] text-[8px] md:text-xs">{t('login.authenticate')}</span> {/* Adjusted font size */}
               <ArrowRight size={18} className="text-blue-400 group-hover:translate-x-1.5 transition-transform" />
             </>
           )}
