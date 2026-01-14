@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../context/authContext.tsx';
@@ -11,37 +10,57 @@ import { MaintenanceScreen } from '../components/common/MaintenanceScreen.tsx';
  * Otimizado para não causar flicker com o Auth.
  */
 export const MaintenanceMiddleware: React.FC = () => {
-  const { user, isLoading: authLoading } = useAuth();
-  const [status, setStatus] = useState<SystemStatus | null>(null);
-  const isFetching = useRef(false);
+  const { user, isLoading: authLoading, systemStatus } = useAuth(); // Get systemStatus from useAuth
+  
+  // No longer fetching status internally, it comes from AuthContext
+  // const [status, setStatus] = useState<SystemStatus | null>(null);
+  // const isFetching = useRef(false);
 
-  const fetchStatus = useCallback(async () => {
-    if (isFetching.current) return;
-    isFetching.current = true;
-    try {
-      const s = await adminService.getSystemStatus();
-      setStatus(s);
-    } finally {
-      isFetching.current = false;
-    }
-  }, []);
+  // const fetchStatus = useCallback(async () => {
+  //   if (isFetching.current) return;
+  //   isFetching.current = true;
+  //   try {
+  //     const s = await adminService.getSystemStatus();
+  //     setStatus(s);
+  //   } finally {
+  //     isFetching.current = false;
+  //   }
+  // }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const unsubscribe = adminService.subscribeToSystemStatus(setStatus);
-    return () => unsubscribe();
-  }, [fetchStatus]);
+    // Only subscribe to real-time updates here, initial status is provided by AuthContext
+    if (systemStatus) { // Ensure initial systemStatus is present before subscribing
+      const unsubscribe = adminService.subscribeToSystemStatus(setStatusFromSubscription);
+      return () => unsubscribe();
+    }
+  }, [systemStatus]);
+
+  // Use a local state to capture updates from subscription, but initialize from AuthContext
+  const [currentSystemStatus, setCurrentSystemStatus] = useState<SystemStatus | null>(systemStatus);
+
+  useEffect(() => {
+    setCurrentSystemStatus(systemStatus);
+  }, [systemStatus]);
+
+  const setStatusFromSubscription = useCallback((s: SystemStatus) => {
+    setCurrentSystemStatus(s);
+  }, []);
+
+  const handleRetry = useCallback(async () => {
+    const s = await adminService.getSystemStatus();
+    setCurrentSystemStatus(s);
+  }, []);
 
   // Se o Auth ainda está carregando ou o status do sistema ainda não veio,
   // não renderizamos nada para o AuthProvider gerenciar o splash screen único.
-  if (authLoading || !status) return null;
+  if (authLoading || !currentSystemStatus) return null;
 
   const isAuthorizedToBypass = user && normalizeRole(user.role) === UserRole.ADMIN;
-  const isSystemLocked = status.mode === 'MAINTENANCE';
+  const isSystemLocked = currentSystemStatus.mode === 'MAINTENANCE';
 
   if (isSystemLocked && !isAuthorizedToBypass) {
-    return <MaintenanceScreen status={status} onRetry={fetchStatus} />;
+    return <MaintenanceScreen status={currentSystemStatus} onRetry={handleRetry} />;
   }
 
-  return <Outlet context={{ systemStatus: status }} />;
+  return <Outlet context={{ systemStatus: currentSystemStatus }} />;
 };

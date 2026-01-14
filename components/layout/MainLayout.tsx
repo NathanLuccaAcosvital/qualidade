@@ -18,12 +18,12 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, systemStatus: authSystemStatus } = useAuth(); // Get systemStatus from AuthContext
   const { t } = useTranslation();
   const role = normalizeRole(user?.role);
 
   const layout = useLayoutState();
-  const system = useSystemSync(user);
+  const system = useSystemSync(user, authSystemStatus); // Pass authSystemStatus to useSystemSync
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">

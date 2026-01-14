@@ -1,13 +1,13 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient.ts';
-import { userService } from '../lib/services/index.ts';
-import { User, UserRole, normalizeRole } from '../types/index.ts';
+import { userService, adminService } from '../lib/services/index.ts'; // Import adminService
+import { User, UserRole, normalizeRole, SystemStatus } from '../types/index.ts';
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  systemStatus: SystemStatus | null; // Added systemStatus
 }
 
 interface AuthContextType extends AuthState {
@@ -26,14 +26,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, setState] = useState<AuthState>({
     user: null,
     isLoading: true,
-    error: null
+    error: null,
+    systemStatus: null, // Initialized systemStatus
   });
 
   const initialized = useRef(false);
 
   const syncUserProfile = useCallback(async () => {
     try {
-      const currentUser = await userService.getCurrentUser();
+      const [currentUser, sysStatus] = await Promise.all([ // Fetch user and system status in parallel
+        userService.getCurrentUser(),
+        adminService.getSystemStatus(),
+      ]);
       
       if (currentUser) {
         // Força a normalização para garantir que 'CLIENT' ou 'CLIENTE' vire UserRole.CLIENT
@@ -44,13 +48,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev, 
         user: currentUser, 
         isLoading: false,
-        error: null 
+        error: null,
+        systemStatus: sysStatus, // Set systemStatus
       }));
       
       return currentUser;
     } catch (error: any) {
       console.error("[AuthContext] Erro na Sincronização:", error);
-      setState(prev => ({ ...prev, user: null, isLoading: false, error: error.message }));
+      setState(prev => ({ ...prev, user: null, isLoading: false, error: error.message, systemStatus: null })); // Handle error for systemStatus
       return null;
     }
   }, []);
@@ -60,11 +65,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initialized.current = true;
 
     const initAuth = async () => {
+      setState(prev => ({ ...prev, isLoading: true }));
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await syncUserProfile();
       } else {
-        setState(prev => ({ ...prev, isLoading: false }));
+        const sysStatus = await adminService.getSystemStatus(); // Fetch system status even if no user session
+        setState(prev => ({ ...prev, isLoading: false, systemStatus: sysStatus }));
       }
     };
 
@@ -74,7 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (session) await syncUserProfile();
       } else if (event === 'SIGNED_OUT') {
-        setState({ user: null, isLoading: false, error: null });
+        const sysStatus = await adminService.getSystemStatus(); // Fetch system status on sign out too
+        setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus });
       }
     });
 
@@ -103,7 +111,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await userService.logout();
     } finally {
-      setState({ user: null, isLoading: false, error: null });
+      // After logout, refresh system status as it might be relevant for public-facing components
+      const sysStatus = await adminService.getSystemStatus();
+      setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus });
       window.location.hash = '#/login';
     }
   };

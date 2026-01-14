@@ -1,3 +1,4 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertOctagon, RefreshCw } from 'lucide-react';
 
@@ -15,12 +16,18 @@ interface State {
  * Refatorado para maior estabilidade em ambientes de desenvolvimento (HMR).
  */
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false
-    };
-  }
+  // Fix: Initialize state as a class property for better type inference
+  public state: State = {
+    hasError: false
+  };
+
+  // Removed constructor as state is now initialized as a class property
+  // constructor(props: Props) {
+  //   super(props);
+  //   this.state = {
+  //     hasError: false
+  //   };
+  // }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
