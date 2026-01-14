@@ -25,10 +25,9 @@ export const es: typeof pt = {
     pt: "Portugués",
     en: "Inglés",
     es: "Español"
+  }
   },
-  privacyPolicy: "Política de Privacidad"
-  },
- login: {
+  login: {
     title: "Portal de Calidad",
     subtitle: "SISTEMA DE GESTIÓN DE CALIDAD",
     corpEmail: "Correo electrónico corporativo",
@@ -45,7 +44,8 @@ export const es: typeof pt = {
     monitoring: "SISTEMAS MONITORIZADOS",
     error: "Error de autenticación del portal.",
     restrictedAccess: "Acceso Restringido",
-    identifyToAccess: "Identifíquese para acceder al panel de certificados."
+    identifyToAccess: "Identifíquese para acceder al panel de certificados.",
+    accessManagedByVital: "Aços Vital gestiona su acceso internamente."
 },
   admin: {
     tabs: {
@@ -95,7 +95,7 @@ export const es: typeof pt = {
     errorLoadingClients: "Error al cargar clientes",
     errorLoadingQualityData: "Error al sincronizar indicadores de calidad.",
     noQualityLogsFound: "No se encontraron registros de calidad.",
-    invalidConfirmationCredentials: "Credenciales de confirmación no válidas."
+    invalidConfirmationCredentials: "Credenciais de confirmação no válidas."
   },
   roles: {
     ADMIN: "Administrador",

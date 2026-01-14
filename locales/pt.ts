@@ -23,8 +23,7 @@ export const pt = {
       pt: "Português",
       en: "Inglês",
       es: "Espanhol"
-    },
-    privacyPolicy: "Política de Privacidade"
+    }
   },
   login: {
     title: "Portal da Qualidade",
@@ -43,7 +42,8 @@ export const pt = {
     monitoring: "SISTEMAS MONITORADOS",
     error: "Falha na autenticação do portal.",
     restrictedAccess: "Acesso Restrito",
-    identifyToAccess: "Identifique-se para acessar o painel de certificados."
+    identifyToAccess: "Identifique-se para acessar o painel de certificados.",
+    accessManagedByVital: "A Aços Vital gerencia seu acesso internamente."
   },
   admin: {
     tabs: {

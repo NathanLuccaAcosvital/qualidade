@@ -63,8 +63,7 @@ const ClientLoginPage: React.FC = () => {
 
             <footer className="pt-6 border-t border-slate-100 flex items-center justify-between">
                <div className="space-y-0.5">
-                  <p className="text-[8px] font-black text-slate-900 uppercase tracking-[2px]">Aços Vital S.A.</p>
-                  <p className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">Sistemas de Qualidade</p>
+                  <p className="text-[9px] font-black text-slate-900 uppercase tracking-[2px]">{t('login.accessManagedByVital')}</p>
                </div>
                <img 
                  src="https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png" 

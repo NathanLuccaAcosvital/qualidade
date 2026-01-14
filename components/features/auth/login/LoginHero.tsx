@@ -76,10 +76,6 @@ export const LoginHero: React.FC = () => {
             </div>
             <span>{t('login.monitoring')}</span>
           </div>
-
-          <button className="hover:text-white transition-all underline-offset-4 hover:underline">
-            {t('common.privacyPolicy')}
-          </button>
       </footer>
       
       {/* Background Layer */}

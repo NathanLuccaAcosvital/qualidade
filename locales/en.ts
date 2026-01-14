@@ -25,8 +25,7 @@ export const en: typeof pt = {
       pt: "Portuguese",
       en: "English",
       es: "Spanish"
-    },
-    privacyPolicy: "Privacy Policy"
+    }
   },
   login: {
     title: "Quality Portal",
@@ -45,7 +44,8 @@ export const en: typeof pt = {
     monitoring: "MONITORED SYSTEMS",
     error: "Portal authentication failed.",
     restrictedAccess: "Restricted Access",
-    identifyToAccess: "Identify yourself to access the certificate panel."
+    identifyToAccess: "Identify yourself to access the certificate panel.",
+    accessManagedByVital: "Aços Vital manages your access internally."
   },
   admin: {
     tabs: {
