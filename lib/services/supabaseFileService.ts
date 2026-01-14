@@ -5,8 +5,11 @@ import { FileNode, FileType, LibraryFilters, BreadcrumbItem, normalizeRole } fro
 import { QualityStatus } from '../../types/metallurgy.ts';
 import { logAction as internalLogAction } from './loggingService.ts';
 import { IFileService, PaginatedResponse, DashboardStatsData } from './interfaces.ts';
+// import { config } from '../config.ts'; // Removido
 
 const STORAGE_BUCKET = 'certificates';
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
 /**
  * Mapper: DB Row -> Domain FileNode
@@ -100,11 +103,12 @@ export const SupabaseFileService: IFileService = {
         baseQuery = baseQuery.eq('owner_id', user.organizationId);
     }
 
+    // Fix: Use .copy() instead of .clone() for Supabase query builder
     const [totalApproved, totalPending] = await Promise.all([
-      baseQuery.clone().eq('metadata->>status', QualityStatus.APPROVED),
+      baseQuery.copy().eq('metadata->>status', QualityStatus.APPROVED),
       role === UserRole.CLIENT 
         ? { count: 0 } // Clientes não veem contagem de pendências técnicas internas da mesma forma
-        : baseQuery.clone().eq('metadata->>status', QualityStatus.PENDING)
+        : baseQuery.copy().eq('metadata->>status', QualityStatus.PENDING)
     ]);
     
     return {
@@ -132,6 +136,12 @@ export const SupabaseFileService: IFileService = {
   },
 
   uploadFile: async (user, fileData, ownerId) => {
+    // Validações de upload
+    if (fileData.fileBlob && fileData.fileBlob.size > MAX_FILE_SIZE_BYTES) {
+      throw new Error(`O arquivo é muito grande. Tamanho máximo: ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB.`);
+    }
+    // TODO: Adicionar checagem de mimeType do fileBlob vs ALLOWED_MIME_TYPES
+
     const { data, error } = await supabase.from('files').insert({
         name: fileData.name,
         type: fileData.type || 'PDF',

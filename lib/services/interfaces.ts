@@ -14,6 +14,7 @@ import {
   MaintenanceEvent, 
   AppNotification 
 } from '../../types/index.ts';
+import { AccountStatus } from '../../types/auth.ts';
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -46,6 +47,30 @@ export interface DashboardStatsData {
 export interface QualityOverviewStats {
   pendingDocs: number;
   totalActiveClients: number;
+}
+
+// Raw interface for Supabase `organizations` table response, including joined `profiles`
+export interface RawClientOrganization {
+  id: string;
+  name: string | null;
+  cnpj: string | null;
+  status: AccountStatus;
+  contract_date: string; // snake_case from DB
+  quality_analyst_id: string | null;
+  profiles: { full_name: string | null } | { full_name: string | null }[] | null; // Joined profile data
+}
+
+// Raw interface for Supabase `profiles` table response, including joined `organizations`
+export interface RawProfile {
+  id: string;
+  full_name: string | null;
+  email: string;
+  organization_id: string | null;
+  department: string | null;
+  role: UserRole;
+  status: AccountStatus;
+  last_login: string | null;
+  organizations: { name: string | null } | { name: string | null }[] | null; // Joined organization data
 }
 
 export interface IUserService {

@@ -1,4 +1,3 @@
-
 import React, { Suspense, useMemo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -33,11 +32,19 @@ const PageLoader = ({ message = "Sincronizando" }: { message?: string }) => (
  * Componente de Decisão de Destino (Após Auth)
  */
 const RootRedirect = () => {
-    const { user } = useAuth();
+    const { user, systemStatus, error: authError } = useAuth(); // Incluindo systemStatus e authError
     
     return useMemo(() => {
-        if (!user) return <ClientLoginPage />;
-        
+        if (authError) {
+          console.error("Erro no AuthContext:", authError);
+          // Podemos renderizar uma tela de erro específica aqui ou redirecionar para login com uma mensagem
+          return <PageLoader message={`Erro de inicialização: ${authError}`} />;
+        }
+
+        if (!user) return <ClientLoginPage />; // Se não há usuário, mostra o login de cliente
+
+        if (!systemStatus) return <PageLoader message="Verificando Gateway Seguro" />; // Aguarda o status do sistema
+
         const role = normalizeRole(user.role);
         const roleRoutes: Record<UserRole, string> = {
           [UserRole.ADMIN]: '/admin/dashboard',
@@ -46,17 +53,21 @@ const RootRedirect = () => {
         };
 
         return <Navigate to={roleRoutes[role] || '/'} replace />;
-    }, [user]);
+    }, [user, systemStatus, authError]); // Dependências atualizadas
 };
 
 export const AppRoutes: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, error: authError } = useAuth();
   
   // Durante o carregamento inicial da sessão, mostramos um estado neutro 
-  if (isLoading) return <PageLoader message="Aços Vital" />;
+  if (isLoading) return <PageLoader message="Sincronizando Acesso Vital" />;
+
+  // Se houver um erro crítico no AuthContext após o carregamento, mostre-o
+  if (authError) return <PageLoader message={`Erro Crítico: ${authError}`} />;
+
 
   return (
-    <Suspense fallback={<PageLoader message="Carregando Camada" />}>
+    <Suspense fallback={<PageLoader message="Carregando Componentes Essenciais" />}>
       <Routes>
         {/* A PRIMEIRA PÁGINA: Login do Cliente na Raiz */}
         <Route path="/" element={user ? <RootRedirect /> : <ClientLoginPage />} />

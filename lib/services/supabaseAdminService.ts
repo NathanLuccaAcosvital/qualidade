@@ -1,23 +1,40 @@
 
-import { IAdminService, AdminStatsData, PaginatedResponse } from './interfaces.ts';
+import { IAdminService, AdminStatsData, PaginatedResponse, RawClientOrganization } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
 import { SystemStatus, MaintenanceEvent } from '../../types/system.ts';
 import { ClientOrganization } from '../../types/auth.ts';
 import { withAuditLog } from '../utils/auditLogWrapper.ts';
+import { withTimeout } from '../utils/apiUtils.ts'; // Import withTimeout
+// import { config } from '../config.ts'; // Removido
+// Fix: Import necessary Supabase types for explicit typing
+import { PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
+
+const API_TIMEOUT = 15000; // Definido localmente
 
 /**
  * Implementação Supabase para Gestão Administrativa.
  */
 export const SupabaseAdminService: IAdminService = {
   getSystemStatus: async () => {
-    const { data, error } = await supabase.from('system_settings').select('*').single();
+    // Fix: Explicitly type fetchStatusPromise to match the expected return type for withTimeout
+    const fetchStatusPromise: Promise<PostgrestSingleResponse<SystemStatus>> = supabase.from('system_settings').select('*').single();
+    
+    // Aplica timeout à requisição do status do sistema
+    // Fix: Explicitly destructure result to correctly infer types from withTimeout
+    const result = await withTimeout(
+      fetchStatusPromise, 
+      API_TIMEOUT, 
+      "Tempo esgotado ao buscar status do sistema."
+    );
+    const { data, error } = result;
+
     if (error || !data) return { mode: 'ONLINE' };
     return {
       mode: data.mode,
       message: data.message,
-      scheduledStart: data.scheduled_start,
-      scheduledEnd: data.scheduled_end,
-      updatedBy: data.updated_by
+      scheduledStart: data.scheduled_start, // Fix: Use snake_case from DB
+      scheduledEnd: data.scheduled_end,     // Fix: Use snake_case from DB
+      updatedBy: data.updated_by            // Fix: Use snake_case from DB
     };
   },
 
@@ -26,9 +43,9 @@ export const SupabaseAdminService: IAdminService = {
       const { data, error } = await supabase.from('system_settings').update({
         mode: newStatus.mode,
         message: newStatus.message,
-        scheduled_start: newStatus.scheduledStart,
-        scheduled_end: newStatus.scheduledEnd,
-        updated_by: user.id,
+        scheduled_start: newStatus.scheduledStart, // Fix: Use snake_case for DB column
+        scheduled_end: newStatus.scheduledEnd,     // Fix: Use snake_case for DB column
+        updated_by: user.id,                       // Fix: Use snake_case for DB column
         updated_at: new Date().toISOString()
       }).eq('id', 1).select().single();
       
@@ -54,6 +71,7 @@ export const SupabaseAdminService: IAdminService = {
   },
 
   getAdminStats: async (): Promise<AdminStatsData> => {
+    // As chamadas de stats geralmente são rápidas, mas podemos adicionar timeout aqui também se necessário.
     const [u, a, c, l] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
@@ -86,13 +104,19 @@ export const SupabaseAdminService: IAdminService = {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, count, error } = await query
-      .range(from, to)
-      .order('name');
+    // Fix: Explicitly type the promise to match the expected return type for withTimeout
+    const queryPromise: Promise<PostgrestResponse<RawClientOrganization>> = query.range(from, to).order('name');
+    const result = await withTimeout( 
+      queryPromise,
+      API_TIMEOUT,
+      "Tempo esgotado ao carregar clientes."
+    );
+    const { data, count, error } = result;
 
     if (error) throw error;
 
     return {
+      // Fix: Map raw data to ClientOrganization domain type
       items: (data || []).map(c => {
         // Tratar o retorno do join que pode vir como objeto ou array
         const profileData = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
@@ -101,7 +125,8 @@ export const SupabaseAdminService: IAdminService = {
           name: c.name || 'Empresa Sem Nome', 
           cnpj: c.cnpj || '00.000.000/0000-00', 
           status: c.status, 
-          contractDate: c.contract_date,
+          contractDate: c.contract_date, // Fix: Map from snake_case to camelCase
+          qualityAnalystId: c.quality_analyst_id || undefined, // Fix: Map from snake_case
           qualityAnalystName: profileData?.full_name || 'N/A'
         };
       }),
@@ -113,11 +138,23 @@ export const SupabaseAdminService: IAdminService = {
   saveClient: async (user, data) => {
     const call = async () => {
       const payload = {
-        name: data.name, cnpj: data.cnpj, status: data.status,
-        contract_date: data.contractDate, quality_analyst_id: data.qualityAnalystId
+        name: data.name, 
+        cnpj: data.cnpj, 
+        status: data.status,
+        contract_date: data.contractDate, // Fix: Use snake_case for DB column
+        quality_analyst_id: data.qualityAnalystId // Fix: Use snake_case for DB column
       };
       const query = data.id ? supabase.from('organizations').update(payload).eq('id', data.id) : supabase.from('organizations').insert(payload);
-      const { data: res, error } = await query.select().single();
+      
+      // Fix: Explicitly type the promise to match the expected return type for withTimeout
+      const queryPromise: Promise<PostgrestSingleResponse<ClientOrganization>> = query.select().single();
+      const result = await withTimeout( 
+        queryPromise,
+        API_TIMEOUT,
+        "Tempo esgotado ao salvar cliente."
+      );
+      const { data: res, error } = result;
+
       if (error) throw error;
       return res as ClientOrganization;
     };
@@ -126,7 +163,14 @@ export const SupabaseAdminService: IAdminService = {
 
   deleteClient: async (user, id) => {
     const action = async () => {
-      const { error } = await supabase.from('organizations').delete().eq('id', id);
+      // Fix: Explicitly type the promise to match the expected return type for withTimeout
+      const deletePromise: Promise<PostgrestResponse<null>> = supabase.from('organizations').delete().eq('id', id);
+      const result = await withTimeout( 
+        deletePromise,
+        API_TIMEOUT,
+        "Tempo esgotado ao deletar cliente."
+      );
+      const { error } = result;
       if (error) throw error;
     };
 
@@ -141,21 +185,35 @@ export const SupabaseAdminService: IAdminService = {
   getPorts: async () => [],
   getMaintenanceEvents: async () => [],
   scheduleMaintenance: async (user, event) => {
-     const { data, error } = await supabase.from('maintenance_events').insert({
-       title: event.title,
-       scheduled_date: event.scheduledDate,
-       duration_minutes: event.durationMinutes,
-       description: event.description,
-       status: 'SCHEDULED',
-       created_by: user.id
-     }).select().single();
+    // Fix: Explicitly type the promise to match the expected return type for withTimeout
+     const insertPromise: Promise<PostgrestSingleResponse<MaintenanceEvent>> = supabase.from('maintenance_events').insert({
+         title: event.title,
+         scheduled_date: event.scheduledDate, // Fix: Use snake_case for DB column
+         duration_minutes: event.durationMinutes,
+         description: event.description,
+         status: 'SCHEDULED',
+         created_by: user.id
+       }).select().single();
+     const result = await withTimeout( 
+       insertPromise,
+       API_TIMEOUT,
+       "Tempo esgotado ao agendar manutenção."
+     );
+     const { data, error } = result;
      
      if (error) throw error;
      return data as MaintenanceEvent;
   },
   cancelMaintenance: async (user, id) => {
     const action = async () => {
-      const { error } = await supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id);
+      // Fix: Explicitly type the promise to match the expected return type for withTimeout
+      const updatePromise: Promise<PostgrestResponse<null>> = supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id);
+      const result = await withTimeout( 
+        updatePromise,
+        API_TIMEOUT,
+        "Tempo esgotado ao cancelar manutenção."
+      );
+      const { error } = result;
       if (error) throw error;
     };
     await withAuditLog(user, 'MAINTENANCE_CANCEL', { target: id, category: 'SYSTEM' }, action);

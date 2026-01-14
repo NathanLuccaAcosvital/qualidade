@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="flex flex-col gap-3">
             <button
               onClick={this.handleReset}
-              className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-[0.98] shadow-xl"
+              className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-98 shadow-xl"
             >
               <RefreshCw size={16} /> Reiniciar Aplicação
             </button>
