@@ -23,7 +23,8 @@ export const pt = {
       pt: "Português",
       en: "Inglês",
       es: "Espanhol"
-    }
+    },
+    privacyPolicy: "Política de Privacidade"
   },
   login: {
     title: "Portal da Qualidade",

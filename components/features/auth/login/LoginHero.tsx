@@ -68,7 +68,7 @@ export const LoginHero: React.FC = () => {
       </div>
 
       {/* Footer Industrial Slim - Posição final da tela */}
-      <footer className="relative z-10 shrink-0 flex items-center justify-between border-t border-white/5 pt-6 text-[8px] xl:text-[9px] font-black uppercase tracking-[2px] text-white/30">
+      <footer className="relative z-10 shrink-0 flex items-center justify-between border-t border-white/5 pt-6 text-[9px] lg:text-[10px] xl:text-xs font-black uppercase tracking-[2px] text-white/30">
           <div className="flex items-center gap-3">
             <div className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
@@ -78,7 +78,7 @@ export const LoginHero: React.FC = () => {
           </div>
 
           <button className="hover:text-white transition-all underline-offset-4 hover:underline">
-            POLÍTICA DE QUALIDADE
+            {t('common.privacyPolicy')}
           </button>
       </footer>
       

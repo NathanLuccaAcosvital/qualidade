@@ -24,10 +24,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
            <span className="text-[9px] font-black uppercase tracking-[1.5px]">Gateway Seguro Ativo</span>
         </div>
         <div>
-          <h2 className="text-2xl font-black text-[#040a1d] tracking-tighter leading-none mb-1">
+          <h2 className="text-2xl md:text-3xl font-black text-[#040a1d] tracking-tighter leading-none mb-1">
             {t('login.restrictedAccess')}
           </h2>
-          <p className="text-slate-500 text-sm font-medium tracking-tight">
+          <p className="text-sm md:text-base text-slate-500 font-medium tracking-tight">
             {t('login.identifyToAccess')}
           </p>
         </div>
@@ -37,7 +37,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
         <div className="space-y-4">
           {/* Email Input */}
           <div className="space-y-2 group">
-            <label htmlFor="login-email" className="text-[10px] font-black uppercase tracking-[2px] text-slate-400 group-focus-within:text-blue-700 transition-colors ml-1">
+            <label htmlFor="login-email" className="text-[10px] md:text-xs font-black uppercase tracking-[2px] text-slate-400 group-focus-within:text-blue-700 transition-colors ml-1">
               {t('login.corpEmail')}
             </label>
             <div className={`flex items-center bg-slate-50 border-2 rounded-2xl overflow-hidden transition-all duration-300 ${focusedInput === 'email' ? 'border-blue-700 bg-white shadow-lg shadow-blue-500/5' : 'border-slate-100'}`}>
@@ -47,7 +47,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
               <input 
                 id="login-email"
                 type="email" required 
-                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm font-semibold text-[#040a1d] placeholder-slate-400"
+                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm md:text-base font-semibold text-[#040a1d] placeholder-slate-400"
                 placeholder="tecnico@acosvital.com"
                 onFocus={() => setFocusedInput('email')}
                 onBlur={() => setFocusedInput(null)}
@@ -60,13 +60,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
           {/* Password Input */}
           <div className="space-y-2 group">
             <div className="flex justify-between items-end px-1">
-              <label htmlFor="login-password" className="text-[10px] font-black uppercase tracking-[2px] text-slate-400 group-focus-within:text-blue-700 transition-colors">
+              <label htmlFor="login-password" className="text-[10px] md:text-xs font-black uppercase tracking-[2px] text-slate-400 group-focus-within:text-blue-700 transition-colors">
                 {t('login.accessPassword')}
               </label>
               <button 
                 type="button" 
                 onClick={() => { /* TODO: Implement password reset flow */ }}
-                className="text-[10px] font-black text-[#b23c0e] hover:text-[#8a2e0b] uppercase tracking-widest transition-colors underline-offset-4 hover:underline"
+                className="text-[10px] md:text-xs font-black text-[#b23c0e] hover:text-[#8a2e0b] uppercase tracking-widest transition-colors underline-offset-4 hover:underline"
               >
                 {t('login.forgotPassword')}
               </button>
@@ -78,7 +78,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
               <input 
                 id="login-password"
                 type={showPassword ? "text" : "password"} required 
-                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm font-semibold text-[#040a1d] placeholder-slate-400 tracking-widest"
+                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm md:text-base font-semibold text-[#040a1d] placeholder-slate-400 tracking-widest"
                 placeholder="••••••••"
                 onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput(null)}
@@ -98,7 +98,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 text-red-800 text-sm font-bold rounded-xl border border-red-200 flex items-center gap-3 animate-shake" role="alert">
+          <div className="p-4 bg-red-50 text-red-800 text-sm md:text-base font-bold rounded-xl border border-red-200 flex items-center gap-3 animate-shake" role="alert">
             <AlertOctagon size={16} className="text-red-700 shrink-0" />
             <span className="leading-tight">{error}</span>
           </div>
@@ -111,7 +111,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           {isLoading ? <Loader2 size={20} className="animate-spin" /> : (
             <>
-              <span className="uppercase tracking-[4px] text-sm">{t('login.authenticate')}</span>
+              <span className="uppercase tracking-[4px] text-sm md:text-base">{t('login.authenticate')}</span>
               <ArrowRight size={18} className="text-blue-400 group-hover:translate-x-1.5 transition-transform" />
             </>
           )}

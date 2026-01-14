@@ -25,7 +25,8 @@ export const en: typeof pt = {
       pt: "Portuguese",
       en: "English",
       es: "Spanish"
-    }
+    },
+    privacyPolicy: "Privacy Policy"
   },
   login: {
     title: "Quality Portal",

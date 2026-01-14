@@ -25,7 +25,8 @@ export const es: typeof pt = {
     pt: "Portugués",
     en: "Inglés",
     es: "Español"
-  }
+  },
+  privacyPolicy: "Política de Privacidad"
   },
  login: {
     title: "Portal de Calidad",
