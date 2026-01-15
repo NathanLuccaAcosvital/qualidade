@@ -1,5 +1,5 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef, useEffect } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,14 @@ const QualityPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView = searchParams.get('view') || 'overview';
+  const mainContentRef = useRef<HTMLElement>(null); // Ref para o elemento main
+
+  // Efeito para rolar para o topo quando a view muda
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [activeView]);
 
   const VIEWS = [
     { id: 'overview', label: t('quality.overview'), icon: BarChart3 },
@@ -55,7 +63,7 @@ const QualityPage: React.FC = () => {
             </div>
         </header>
 
-        <main className="min-h-[calc(100vh-250px)] animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <main ref={mainContentRef} className="min-h-[calc(100vh-250px)] animate-in fade-in slide-in-from-bottom-2 duration-500 overflow-y-auto"> {/* Adicionado ref e overflow-y-auto */}
             <Suspense fallback={<ViewFallback t={t} />}>
                 {renderView()}
             </Suspense>

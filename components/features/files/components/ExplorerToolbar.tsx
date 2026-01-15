@@ -41,7 +41,7 @@ export const ExplorerToolbar: React.FC<ExplorerToolbarProps> = ({
   const isClient = userRole === UserRole.CLIENT;
 
   return (
-    <div className="sticky top-20 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/70 p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+    <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
       
       {/* Breadcrumbs como navegação principal */}
       <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">

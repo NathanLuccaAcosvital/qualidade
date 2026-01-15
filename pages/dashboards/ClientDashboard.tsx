@@ -53,34 +53,46 @@ const ClientDashboard: React.FC = () => {
 
   return (
     <>
+      {/* Fix: Changed 'file' prop to 'initialFile' to match FilePreviewModalProps interface */}
       <FilePreviewModal 
-        file={selectedFile} 
+        initialFile={selectedFile} 
+        allFiles={recentFiles.filter(f => f.type !== FileType.FOLDER)} // Pass only files for navigation
         isOpen={isPreviewOpen} 
         onClose={() => setIsPreviewOpen(false)} 
+        onDownloadFile={async (file: FileNode) => { // Implement download action
+          try {
+            const url = await fileService.getFileSignedUrl(user!, file.id);
+            window.open(url, '_blank');
+          } catch (error) {
+            console.error("Download failed:", error);
+          }
+        }}
       />
 
       <div className="space-y-8 pb-12 animate-in fade-in duration-700">
         <DashboardHero name={user?.name.split(' ')[0] || ''} t={t} />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Adjusted grid-cols for 3 cards */}
           <KpiCard 
             icon={Library} 
             label={t('dashboard.kpi.libraryLabel')} 
             value={stats?.subValue ?? '--'} 
             subtext={t('dashboard.kpi.activeDocsSubtext')} 
-            color="blue" 
+            color="orange-accent" // Altera para a nova variante de cor
             onClick={() => navigate('/client/dashboard?view=files')} 
             loading={!stats}
           />
+          {/* Removed Favorites KpiCard 
           <KpiCard 
             icon={Star} 
             label={t('menu.favorites')} 
             value={0} // Mock favorites count or implement in service
             subtext="Arquivos Marcados" 
-            color="indigo" 
+            color="orange-accent" // Altera para a nova variante de cor
             onClick={() => navigate('/client/dashboard?view=favorites')} 
             loading={!stats}
           />
+          */}
           <KpiCard 
             icon={History} 
             label="Recentes" 
@@ -88,6 +100,15 @@ const ClientDashboard: React.FC = () => {
             subtext="Visualizados Hoje" 
             color="slate" 
             onClick={() => navigate('/client/dashboard?view=files')} // Redireciona para a view de arquivos
+            loading={!stats}
+          />
+           <KpiCard 
+            icon={ShieldCheck} 
+            label="Conformidade" 
+            value={"ISO 9001"} 
+            subtext="Certificação Ativa" 
+            color="emerald" 
+            onClick={() => navigate('/client/dashboard?view=files')} 
             loading={!stats}
           />
         </div>
@@ -155,14 +176,15 @@ const DashboardHero = ({ name, t }: { name: string, t: any }) => (
     <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
     <div className="relative z-10 space-y-4">
       <div className="flex items-center gap-3">
-          <span className="px-3 py-1 bg-blue-600 rounded-full text-[9px] font-black uppercase tracking-[3px] shadow-lg shadow-blue-600/20">Portal do Cliente</span>
+          {/* Badge "Portal do Cliente" com a nova cor */}
+          <span className="px-3 py-1 bg-[#b23c0e] rounded-full text-[9px] font-black uppercase tracking-[3px] shadow-lg shadow-[#b23c0e]/20">Portal do Cliente</span>
           <div className="flex items-center gap-2">
             <ShieldCheck size={12} className="text-emerald-500" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acesso Seguro</span>
           </div>
       </div>
       <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight max-w-xl">
-        Bem-vindo, <span className="text-blue-400">{name}.</span>
+        Bem-vindo, <span className="text-[#4c81c6]">{name}.</span>
       </h1>
       <p className="text-slate-400 max-w-md text-sm font-medium leading-relaxed">
         Acesse seus certificados de qualidade validados e mantenha a rastreabilidade total de seus materiais.
@@ -181,6 +203,8 @@ const KpiCard = ({ icon: Icon, label, value, subtext, color, onClick, loading }:
       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110 ${
         color === 'blue' ? 'bg-blue-50 text-blue-600' : 
         color === 'indigo' ? 'bg-indigo-50 text-indigo-600' :
+        color === 'orange-accent' ? 'bg-[#ff4C00]/10 text-[#ff4C00]' : 
+        color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : // Added emerald variant
         'bg-slate-50 text-slate-600'
       }`}>
         <Icon size={28} />

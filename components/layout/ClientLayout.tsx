@@ -1,49 +1,47 @@
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext.tsx';
 import { Header } from './Header.tsx';
 import { MobileNavigation } from './MobileNavigation.tsx';
 import { CookieBanner } from '../common/CookieBanner.tsx';
-import { PrivacyModal } from '../common/PrivacyModal.tsx';
-import { ChangePasswordModal } from '../features/auth/ChangePasswordModal.tsx';
 import { MaintenanceBanner } from '../common/MaintenanceBanner.tsx';
-import { CommandPalette } from '../components/common/CommandPalette.tsx';
 import { useLayoutState } from './hooks/useLayoutState.ts';
 import { useSystemSync } from './hooks/useSystemSync.ts';
 import { UserRole, normalizeRole } from '../../types/index.ts';
-import { ClientDock } from './ClientDock.tsx'; // Importa o novo ClientDock
+import { ClientDock } from './ClientDock.tsx';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
   title: string;
-  activeView: string; // Para o Dock
-  onViewChange: (view: string) => void; // Para o Dock
-  onOpenCommandPalette?: () => void;
+  activeView: string;
+  onViewChange: (view: string) => void;
 }
 
-export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, activeView, onViewChange, onOpenCommandPalette }) => {
+export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, activeView, onViewChange }) => {
   const { user, logout, systemStatus: authSystemStatus } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const role = normalizeRole(user?.role);
 
   const layout = useLayoutState();
   const system = useSystemSync(user, authSystemStatus);
 
+  // Handler para o botão de voltar no mobile
+  const handleNavigateBack = () => {
+    navigate(-1);
+  };
+
+  // Handler para navegar para a página de configurações
+  const handleNavigateToSettingsPage = () => {
+    navigate('/settings');
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       <CookieBanner />
-      <PrivacyModal isOpen={layout.isPrivacyOpen} onClose={layout.closePrivacy} />
-      <ChangePasswordModal isOpen={layout.isChangePasswordOpen} onClose={layout.closeChangePassword} />
-
-      {/* Command Palette */}
-      <CommandPalette
-        isOpen={layout.isCommandPaletteOpen}
-        onClose={layout.closeCommandPalette}
-        onSearch={() => Promise.resolve([])} // Placeholder, ClientPage passará o real
-        onNavigateToFile={() => {}} // Placeholder, ClientPage passará o real
-        onNavigateToFolder={() => {}} // Placeholder, ClientPage passará o real
-        isLoadingResults={false} // Placeholder, ClientPage passará o real
-      />
+      {/* PrivacyModal e ChangePasswordModal removidos, pois agora são controlados pela ConfigPage */}
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <MaintenanceBanner status={system.status} isAdmin={role === UserRole.ADMIN} />
@@ -54,42 +52,37 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
           role={role} 
           unreadCount={system.unreadCount} 
           onLogout={logout}
-          onOpenMobileMenu={layout.openMobileMenu}
-          onOpenCommandPalette={onOpenCommandPalette || layout.openCommandPalette}
+          onOpenMobileMenu={layout.openMobileMenu} // O ícone de configurações mobile abre o drawer
+          onNavigateBack={handleNavigateBack} // Passa o handler para o botão de voltar
+          variant="blue"
         />
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col">
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col pb-20">
           <div className="max-w-[1400px] w-full mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1">
             {children}
           </div>
 
-          <footer className="max-w-[1400px] w-full mx-auto mt-12 mb-4 px-4 py-10 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-start gap-8 sm:gap-16 opacity-50">
+          <footer className="max-w-[1400px] w-full mx-auto mt-12 mb-4 px-4 py-10 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
               <div className="flex items-center gap-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px]">{t('login.monitoring')}</span>
+                <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] text-slate-500">{t('login.monitoring')}</span>
               </div>
-              <button 
-                onClick={layout.openPrivacy}
-                className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] hover:text-blue-600 transition-colors"
-              >
-                {t('common.privacy')}
-              </button>
-              <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px]">
-                © 2026 {t('menu.brand').toUpperCase()} S.A.
+              {/* Removido o botão de Privacidade */}
+              <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] text-slate-500">
+                © 2026 {t('menu.brand').toUpperCase()}
               </div>
           </footer>
         </main>
 
         <MobileNavigation 
           user={user}
+          userRole={role}
           isMenuOpen={layout.mobileMenuOpen}
           onCloseMenu={layout.closeMobileMenu}
           onLogout={logout}
-          onOpenPassword={layout.openChangePassword}
-          onOpenPrivacy={layout.openPrivacy}
+          onNavigateToSettings={handleNavigateToSettingsPage} // Passa o handler para navegar para a ConfigPage
         />
 
-        {/* Client Dock - Visível apenas em telas maiores que md */}
         <ClientDock 
           activeView={activeView} 
           onViewChange={onViewChange}

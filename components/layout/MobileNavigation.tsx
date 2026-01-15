@@ -1,22 +1,23 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { getBottomNavItems, getUserMenuItems } from '../../config/navigation.ts';
-import { User } from '../../types/index.ts';
+import { User, UserRole, normalizeRole } from '../../types/index.ts';
 
 interface MobileNavProps {
   user: User | null;
+  userRole: UserRole;
   isMenuOpen: boolean;
   onCloseMenu: () => void;
   onLogout: () => void;
-  onOpenPassword: () => void;
-  onOpenPrivacy: () => void;
+  // onOpenPassword e onOpenPrivacy removidos, substituídos por onNavigateToSettings
+  onNavigateToSettings: () => void; 
 }
 
 export const MobileNavigation: React.FC<MobileNavProps> = ({ 
-  user, isMenuOpen, onCloseMenu, onLogout, onOpenPassword, onOpenPrivacy 
+  user, userRole, isMenuOpen, onCloseMenu, onLogout, onNavigateToSettings 
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -28,24 +29,28 @@ export const MobileNavigation: React.FC<MobileNavProps> = ({
     return location.pathname === path.split('?')[0];
   };
 
+  const isClient = userRole === UserRole.CLIENT;
+
   return (
     <>
-      {/* Bottom Action Bar */}
-      <nav className="md:hidden h-16 bg-white border-t border-slate-200 flex items-center justify-around shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[45]">
-        {bottomNavItems.map((item, idx) => {
-          const active = isActive(item.path, item.exact);
-          return (
-            <Link 
-              key={idx} 
-              to={item.path} 
-              className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-blue-600 scale-105' : 'text-slate-400'}`}
-            >
-              <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Bottom Action Bar (Apenas visível se NÃO for CLIENTE, pois ClientDock agora é universal) */}
+      {!isClient && (
+        <nav className="md:hidden h-16 bg-white border-t border-slate-200 flex items-center justify-around shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[45]">
+          {bottomNavItems.map((item, idx) => {
+            const active = isActive(item.path, item.exact);
+            return (
+              <Link 
+                key={idx} 
+                to={item.path} 
+                className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-blue-600 scale-105' : 'text-slate-400'}`}
+              >
+                <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
 
       {/* Profile/Settings Drawer */}
       {isMenuOpen && (
@@ -63,13 +68,18 @@ export const MobileNavigation: React.FC<MobileNavProps> = ({
             
             <div className="space-y-4 overflow-y-auto">
               {getUserMenuItems(t, { 
-                onLogout, 
-                onOpenChangePassword: onOpenPassword, 
-                onOpenPrivacy 
+                onLogout: () => {
+                  onLogout();
+                  onCloseMenu();
+                }, 
+                onNavigateToSettings: () => { 
+                  onNavigateToSettings();
+                  onCloseMenu();
+                } 
               }).map((item, idx) => (
                 <button 
                   key={idx} 
-                  onClick={() => { item.onClick(); onCloseMenu(); }} 
+                  onClick={item.onClick}
                   className="w-full flex items-center gap-4 p-5 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 active:bg-blue-50 active:border-blue-200 transition-all text-left"
                 >
                   <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">

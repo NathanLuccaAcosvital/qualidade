@@ -1,5 +1,4 @@
 
-
 import { 
   User, 
   UserRole, 
@@ -105,8 +104,8 @@ export interface IFileService {
   renameFile: (user: User, fileId: string, newName: string) => Promise<void>;
   searchFiles: (user: User, query: string, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
   getBreadcrumbs: (folderId: string | null) => Promise<BreadcrumbItem[]>;
-  toggleFavorite: (user: User, fileId: string) => Promise<boolean>;
-  getFavorites: (user: User) => Promise<FileNode[]>;
+  // Removed toggleFavorite: (user: User, fileId: string) => Promise<boolean>;
+  // Removed getFavorites: (user: User) => Promise<FileNode[]>;
   getFileSignedUrl: (user: User, fileId: string) => Promise<string>;
   logAction: (
     user: User | null,

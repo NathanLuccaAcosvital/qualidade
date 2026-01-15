@@ -6,9 +6,8 @@ export const useLayoutState = () => {
     localStorage.getItem('sidebar_collapsed') === 'true'
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false); // New state for Command Palette
+  // Removed isPrivacyOpen, openPrivacy, closePrivacy, isChangePasswordOpen, openChangePassword, closeChangePassword
+  // const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false); // Removido
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => {
@@ -21,14 +20,15 @@ export const useLayoutState = () => {
   const openMobileMenu = useCallback(() => setMobileMenuOpen(true), []);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   
-  const openPrivacy = useCallback(() => setIsPrivacyOpen(true), []);
-  const closePrivacy = useCallback(() => setIsPrivacyOpen(false), []);
+  // Removed privacy and change password handlers as they are now handled by ConfigPage
+  // const openPrivacy = useCallback(() => setIsPrivacyOpen(true), []);
+  // const closePrivacy = useCallback(() => setIsPrivacyOpen(false), []);
   
-  const openChangePassword = useCallback(() => setIsChangePasswordOpen(true), []);
-  const closeChangePassword = useCallback(() => setIsChangePasswordOpen(false), []);
+  // const openChangePassword = useCallback(() => setIsChangePasswordOpen(true), []);
+  // const closeChangePassword = useCallback(() => setIsChangePasswordOpen(false), []);
 
-  const openCommandPalette = useCallback(() => setIsCommandPaletteOpen(true), []); // New open
-  const closeCommandPalette = useCallback(() => setIsCommandPaletteOpen(false), []); // New close
+  // const openCommandPalette = useCallback(() => setIsCommandPaletteOpen(true), []); // Removido
+  // const closeCommandPalette = useCallback(() => setIsCommandPaletteOpen(false), []); // Removido
 
   return {
     sidebarCollapsed,
@@ -36,14 +36,14 @@ export const useLayoutState = () => {
     mobileMenuOpen,
     openMobileMenu,
     closeMobileMenu,
-    isPrivacyOpen,
-    openPrivacy,
-    closePrivacy,
-    isChangePasswordOpen,
-    openChangePassword,
-    closeChangePassword,
-    isCommandPaletteOpen, // New return
-    openCommandPalette,   // New return
-    closeCommandPalette   // New return
+    // isPrivacyOpen, // Removido
+    // openPrivacy,   // Removido
+    // closePrivacy,  // Removido
+    // isChangePasswordOpen, // Removido
+    // openChangePassword,   // Removido
+    // closeChangePassword   // Removido
+    // isCommandPaletteOpen, // Removido
+    // openCommandPalette,   // Removido
+    // closeCommandPalette   // Removido
   };
 };

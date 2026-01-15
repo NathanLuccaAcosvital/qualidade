@@ -44,7 +44,14 @@ export const FileInspection: React.FC = () => {
 
   return (
     <Layout title={inspectorFile.name}>
-      <FilePreviewModal file={previewFile} isOpen={!!previewFile} onClose={() => setPreviewFile(null)} />
+      {/* Fix: Changed 'file' prop to 'initialFile' to match FilePreviewModalProps interface */}
+      <FilePreviewModal 
+        initialFile={previewFile} 
+        allFiles={inspectorFile ? [inspectorFile] : []} // Assuming only the current inspectorFile is relevant for navigation here
+        isOpen={!!previewFile} 
+        onClose={() => setPreviewFile(null)}
+        onDownloadFile={handleDownload}
+      />
 
       <div className="h-[calc(100vh-190px)] relative flex flex-col">
         {isProcessing && <ProcessingOverlay message={t('common.updatingDatabase')} />}

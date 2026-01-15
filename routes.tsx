@@ -1,3 +1,4 @@
+
 import React, { Suspense, useMemo, useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
@@ -17,6 +18,7 @@ const QualityDashboard = React.lazy(() => import('./pages/dashboards/QualityDash
 const ClientPage = React.lazy(() => import('./pages/ClientPage.tsx'));
 const QualityPage = React.lazy(() => import('./pages/QualityPage.tsx'));
 const AdminPage = React.lazy(() => import('./pages/AdminPage.tsx'));
+const ConfigPage = React.lazy(() => import('./pages/ConfigPage.tsx')); // Lazy load ConfigPage
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage.tsx'));
 const FileInspection = React.lazy(() => import('./components/features/quality/views/FileInspection.tsx').then(m => ({ default: m.FileInspection })));
 
@@ -128,6 +130,9 @@ export const AppRoutes: React.FC = () => {
         <Route element={<MaintenanceMiddleware />}> 
             <Route element={<AuthMiddleware />}>
                 
+                {/* Rotas Comuns/Gerais (Acessíveis a todos os roles autenticados para certas funcionalidades) */}
+                <Route path="/settings" element={<ConfigPage />} /> {/* Nova rota para ConfigPage */}
+
                 {/* Rotas Administrativas */}
                 <Route element={<RoleMiddleware allowedRoles={[UserRole.ADMIN]} />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />

@@ -1,3 +1,4 @@
+
 import { pt } from './pt.ts';
 
 export const es: typeof pt = {
@@ -126,12 +127,12 @@ export const es: typeof pt = {
   menu: {
     dashboard: "Inicio",
     library: "Biblioteca",
-    favorites: "Favoritos",
     management: "Gestión",
     qualityManagement: "Gestión de Calidad",
     portalName: "Portal de Calidad",
     brand: "Aços Vital",
-    systemMonitoring: "MONITOREO DEL SISTEMA"
+    systemMonitoring: "MONITOREO DEL SISTEMA",
+    settings: "Configuración" // New translation key
   },
   files: {
     authenticatingAccess: "Autenticando Acceso...",
@@ -193,5 +194,23 @@ export const es: typeof pt = {
     selectItem: "Seleccionar {{name}}",
     noResultsFound: "No se encontraron resultados.",
     typeToSearch: "Escriba para buscar archivos y carpetas..."
+  },
+  changePassword: {
+    title: "Cambiar Contraseña",
+    current: "Contraseña Actual",
+    new: "Nueva Contraseña",
+    confirm: "Confirmar Contraseña",
+    minCharacters: "Mínimo {{count}} caracteres",
+    matchError: "Las contraseñas no coinciden.",
+    success: "¡Contraseña cambiada exitosamente!",
+    errorUpdatingPassword: "Error al actualizar la contraseña."
+  },
+  privacy: {
+    title: "Política de Privacidad",
+    subtitle: "Cumplimiento de LGPD e ISO 9001",
+    close: "Entendido",
+    section1: "Sobre el Portal",
+    section2: "Datos Recopilados",
+    section3: "Seguridad de Datos"
   }
 };

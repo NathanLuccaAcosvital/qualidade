@@ -29,36 +29,37 @@ export const FileListView: React.FC<FileViewProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <div className="space-y-2">
+    <div className="space-y-0"> {/* Remove space-y para controlar o espaçamento com bordas */}
       {files.map((file) => {
         const isSelected = selectedFileIds.includes(file.id);
         const IconComponent = isSelected ? CheckSquare : Square;
         return (
           <div 
             key={file.id} 
-            className={`group flex items-center p-3 rounded-xl cursor-pointer border transition-all ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-200'}`}
+            className={`group flex items-center h-16 p-3 border-b border-slate-100 last:border-b-0 cursor-pointer transition-all 
+                        ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white hover:bg-slate-50 hover:border-slate-200'}`}
             role="button"
             tabIndex={0}
             onDoubleClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
           >
             <button 
-              className="p-1 mr-2 text-slate-400 hover:text-blue-600 transition-colors"
+              className="p-1 mr-2 text-slate-400 hover:text-blue-600 transition-colors shrink-0"
               onClick={(e) => { e.stopPropagation(); onToggleFileSelection(file.id); }}
               aria-label={t('files.selectItem', { name: file.name })}
             >
-              <IconComponent size={20} className={isSelected ? 'text-blue-600' : 'text-slate-400'} />
+              <IconComponent size={18} className={isSelected ? 'text-blue-600' : 'text-slate-400'} />
             </button>
 
             <div 
-              className="flex-1 flex items-center gap-4 min-w-0"
+              className="flex-1 flex items-center gap-3 min-w-0"
               onClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
             >
-              <div className={`w-10 h-10 rounded-lg shrink-0 flex items-center justify-center shadow-sm ${file.type === FileType.FOLDER ? 'bg-blue-50 text-blue-500' : 'bg-red-50 text-red-500'}`}>
-                {file.type === FileType.FOLDER ? <Folder size={20} /> : <FileText size={20} />}
+              <div className={`w-9 h-9 rounded-md shrink-0 flex items-center justify-center shadow-sm ${file.type === FileType.FOLDER ? 'bg-blue-50 text-blue-500' : 'bg-red-50 text-red-500'}`}>
+                {file.type === FileType.FOLDER ? <Folder size={18} /> : <FileText size={18} />}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition-colors truncate">{file.name}</p>
-                <div className="flex items-center gap-3 mt-0.5">
+                <p className="text-xs font-semibold text-slate-700 group-hover:text-blue-600 transition-colors truncate">{file.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-[10px] text-slate-400 font-mono">{file.size || '--'}</span>
                   {file.type !== FileType.FOLDER && <FileStatusBadge status={file.metadata?.status} />}
                 </div>
@@ -71,7 +72,7 @@ export const FileListView: React.FC<FileViewProps> = ({
               onRename={onRename} 
               onDelete={onDelete} 
               t={t} 
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0" // Adiciona ml-4 para espaçamento e shrink-0 para não espremer
               userRole={userRole} // Passa userRole para o ContextMenu
             />
           </div>

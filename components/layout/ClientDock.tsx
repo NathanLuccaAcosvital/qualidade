@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Library, Star } from 'lucide-react';
@@ -13,12 +14,12 @@ export const ClientDock: React.FC<ClientDockProps> = ({ activeView, onViewChange
   const navItems = [
     { id: 'home', label: t('menu.dashboard'), icon: LayoutDashboard },
     { id: 'files', label: t('menu.library'), icon: Library },
-    { id: 'favorites', label: t('menu.favorites'), icon: Star },
+    // Removed Favorites: { id: 'favorites', label: t('menu.favorites'), icon: Star },
   ];
 
   return (
     <div 
-      className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] 
+      className="flex fixed bottom-0 md:bottom-6 left-1/2 -translate-x-1/2 z-[80] 
                  bg-white/50 backdrop-blur-xl border border-white/20 
                  p-2.5 rounded-full shadow-lg shadow-slate-900/10 
                  animate-in slide-in-from-bottom-6 duration-500"

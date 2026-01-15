@@ -12,7 +12,8 @@ import {
   FileText,
   LayoutDashboard,
   ShieldAlert,
-  Clock
+  Clock,
+  Settings // Import Settings icon
 } from 'lucide-react';
 import { User, UserRole, normalizeRole } from '../types/index.ts';
 
@@ -71,7 +72,7 @@ const getClientNavigation = (t: any): NavSection[] => [
   {
     title: "SUGESTÕES",
     items: [
-      { label: t('menu.favorites'), path: '/client/dashboard?view=favorites', icon: Star },
+      // Removed Favorites: { label: t('menu.favorites'), path: '/client/dashboard?view=favorites', icon: Star },
     ]
   }
 ];
@@ -103,7 +104,7 @@ export const getBottomNavItems = (user: User | null, t: any): NavItem[] => {
     return [
       { label: "Início", path: '/client/dashboard', icon: LayoutDashboard, exact: true },
       { label: "Docs", path: '/client/dashboard?view=files', icon: Library },
-      { label: "Favoritos", path: '/client/dashboard?view=favorites', icon: Star },
+      // Removed Favorites: { label: "Favoritos", path: '/client/dashboard?view=favorites', icon: Star },
     ];
   }
   
@@ -113,8 +114,9 @@ export const getBottomNavItems = (user: User | null, t: any): NavItem[] => {
   ];
 };
 
-export const getUserMenuItems = (t: any, hooks: { onLogout: () => void, onOpenChangePassword: () => void, onOpenPrivacy: () => void }) => [
-  { label: t('common.changePassword'), icon: Lock, onClick: hooks.onOpenChangePassword },
-  { label: t('common.privacy'), icon: ShieldCheck, onClick: hooks.onOpenPrivacy },
+// Renamed onOpenChangePassword to onNavigateToSettings for the settings icon, as it now navigates to a page.
+// The privacy modal is also now handled within the settings page.
+export const getUserMenuItems = (t: any, hooks: { onLogout: () => void, onNavigateToSettings: () => void }) => [
+  { label: t('menu.settings'), icon: Settings, onClick: hooks.onNavigateToSettings },
   { label: t('common.logout'), icon: LogOut, onClick: hooks.onLogout },
 ];

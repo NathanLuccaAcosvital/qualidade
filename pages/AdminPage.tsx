@@ -1,5 +1,5 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef, useEffect } from 'react';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { useAdminPage } from '../components/features/admin/hooks/useAdminPage.ts';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,14 @@ const AdminSettings = React.lazy(() => import('../components/features/admin/view
 const AdminPage: React.FC = () => {
   const { t } = useTranslation();
   const { activeTab, isLoading, isSaving, setIsSaving, adminStats, systemStatus, setSystemStatus, changeTab } = useAdminPage();
+  const contentRef = useRef<HTMLDivElement>(null); // Ref para o container de conteúdo
+
+  // Efeito para rolar para o topo quando a guia muda
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   const tabs = [
     { id: 'overview', label: t('admin.tabs.overview'), icon: LayoutDashboard },
@@ -23,7 +31,7 @@ const AdminPage: React.FC = () => {
 
   return (
     <Layout title={t('menu.management')}>
-      <div className="flex flex-col gap-6 pb-20 relative">
+      <div ref={contentRef} className="flex flex-col gap-6 pb-20 relative overflow-y-auto h-full"> {/* Adicionado ref e overflow-y-auto */}
         <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={changeTab} />
 
         {isSaving && (

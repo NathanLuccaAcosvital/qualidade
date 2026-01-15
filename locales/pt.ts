@@ -1,3 +1,4 @@
+
 export const pt = {
   common: {
     welcome: "Bem-vindo",
@@ -58,7 +59,7 @@ export const pt = {
       totalUsers: "Total de Usuários",
       organizations: "Empresas Ativas",
       activities: "Atividades (24h)",
-      activeClientsSummary: "{{count}} empresas no portfólio",
+      activeClientsSummary: "{{count}} empresas em carteira",
       logsLast24hSummary: "{{count}} eventos registrados",
       headers: {
         timestamp: "Data/Hora",
@@ -124,12 +125,12 @@ export const pt = {
   menu: {
     dashboard: "Início",
     library: "Biblioteca",
-    favorites: "Favoritos",
     management: "Gestão",
     qualityManagement: "Gestão da Qualidade",
     portalName: "Portal da Qualidade",
     brand: "Aços Vital",
-    systemMonitoring: "MONITORAMENTO DO SISTEMA"
+    systemMonitoring: "MONITORAMENTO DO SISTEMA",
+    settings: "Configurações" // New translation key
   },
   files: {
     authenticatingAccess: "Autenticando Acesso...",
@@ -191,5 +192,23 @@ export const pt = {
     selectItem: "Selecionar {{name}}",
     noResultsFound: "Nenhum resultado encontrado.",
     typeToSearch: "Digite para buscar arquivos e pastas..."
+  },
+  changePassword: {
+    title: "Alterar Senha",
+    current: "Senha Atual",
+    new: "Nova Senha",
+    confirm: "Confirmar Senha",
+    minCharacters: "Mínimo {{count}} caracteres",
+    matchError: "As senhas não conferem.",
+    success: "Senha alterada com sucesso!",
+    errorUpdatingPassword: "Erro ao atualizar a senha."
+  },
+  privacy: {
+    title: "Política de Privacidade",
+    subtitle: "Conformidade LGPD e ISO 9001",
+    close: "Compreendi",
+    section1: "Sobre o Portal",
+    section2: "Dados Coletados",
+    section3: "Segurança de Dados"
   }
 };

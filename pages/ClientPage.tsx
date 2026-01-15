@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/authContext.tsx';
@@ -25,7 +26,7 @@ import { RenameModal } from '../components/features/files/modals/RenameModal.tsx
 import { useFileExplorer } from '../components/features/files/hooks/useFileExplorer.ts';
 import { ProcessingOverlay } from '../components/features/quality/components/ViewStates.tsx';
 import ClientDashboard from './dashboards/ClientDashboard.tsx'; // Importa o componente ClientDashboard
-import { CommandPalette } from '../components/common/CommandPalette.tsx';
+// import { CommandPalette } from '../components/common/CommandPalette.tsx'; // Removido
 import { useLayoutState } from '../components/layout/hooks/useLayoutState.ts';
 import { ClientLayout } from '../components/layout/ClientLayout.tsx'; // Importa o novo ClientLayout
 
@@ -38,6 +39,14 @@ const ClientPage: React.FC = () => {
   
   const activeView = searchParams.get('view') || 'home';
   const currentFolderId = searchParams.get('folderId');
+  const mainContentRef = useRef<HTMLElement>(null); // Ref para o elemento main
+
+  // Efeito para rolar para o topo quando a view ou a pasta muda
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [activeView, currentFolderId]);
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -190,32 +199,30 @@ const ClientPage: React.FC = () => {
     setIsConfirmDeleteOpen(true);
   }, [isClient]);
 
-  const handleCommandPaletteSearch = useCallback(async (term: string) => {
-    if (!user) return [];
-    const results = await fileService.searchFiles(user, term, 1, 20); // Limit to 20 results for palette
-    return results.items;
-  }, [user]);
+  // Funções da Command Palette removidas
+  // const handleCommandPaletteSearch = useCallback(async (term: string) => {
+  //   if (!user) return [];
+  //   const results = await fileService.searchFiles(user, term, 1, 20); // Limit to 20 results for palette
+  //   return results.items;
+  // }, [user]);
 
-  const handleCommandPaletteNavigateToFile = useCallback((file: FileNode) => {
-    // Navigate to files view first, then open preview modal
-    setSearchParams(prev => {
-      prev.set('view', 'files');
-      if (file.parentId) prev.set('folderId', file.parentId);
-      else prev.delete('folderId');
-      return prev;
-    }, { replace: true });
-    // This will trigger a re-render and re-fetch files, then open the preview
-    // We might need a small delay or a more robust state management to ensure file data is available
-    setTimeout(() => {
-      handleFileSelectForPreview(file);
-    }, 500); // Small delay to allow URL/data to update
-    layout.closeCommandPalette();
-  }, [setSearchParams, handleFileSelectForPreview, layout]);
+  // const handleCommandPaletteNavigateToFile = useCallback((file: FileNode) => {
+  //   setSearchParams(prev => {
+  //     prev.set('view', 'files');
+  //     if (file.parentId) prev.set('folderId', file.parentId);
+  //     else prev.delete('folderId');
+  //     return prev;
+  //   }, { replace: true });
+  //   setTimeout(() => {
+  //     handleFileSelectForPreview(file);
+  //   }, 500); 
+  //   layout.closeCommandPalette();
+  // }, [setSearchParams, handleFileSelectForPreview, layout]);
 
-  const handleCommandPaletteNavigateToFolder = useCallback((folderId: string | null) => {
-    handleNavigate(folderId); // Use existing navigation handler for folder
-    layout.closeCommandPalette();
-  }, [handleNavigate, layout]);
+  // const handleCommandPaletteNavigateToFolder = useCallback((folderId: string | null) => {
+  //   handleNavigate(folderId); // Use existing navigation handler for folder
+  //   layout.closeCommandPalette();
+  // }, [handleNavigate, layout]);
 
 
   const selectedFilesData = files.filter(f => selectedFileIds.includes(f.id));
@@ -265,22 +272,7 @@ const ClientPage: React.FC = () => {
             />
           </div>
         );
-      case 'favorites':
-        return (
-          <div className="flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px]">
-            <header className="p-8 border-b border-slate-100">
-              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
-                  <Star className="text-amber-400" size={24} />
-                  {t('menu.favorites')}
-              </h3>
-              <p className="text-slate-400 text-sm font-medium mt-1">Seus certificados marcados para acesso rápido.</p>
-            </header>
-            <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-300 italic">
-                <FileText size={48} className="opacity-10 mb-4" />
-                <p className="font-semibold text-slate-600 text-sm">Funcionalidade de favoritos em sincronização...</p>
-            </div>
-          </div>
-        );
+      // Removed 'favorites' case
       default:
         return <ClientDashboard />;
     }
@@ -291,12 +283,14 @@ const ClientPage: React.FC = () => {
       title={activeView === 'home' ? t('menu.dashboard') : t('menu.library')} 
       activeView={activeView} 
       onViewChange={handleViewChange}
-      onOpenCommandPalette={layout.openCommandPalette}
+      // onOpenCommandPalette={layout.openCommandPalette} // Removido
     >
       <FilePreviewModal 
-        file={selectedFileForPreview} 
+        initialFile={selectedFileForPreview}
+        allFiles={files.filter(f => f.type !== FileType.FOLDER)} // Passa apenas arquivos para navegação
         isOpen={isPreviewOpen} 
         onClose={() => setIsPreviewOpen(false)} 
+        onDownloadFile={handleDownloadSingleFile} // Passa a função de download
       />
       
       {/* Conditionally render modals based on user role */}
@@ -350,27 +344,22 @@ const ClientPage: React.FC = () => {
         </>
       )}
 
-      {/* Command Palette (Integrado ao ClientLayout agora, mas sua lógica de busca ainda precisa vir daqui) */}
-      {/* Precisa ser renderizado aqui ou passar props para o ClientLayout para que ele possa renderizar e usar as funções de busca */}
+      {/* Command Palette (Removido daqui) */}
+      {/*
       <CommandPalette
         isOpen={layout.isCommandPaletteOpen}
         onClose={layout.closeCommandPalette}
-        onSearch={handleCommandPaletteSearch}
-        onNavigateToFile={handleCommandPaletteNavigateToFile}
-        onNavigateToFolder={handleCommandPaletteNavigateToFolder}
-        isLoadingResults={loading} // Reuse the file explorer's loading state for now
+        onSearch={() => Promise.resolve([])} // Placeholder, ClientPage passará o real
+        onNavigateToFile={() => {}} // Placeholder, ClientPage passará o real
+        onNavigateToFolder={() => {}} // Placeholder, ClientPage passará o real
+        isLoadingResults={false} // Placeholder, ClientPage passará o real
       />
+      */}
 
       {loading && <ProcessingOverlay message={t('files.processingFiles')} />}
 
       <div className="flex flex-col relative w-full gap-6 pb-20">
-        {/*
-          A navegação superior por abas foi movida para o ClientDock.
-          A div de "Portal de Dados Seguro" também foi removida, se necessário, pode ser reintegrada no Header global ou no próprio dock.
-        */}
-
-        {/* Container Principal de Conteúdo */}
-        <main className="min-h-[calc(100vh-280px)] animate-in fade-in slide-in-from-bottom-3 duration-700">
+        <main ref={mainContentRef} className="min-h-[calc(100vh-280px)] animate-in fade-in slide-in-from-bottom-3 duration-700 overflow-y-auto"> {/* Adicionado ref e overflow-y-auto */}
             <Suspense fallback={<ClientViewLoader />}>
                 {renderContent()}
             </Suspense>

@@ -1,3 +1,4 @@
+
 import { pt } from './pt.ts';
 
 export const en: typeof pt = {
@@ -126,12 +127,12 @@ export const en: typeof pt = {
   menu: {
     dashboard: "Home",
     library: "Library",
-    favorites: "Favorites",
     management: "Management",
     qualityManagement: "Quality Management",
     portalName: "Quality Portal",
     brand: "Aços Vital",
-    systemMonitoring: "SYSTEM MONITORING"
+    systemMonitoring: "SYSTEM MONITORING",
+    settings: "Settings" // New translation key
   },
   files: {
     authenticatingAccess: "Authenticating Access...",
@@ -193,5 +194,23 @@ export const en: typeof pt = {
     selectItem: "Select {{name}}",
     noResultsFound: "No results found.",
     typeToSearch: "Type to search files and folders..."
+  },
+  changePassword: {
+    title: "Change Password",
+    current: "Current Password",
+    new: "New Password",
+    confirm: "Confirm Password",
+    minCharacters: "Minimum {{count}} characters",
+    matchError: "Passwords do not match.",
+    success: "Password changed successfully!",
+    errorUpdatingPassword: "Error updating password."
+  },
+  privacy: {
+    title: "Privacy Policy",
+    subtitle: "LGPD and ISO 9001 Compliance",
+    close: "Understood",
+    section1: "About the Portal",
+    section2: "Data Collected",
+    section3: "Data Security"
   }
 };

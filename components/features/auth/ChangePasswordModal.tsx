@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, X, Check, ShieldAlert, Loader2 } from 'lucide-react';
+import { Lock, X, Check, ShieldAlert, Loader2, Eye, EyeOff } from 'lucide-react'; // Importado Eye e EyeOff
 import { useChangePassword } from './useChangePassword.ts';
 
 interface ChangePasswordModalProps {
@@ -22,6 +22,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     error, 
     handleSubmit 
   } = useChangePassword(onClose);
+
+  // Estados locais para a visibilidade das senhas
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Validação em tempo real para campos de nova senha
+  const newPasswordMismatch = formData.newPassword !== '' && formData.newPassword !== formData.confirmPassword;
 
   if (!isOpen) return null;
 
@@ -55,6 +63,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                     onChange={(v) => updateField('currentPassword', v)}
                     id="current-password"
                     autoFocus
+                    showPassword={showCurrentPassword}
+                    onToggleShowPassword={() => setShowCurrentPassword(prev => !prev)}
                 />
 
                 <div className="h-px bg-slate-100 my-2" />
@@ -64,7 +74,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                     value={formData.newPassword}
                     onChange={(v) => updateField('newPassword', v)}
                     id="new-password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={t('changePassword.minCharacters', {count: 6})}
+                    showPassword={showNewPassword}
+                    onToggleShowPassword={() => setShowNewPassword(prev => !prev)}
                 />
 
                 <PasswordField 
@@ -72,7 +84,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                     value={formData.confirmPassword}
                     onChange={(v) => updateField('confirmPassword', v)}
                     id="confirm-password"
-                    hasError={formData.confirmPassword !== '' && formData.newPassword !== formData.confirmPassword}
+                    hasError={newPasswordMismatch}
+                    showPassword={showConfirmPassword}
+                    onToggleShowPassword={() => setShowConfirmPassword(prev => !prev)}
+                    errorMessage={newPasswordMismatch ? t('changePassword.matchError') : undefined}
                 />
             </div>
 
@@ -93,7 +108,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 </button>
                 <button 
                     type="submit" 
-                    disabled={isLoading}
+                    disabled={isLoading || newPasswordMismatch}
                     className="order-1 sm:order-2 px-8 py-3 bg-[#081437] text-white font-black text-[10px] uppercase tracking-[3px] rounded-xl hover:bg-blue-900 transition-all shadow-lg shadow-blue-900/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     {isLoading ? (
@@ -119,27 +134,50 @@ interface PasswordFieldProps {
     placeholder?: string;
     autoFocus?: boolean;
     hasError?: boolean;
+    showPassword?: boolean; // Nova prop
+    onToggleShowPassword?: () => void; // Nova prop
+    errorMessage?: string; // Nova prop para mensagens de erro específicas do campo
 }
 
-const PasswordField: React.FC<PasswordFieldProps> = ({ label, value, onChange, id, placeholder, autoFocus, hasError }) => (
-    <div className="space-y-2">
-        <label htmlFor={id} className={`text-[10px] font-black uppercase tracking-[2px] ml-1 transition-colors ${hasError ? 'text-red-500' : 'text-slate-400'}`}>
-            {label}
-        </label>
-        <input 
-            id={id}
-            type="password"
-            autoFocus={autoFocus}
-            placeholder={placeholder || '••••••••'}
-            className={`w-full px-5 py-3.5 bg-slate-50 border-[1.5px] rounded-2xl outline-none text-sm font-medium transition-all
+const PasswordField: React.FC<PasswordFieldProps> = ({ label, value, onChange, id, placeholder, autoFocus, hasError, showPassword, onToggleShowPassword, errorMessage }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="space-y-2">
+            <label htmlFor={id} className={`text-[10px] font-black uppercase tracking-[2px] ml-1 transition-colors ${hasError ? 'text-red-500' : 'text-slate-400'}`}>
+                {label}
+            </label>
+            <div className={`flex items-center bg-slate-50 border-[1.5px] rounded-2xl overflow-hidden transition-all duration-300
                 ${hasError 
-                    ? 'border-red-200 bg-red-50/30 focus:border-red-500 ring-4 ring-red-500/10' 
-                    : 'border-slate-100 focus:border-blue-500 focus:bg-white ring-4 ring-blue-500/0 focus:ring-blue-500/10'
+                    ? 'border-red-200 bg-red-50/30 focus-within:border-red-500 ring-4 ring-red-500/10' 
+                    : 'border-slate-100 focus-within:border-blue-500 focus-within:bg-white ring-4 ring-blue-500/0 focus-within:ring-blue-500/10'
                 }
-            `}
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            required
-        />
-    </div>
-);
+            `}>
+                <input 
+                    id={id}
+                    type={showPassword ? "text" : "password"}
+                    autoFocus={autoFocus}
+                    placeholder={placeholder || '••••••••'}
+                    className="flex-1 px-5 py-3.5 bg-transparent outline-none text-sm font-medium text-slate-900 placeholder-slate-400"
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    required
+                />
+                {onToggleShowPassword && (
+                    <button 
+                        type="button" 
+                        onClick={onToggleShowPassword} 
+                        className="w-12 h-14 flex items-center justify-center text-slate-300 hover:text-blue-700 transition-colors"
+                        aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                )}
+            </div>
+            {errorMessage && hasError && (
+                <p className="text-[10px] font-bold text-red-500 ml-1 mt-1 animate-in fade-in slide-in-from-top-1">
+                    {errorMessage}
+                </p>
+            )}
+        </div>
+    );
+};
