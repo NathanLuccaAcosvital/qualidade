@@ -1,8 +1,6 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Folder, FileText, ChevronRight, CheckSquare, Square, Download, Trash2, Edit2, MoreVertical } from 'lucide-react';
-import { FileNode, FileType } from '../../../../types/index.ts';
+import { FileNode, FileType, UserRole } from '../../../../types/index.ts';
 import { FileStatusBadge } from './FileStatusBadge.tsx';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +13,7 @@ interface FileViewProps {
   onDownload: (file: FileNode) => void;
   onRename: (file: FileNode) => void;
   onDelete: (fileId: string) => void;
+  userRole: UserRole; // Adicionada a prop userRole
 }
 
 export const FileListView: React.FC<FileViewProps> = ({ 
@@ -25,7 +24,8 @@ export const FileListView: React.FC<FileViewProps> = ({
   onToggleFileSelection,
   onDownload,
   onRename,
-  onDelete
+  onDelete,
+  userRole // Recebe userRole
 }) => {
   const { t } = useTranslation();
   return (
@@ -72,6 +72,7 @@ export const FileListView: React.FC<FileViewProps> = ({
               onDelete={onDelete} 
               t={t} 
               className="opacity-0 group-hover:opacity-100 transition-opacity"
+              userRole={userRole} // Passa userRole para o ContextMenu
             />
           </div>
         );
@@ -88,7 +89,8 @@ export const FileGridView: React.FC<FileViewProps> = ({
   onToggleFileSelection,
   onDownload,
   onRename,
-  onDelete
+  onDelete,
+  userRole // Recebe userRole
 }) => {
   const { t } = useTranslation();
   return (
@@ -134,6 +136,7 @@ export const FileGridView: React.FC<FileViewProps> = ({
               onDelete={onDelete} 
               t={t} 
               className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              userRole={userRole} // Passa userRole para o ContextMenu
             />
           </div>
         );
@@ -149,12 +152,14 @@ interface FileContextMenuTriggerProps {
   onDelete: (fileId: string) => void;
   t: any;
   className?: string;
+  userRole: UserRole; // Adicionada a prop userRole
 }
 
-const FileContextMenuTrigger: React.FC<FileContextMenuTriggerProps> = ({ file, onDownload, onRename, onDelete, t, className }) => {
+const FileContextMenuTrigger: React.FC<FileContextMenuTriggerProps> = ({ file, onDownload, onRename, onDelete, t, className, userRole }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const isClient = userRole === UserRole.CLIENT;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -203,17 +208,22 @@ const FileContextMenuTrigger: React.FC<FileContextMenuTriggerProps> = ({ file, o
               onClick={(e) => handleAction(() => onDownload(file), e)} 
             />
           )}
-          <ContextMenuItem 
-            icon={Edit2} 
-            label={t('files.rename.title')} 
-            onClick={(e) => handleAction(() => onRename(file), e)} 
-          />
-          <ContextMenuItem 
-            icon={Trash2} 
-            label={t('common.delete')} 
-            onClick={(e) => handleAction(() => onDelete(file.id), e)} 
-            colorClass="text-red-500 hover:bg-red-50"
-          />
+          {/* Renomear e Excluir são visíveis apenas para não-clientes */}
+          {!isClient && (
+            <>
+              <ContextMenuItem 
+                icon={Edit2} 
+                label={t('files.rename.title')} 
+                onClick={(e) => handleAction(() => onRename(file), e)} 
+              />
+              <ContextMenuItem 
+                icon={Trash2} 
+                label={t('common.delete')} 
+                onClick={(e) => handleAction(() => onDelete(file.id), e)} 
+                colorClass="text-red-500 hover:bg-red-50"
+              />
+            </>
+          )}
         </div>
       )}
     </div>

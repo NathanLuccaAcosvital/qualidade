@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/MainLayout.tsx';
@@ -82,14 +79,16 @@ const ClientPage: React.FC = () => {
 
   const layout = useLayoutState(); // Access layout state including command palette
 
+  const userRole = normalizeRole(user?.role);
+  const isClient = userRole === UserRole.CLIENT;
+
   // Redirect if not client/admin
   useEffect(() => {
-    const role = normalizeRole(user?.role);
-    if (user && role !== UserRole.CLIENT && role !== UserRole.ADMIN) {
+    if (user && userRole !== UserRole.CLIENT && userRole !== UserRole.ADMIN) {
       navigate('/quality/dashboard', { replace: true });
       return;
     }
-  }, [user, navigate]);
+  }, [user, navigate, userRole]);
 
   // Handle URL folderId changes
   const handleNavigate = useCallback((folderId: string | null) => {
@@ -123,31 +122,36 @@ const ClientPage: React.FC = () => {
   }, []);
 
   const handleUpload = useCallback(async (fileBlob: File, fileName: string) => {
+    if (isClient) return; // Prevent client from uploading
     await handleUploadFile(fileBlob, fileName, currentFolderId);
     setIsUploadModalOpen(false);
-  }, [handleUploadFile, currentFolderId]);
+  }, [handleUploadFile, currentFolderId, isClient]);
 
   const handleCreate = useCallback(async (folderName: string) => {
+    if (isClient) return; // Prevent client from creating folders
     await handleCreateFolder(folderName, currentFolderId);
     setIsCreateFolderModalOpen(false);
-  }, [handleCreateFolder, currentFolderId]);
+  }, [handleCreateFolder, currentFolderId, isClient]);
 
   const handleRename = useCallback(async (newName: string) => {
+    if (isClient) return; // Prevent client from renaming
     if (!fileToRename) return;
     await handleRenameFile(fileToRename.id, newName);
     setIsRenameModalOpen(false);
     setFileToRename(null);
     setSelectedFileIds([]);
-  }, [fileToRename, handleRenameFile]);
+  }, [fileToRename, handleRenameFile, isClient]);
 
   const handleDeleteSelected = useCallback(async () => {
+    if (isClient) return; // Prevent client from deleting
     if (selectedFileIds.length === 0) return;
     setIsConfirmDeleteOpen(false); // Close confirmation modal
     await handleDeleteFiles(selectedFileIds);
     setSelectedFileIds([]); // Clear selection after delete
-  }, [selectedFileIds, handleDeleteFiles]);
+  }, [selectedFileIds, handleDeleteFiles, isClient]);
 
   const handleRenameSelected = useCallback(() => {
+    if (isClient) return; // Prevent client from renaming
     if (selectedFileIds.length === 1) {
       const file = files.find(f => f.id === selectedFileIds[0]);
       if (file) {
@@ -155,7 +159,7 @@ const ClientPage: React.FC = () => {
         setIsRenameModalOpen(true);
       }
     }
-  }, [selectedFileIds, files]);
+  }, [selectedFileIds, files, isClient]);
 
   const handleDownloadSelected = useCallback(() => {
     if (selectedFileIds.length === 1) {
@@ -177,14 +181,16 @@ const ClientPage: React.FC = () => {
   }, [user]);
 
   const handleRenameSingleFile = useCallback((file: FileNode) => {
+    if (isClient) return; // Prevent client from renaming
     setFileToRename(file);
     setIsRenameModalOpen(true);
-  }, []);
+  }, [isClient]);
 
   const handleDeleteSingleFile = useCallback((fileId: string) => {
+    if (isClient) return; // Prevent client from deleting
     setSelectedFileIds([fileId]); // Temporarily select for deletion
     setIsConfirmDeleteOpen(true);
-  }, []);
+  }, [isClient]);
 
   const handleCommandPaletteSearch = useCallback(async (term: string) => {
     if (!user) return [];
@@ -245,6 +251,7 @@ const ClientPage: React.FC = () => {
               viewMode={viewMode}
               onViewChange={setViewMode}
               selectedFilesData={selectedFilesData}
+              userRole={userRole} {/* Pass userRole to toolbar */}
             />
 
             <FileExplorer 
@@ -262,6 +269,7 @@ const ClientPage: React.FC = () => {
               onRenameFile={handleRenameSingleFile}
               onDeleteFile={handleDeleteSingleFile}
               viewMode={viewMode}
+              userRole={userRole} {/* Pass userRole to file explorer */}
             />
           </div>
         );
@@ -293,50 +301,56 @@ const ClientPage: React.FC = () => {
         isOpen={isPreviewOpen} 
         onClose={() => setIsPreviewOpen(false)} 
       />
-      <UploadFileModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-        onUpload={handleUpload}
-        isUploading={loading}
-        currentFolderId={currentFolderId}
-      />
-      <CreateFolderModal
-        isOpen={isCreateFolderModalOpen}
-        onClose={() => setIsCreateFolderModalOpen(false)}
-        onCreate={handleCreate}
-        isCreating={loading}
-      />
-      {fileToRename && (
-        <RenameModal
-          isOpen={isRenameModalOpen}
-          onClose={() => setIsRenameModalOpen(false)}
-          onRename={handleRename}
-          isRenaming={loading}
-          currentName={fileToRename.name}
-        />
-      )}
+      
+      {/* Conditionally render modals based on user role */}
+      {!isClient && (
+        <>
+          <UploadFileModal
+            isOpen={isUploadModalOpen}
+            onClose={() => setIsUploadModalOpen(false)}
+            onUpload={handleUpload}
+            isUploading={loading}
+            currentFolderId={currentFolderId}
+          />
+          <CreateFolderModal
+            isOpen={isCreateFolderModalOpen}
+            onClose={() => setIsCreateFolderModalOpen(false)}
+            onCreate={handleCreate}
+            isCreating={loading}
+          />
+          {fileToRename && (
+            <RenameModal
+              isOpen={isRenameModalOpen}
+              onClose={() => setIsRenameModalOpen(false)}
+              onRename={handleRename}
+              isRenaming={loading}
+              currentName={fileToRename.name}
+            />
+          )}
 
-      {isConfirmDeleteOpen && (
-        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden border border-red-200 flex flex-col">
-            <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-red-50/50">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-red-100 text-red-600 rounded-xl shadow-sm"><AlertTriangle size={22} /></div>
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{t('files.delete.confirmTitle')}</h3>
-              </div>
-              <button onClick={() => setIsConfirmDeleteOpen(false)} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400"><XCircle size={24} /></button>
-            </header>
-            <div className="p-8 space-y-6">
-              <p className="text-sm text-slate-700">{t('files.delete.confirmMessage', { count: selectedFileIds.length })}</p>
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setIsConfirmDeleteOpen(false)} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">{t('common.cancel')}</button>
-                <button type="button" onClick={handleDeleteSelected} className="px-8 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg flex items-center gap-2">
-                  <Trash2 size={16} /> {t('files.delete.button')}
-                </button>
+          {isConfirmDeleteOpen && (
+            <div className="fixed inset-0 z-[170] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+              <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden border border-red-200 flex flex-col">
+                <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-red-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-red-100 text-red-600 rounded-xl shadow-sm"><AlertTriangle size={22} /></div>
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{t('files.delete.confirmTitle')}</h3>
+                  </div>
+                  <button onClick={() => setIsConfirmDeleteOpen(false)} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400"><XCircle size={24} /></button>
+                </header>
+                <div className="p-8 space-y-6">
+                  <p className="text-sm text-slate-700">{t('files.delete.confirmMessage', { count: selectedFileIds.length })}</p>
+                  <div className="flex justify-end gap-3">
+                    <button type="button" onClick={() => setIsConfirmDeleteOpen(false)} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">{t('common.cancel')}</button>
+                    <button type="button" onClick={handleDeleteSelected} className="px-8 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg flex items-center gap-2">
+                      <Trash2 size={16} /> {t('files.delete.button')}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       {/* Command Palette */}

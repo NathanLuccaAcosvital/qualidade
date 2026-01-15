@@ -102,24 +102,29 @@ export const SupabaseFileService: IFileService = {
   getDashboardStats: async (user): Promise<DashboardStatsData> => {
     const role = normalizeRole(user.role);
     
-    let baseQuery = supabase.from('files').select('*', { count: 'exact', head: true }).neq('type', 'FOLDER');
-    
-    if (role === UserRole.CLIENT && user.organizationId) {
-        baseQuery = baseQuery.eq('owner_id', user.organizationId);
-    }
+    // Função auxiliar para gerar a query base sempre limpa
+    const getBaseQuery = () => {
+      let query = supabase.from('files').select('*', { count: 'exact', head: true }).neq('type', 'FOLDER');
+      
+      if (role === UserRole.CLIENT && user.organizationId) {
+          query = query.eq('owner_id', user.organizationId);
+      }
+      return query;
+    };
 
-    // Fix: Use .copy() instead of .clone() for Supabase query builder
     const [totalApproved, totalPending] = await Promise.all([
-      baseQuery.copy().eq('metadata->>status', QualityStatus.APPROVED),
+      // Chama a função para pegar uma nova query e aplica o filtro específico
+      getBaseQuery().eq('metadata->>status', QualityStatus.APPROVED),
+      
       role === UserRole.CLIENT 
-        ? { count: 0 } // Clientes não veem contagem de pendências técnicas internas da mesma forma
-        : baseQuery.copy().eq('metadata->>status', QualityStatus.PENDING)
+        ? { count: 0 } 
+        : getBaseQuery().eq('metadata->>status', QualityStatus.PENDING)
     ]);
     
     return {
         mainValue: totalApproved.count || 0,
         subValue: totalApproved.count || 0,
-        pendingValue: totalPending.count || 0,
+        pendingValue: totalPending.count || 0, // Ajuste aqui pois 'totalPending' pode ser o objeto { count: 0 }
         status: (totalPending.count || 0) > 0 ? 'PENDING' : 'REGULAR',
         mainLabel: role === UserRole.CLIENT ? 'Meus Certificados' : 'Certificados Globais',
         subLabel: role === UserRole.CLIENT ? 'Validados e Prontos' : 'Docs. Validados'

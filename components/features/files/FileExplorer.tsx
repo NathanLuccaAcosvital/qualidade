@@ -1,10 +1,7 @@
-
-
-
 import React, { useState, forwardRef, useImperativeHandle } from 'react'; 
 import { Loader2, FileText, Download, Trash2, Edit2, LayoutGrid, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { FileNode, FileType, BreadcrumbItem } from '../../../types/index.ts';
+import { FileNode, FileType, BreadcrumbItem, UserRole } from '../../../types/index.ts';
 import { FileListView, FileGridView } from './components/FileViews.tsx';
 
 export interface FileExplorerHandle {
@@ -19,6 +16,7 @@ interface FileExplorerProps {
   breadcrumbs: BreadcrumbItem[];
   selectedFileIds: string[];
   viewMode: 'grid' | 'list';
+  userRole: UserRole; // Adicionada a prop userRole
   
   onNavigate: (folderId: string | null) => void; 
   onFileSelectForPreview: (file: FileNode | null) => void; 
@@ -39,7 +37,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
     files, loading, onNavigate, 
     onFileSelectForPreview, 
     selectedFileIds, onToggleFileSelection,
-    onDownloadFile, onRenameFile, onDeleteFile, viewMode
+    onDownloadFile, onRenameFile, onDeleteFile, viewMode,
+    userRole // Recebe userRole
   } = props;
 
   useImperativeHandle(ref, () => ({
@@ -58,6 +57,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
     onDownload: onDownloadFile,
     onRename: onRenameFile,
     onDelete: onDeleteFile,
+    userRole: userRole, // Passa userRole para as views
   };
 
   return (

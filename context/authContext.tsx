@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { userService } from '../lib/services';
 import { appService } from '../lib/services/appService.tsx';
