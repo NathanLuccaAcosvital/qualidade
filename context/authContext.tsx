@@ -1,21 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient.ts';
-import { userService, appService, adminService } from '../lib/services/index.ts'; // Importe adminService também
-import { User, SystemStatus } from '../types/index.ts';
+import { supabase } from '../lib/supabaseClient';
+import { userService, appService, adminService } from '../lib/services'; 
+import { User, SystemStatus } from '../types';
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   systemStatus: SystemStatus | null;
-  isInitialSyncComplete: boolean; // Re-adicionado
+  isInitialSyncComplete: boolean;
 }
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  retryInitialSync: () => Promise<void>; // Re-adicionado
+  retryInitialSync: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,19 +26,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
     error: null,
     systemStatus: null,
-    isInitialSyncComplete: false, // Inicializado como false
+    isInitialSyncComplete: false,
   });
 
   const mounted = useRef(true);
 
   // Função centralizada de inicialização/sincronização de autenticação
-  const initializeAuth = useCallback(async () => { // Renomeado para initializeAuth
+  const initializeAuth = useCallback(async () => {
     if (!mounted.current) return;
 
+    // Apenas define loading true se ainda não tiver completado o sync inicial
+    // para evitar "piscar" a tela em revalidações
     setState(s => ({ ...s, isLoading: true, error: null }));
 
     try {
-      const { user, systemStatus } = await appService.getInitialData(); // Usa appService
+      // Busca dados unificados (User + SystemStatus)
+      const { user, systemStatus } = await appService.getInitialData();
       
       if (mounted.current) {
         setState({
@@ -52,19 +55,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("[AuthContext] Erro Crítico na inicialização:", error);
       if (mounted.current) {
-        // Fix: Explicitly cast the systemStatus object to SystemStatus to prevent type widening.
         setState(s => ({ 
           ...s, 
           isLoading: false, 
-          isInitialSyncComplete: true, // Marca como concluído mesmo em erro para permitir UI de retry
-          error: "Erro de conexão inicial. Tente novamente.", // Mensagem mais amigável
-          systemStatus: { mode: 'ONLINE', message: 'Falha ao carregar status inicial do sistema.' } as SystemStatus
+          isInitialSyncComplete: true, // Marca como concluído mesmo em erro para liberar a UI
+          error: "Erro de conexão inicial. Tente novamente.",
+          // Fallback de segurança para não travar a UI esperando systemStatus
+          systemStatus: { 
+            mode: 'ONLINE', 
+            message: 'Falha ao carregar status inicial do sistema.',
+            scheduledStart: null,
+            scheduledEnd: null,
+            updatedBy: 'System Fallback'
+          } as SystemStatus
         }));
       }
     }
   }, []);
 
-  // Adiciona a função retryInitialSync
+  // Função para re-tentar a sincronização em caso de falha
   const retryInitialSync = useCallback(async () => {
     await initializeAuth();
   }, [initializeAuth]);
@@ -73,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     mounted.current = true;
     
     const bootstrap = async () => {
+      // Verifica sessão local
       await supabase.auth.getSession(); 
       if (mounted.current) {
         await initializeAuth();
@@ -83,12 +93,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listener para eventos de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      // SIGNED_IN: Login ou recarga com sessão válida
+      // SIGNED_OUT: Logout explícito
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         await initializeAuth();
       }
     });
 
-    // Subscrição em tempo real para o status do sistema (agora no AuthContext)
+    // Subscrição em tempo real para o status do sistema
     const unsubSystemStatus = adminService.subscribeToSystemStatus((newStatus) => {
       if (mounted.current) {
         setState(s => ({ ...s, systemStatus: newStatus }));
@@ -98,9 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       mounted.current = false;
       subscription.unsubscribe();
-      unsubSystemStatus(); // Desinscrever do status do sistema
+      if (unsubSystemStatus) unsubSystemStatus();
     };
-  }, [initializeAuth]); // Dependência em initializeAuth
+  }, [initializeAuth]);
 
   const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -112,33 +124,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return result;
     }
     
+    // O onAuthStateChange irá disparar o initializeAuth após o login
     return { success: true };
   };
 
   const logout = async () => {
-    // 1. Otimisticamente, limpa o estado no cliente para uma resposta instantânea da UI.
+    // 1. Otimisticamente, limpa o estado no cliente
     setState(s => ({
       ...s,
       user: null,
       systemStatus: null,
-      isLoading: true, // Indica que algo está acontecendo (redirecionamento/recarregamento)
-      isInitialSyncComplete: false, // Força a tela de "Conectando..." no próximo load
+      isLoading: true,
+      isInitialSyncComplete: false,
       error: null,
     }));
 
-    // 2. Limpa o localStorage imediatamente para remover quaisquer dados de sessão e app.
+    // 2. Limpa o localStorage
     localStorage.clear();
 
-    // 3. Força o redirecionamento para a raiz da aplicação, causando um recarregamento completo.
-    // Isso é feito imediatamente, sem esperar pelo backend.
+    // 3. Força refresh da página para garantir limpeza de estados em memória
     window.location.href = '/'; 
 
-    // 4. Invalida a sessão no backend de forma assíncrona (fire-and-forget).
-    // Erros aqui são logados, mas não bloqueiam a experiência do usuário.
+    // 4. Invalida sessão no backend (sem await para não bloquear a UI)
     userService.logout().catch(err => {
       console.error("Erro assíncrono ao fazer logout no backend:", err);
-      // Poderíamos adicionar um toast de erro silencioso aqui se necessário,
-      // mas para logout "instantâneo", geralmente não queremos alertar o usuário.
     });
   };
 
@@ -151,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     refreshProfile,
-    retryInitialSync, // Incluir retryInitialSync no valor do contexto
+    retryInitialSync,
   }), [state, login, logout, refreshProfile, retryInitialSync]);
 
   return (
