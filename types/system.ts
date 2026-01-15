@@ -1,3 +1,4 @@
+
 export interface AuditLog {
   id: string;
   timestamp: string;
@@ -19,12 +20,12 @@ export interface AuditLog {
 
 export interface AppNotification {
   id: string;
-  userId: string;
+  userId?: string | null; // Pode ser null para notificações globais
   title: string;
   message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
-  isRead: boolean;
-  timestamp: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT'; // DB tem default, então sempre será um desses
+  isRead: boolean; // DB tem default, então sempre será boolean
+  timestamp: string; // DB tem default, então sempre será string
   link?: string;
 }
 

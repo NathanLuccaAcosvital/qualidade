@@ -59,7 +59,7 @@ export const pt = {
       totalUsers: "Total de Usuários",
       organizations: "Empresas Ativas",
       activities: "Atividades (24h)",
-      activeClientsSummary: "{{count}} empresas em carteira",
+      activeClientsSummary: "{{count}} empresas na carteira",
       logsLast24hSummary: "{{count}} eventos registrados",
       headers: {
         timestamp: "Data/Hora",
@@ -130,7 +130,10 @@ export const pt = {
     portalName: "Portal da Qualidade",
     brand: "Aços Vital",
     systemMonitoring: "MONITORAMENTO DO SISTEMA",
-    settings: "Configurações" // New translation key
+    settings: "Configurações",
+    // Removed 'recentUploads' and 'complianceReports'
+    // recentUploads: "Uploads Recentes", 
+    // complianceReports: "Relatórios de Compliance", 
   },
   files: {
     authenticatingAccess: "Autenticando Acesso...",
@@ -201,7 +204,8 @@ export const pt = {
     minCharacters: "Mínimo {{count}} caracteres",
     matchError: "As senhas não conferem.",
     success: "Senha alterada com sucesso!",
-    errorUpdatingPassword: "Erro ao atualizar a senha."
+    errorUpdatingPassword: "Erro ao atualizar a senha.",
+    submit: "Confirmar Alteração" 
   },
   privacy: {
     title: "Política de Privacidade",
@@ -210,5 +214,16 @@ export const pt = {
     section1: "Sobre o Portal",
     section2: "Dados Coletados",
     section3: "Segurança de Dados"
+  },
+  notifications: {
+    title: "Minhas Notificações",
+    markAllAsRead: "Marcar todas como lidas",
+    markedAsRead: "Notificação marcada como lida.",
+    markedAllAsRead: "Todas as notificações marcadas como lidas.",
+    emptyState: "Você não possui notificações.",
+    loading: "Carregando Notificações...",
+    errorLoading: "Erro ao carregar notificações: {{message}}",
+    errorMarkingAsRead: "Erro ao marcar notificação como lida: {{message}}",
+    errorMarkingAllAsRead: "Erro ao marcar todas como lidas: {{message}}",
   }
 };

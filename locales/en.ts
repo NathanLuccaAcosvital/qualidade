@@ -132,7 +132,7 @@ export const en: typeof pt = {
     portalName: "Quality Portal",
     brand: "Aços Vital",
     systemMonitoring: "SYSTEM MONITORING",
-    settings: "Settings" // New translation key
+    settings: "Settings", 
   },
   files: {
     authenticatingAccess: "Authenticating Access...",
@@ -203,7 +203,8 @@ export const en: typeof pt = {
     minCharacters: "Minimum {{count}} characters",
     matchError: "Passwords do not match.",
     success: "Password changed successfully!",
-    errorUpdatingPassword: "Error updating password."
+    errorUpdatingPassword: "Error updating password.",
+    submit: "Confirm Changes" 
   },
   privacy: {
     title: "Privacy Policy",
@@ -212,5 +213,16 @@ export const en: typeof pt = {
     section1: "About the Portal",
     section2: "Data Collected",
     section3: "Data Security"
+  },
+  notifications: {
+    title: "My Notifications",
+    markAllAsRead: "Mark all as read",
+    markedAsRead: "Notification marked as read.",
+    markedAllAsRead: "All notifications marked as read.",
+    emptyState: "You have no notifications.",
+    loading: "Loading Notifications...",
+    errorLoading: "Error loading notifications: {{message}}",
+    errorMarkingAsRead: "Error marking notification as read: {{message}}",
+    errorMarkingAllAsRead: "Error marking all as read: {{message}}",
   }
 };

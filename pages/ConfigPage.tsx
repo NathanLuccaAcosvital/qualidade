@@ -4,15 +4,32 @@ import { useTranslation } from 'react-i18next';
 import { Layout } from '../components/layout/MainLayout.tsx';
 import { ChangePasswordModal } from '../components/features/auth/ChangePasswordModal.tsx'; // Importado
 import { PrivacyModal } from '../components/common/PrivacyModal.tsx'; // Importado
-import { Lock, ShieldCheck, Settings as SettingsIcon } from 'lucide-react';
+// Removido LanguageSelector, pois foi movido para o Header
+import { Lock, ShieldCheck, Settings as SettingsIcon } from 'lucide-react'; // Removido Globe
+import { useAuth } from '../context/authContext.tsx'; // Importar useAuth
+import { ClientLayout } from '../components/layout/ClientLayout.tsx'; // Importar ClientLayout
+import { UserRole, normalizeRole } from '../types/index.ts'; // Importar UserRole e normalizeRole
 
 const ConfigPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth(); // Obter usuário do contexto de autenticação
+  const userRole = normalizeRole(user?.role); // Normalizar a role do usuário
+  const isClient = userRole === UserRole.CLIENT; // Verificar se é um cliente
+
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
+  // Determinar qual layout usar com base na role
+  const LayoutComponent = isClient ? ClientLayout : Layout;
+
+  // Propriedades específicas para ClientLayout, se for o caso
+  const clientLayoutProps = isClient ? {
+    activeView: "settings", // Uma view fictícia para não acender nenhum item do ClientDock
+    onViewChange: () => {}, // Uma função vazia, pois esta página não muda a view do dock
+  } : {};
+
   return (
-    <Layout title={t('menu.settings')}>
+    <LayoutComponent title={t('menu.settings')} {...clientLayoutProps}>
       <ChangePasswordModal 
         isOpen={isChangePasswordModalOpen} 
         onClose={() => setIsChangePasswordModalOpen(false)} 
@@ -61,8 +78,10 @@ const ConfigPage: React.FC = () => {
             </button>
           </div>
         </section>
+
+        {/* Seção de Preferências Gerais removida, pois o LanguageSelector foi movido para o Header. */}
       </div>
-    </Layout>
+    </LayoutComponent>
   );
 };
 

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React from 'react'; // Removido useState
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext.tsx';
@@ -11,6 +11,7 @@ import { MaintenanceBanner } from '../common/MaintenanceBanner.tsx';
 import { useLayoutState } from './hooks/useLayoutState.ts';
 import { useSystemSync } from './hooks/useSystemSync.ts';
 import { UserRole, normalizeRole } from '../../types/index.ts';
+// import { NotificationModal } from '../features/notifications/NotificationModal.tsx'; // Importa o modal - REMOVIDO
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,12 +27,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const layout = useLayoutState();
   const system = useSystemSync(user, authSystemStatus);
 
-  // Handler para o botão de voltar no mobile
+  // Removido o estado e handlers do modal de notificação
+  // const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  // const handleOpenNotificationsModal = () => setIsNotificationsModalOpen(true);
+  // const handleCloseNotificationsModal = () => setIsNotificationsModalOpen(false);
+
   const handleNavigateBack = () => {
     navigate(-1);
   };
 
-  // Handler para navegar para a página de configurações
   const handleNavigateToSettingsPage = () => {
     navigate('/settings');
   };
@@ -39,7 +43,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       <CookieBanner />
-      {/* PrivacyModal e ChangePasswordModal removidos, pois agora são controlados pela ConfigPage */}
+      {/* Removido o NotificationModal */}
+      {/* <NotificationModal 
+        isOpen={isNotificationsModalOpen} 
+        onClose={handleCloseNotificationsModal} 
+      /> */}
 
       <Sidebar 
         user={user} 
@@ -57,8 +65,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           role={role} 
           unreadCount={system.unreadCount} 
           onLogout={logout}
-          onOpenMobileMenu={layout.openMobileMenu} // O ícone de configurações mobile abre o drawer
-          onNavigateBack={handleNavigateBack} // Passa o handler para o botão de voltar
+          onOpenMobileMenu={layout.openMobileMenu} 
+          onNavigateBack={handleNavigateBack}
+          // onOpenNotificationsModal={handleOpenNotificationsModal} // Prop removida
         />
 
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col">
@@ -71,7 +80,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px]">{t('login.monitoring')}</span>
               </div>
-              {/* Removido o botão de Privacidade */}
               <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px]">
                 © 2026 {t('menu.brand').toUpperCase()}
               </div>
@@ -84,7 +92,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           isMenuOpen={layout.mobileMenuOpen}
           onCloseMenu={layout.closeMobileMenu}
           onLogout={logout}
-          onNavigateToSettings={handleNavigateToSettingsPage} // Passa o handler para navegar para a ConfigPage
+          onNavigateToSettings={handleNavigateToSettingsPage} 
         />
       </div>
     </div>

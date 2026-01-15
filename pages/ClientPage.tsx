@@ -14,7 +14,10 @@ import {
   // Fix: Imported missing icons
   LayoutDashboard,
   Trash2,
-  XCircle
+  XCircle,
+  Clock, // New: For recent documents
+  BarChart3, // New: For reports
+  Bell // New: For notifications
 } from 'lucide-react';
 import { normalizeRole, UserRole, FileNode, FileType } from '../types/index.ts';
 import { FileExplorer, FileExplorerHandle } from '../components/features/files/FileExplorer.tsx';
@@ -24,7 +27,7 @@ import { UploadFileModal } from '../components/features/files/modals/UploadFileM
 import { CreateFolderModal } from '../components/features/files/modals/CreateFolderModal.tsx';
 import { RenameModal } from '../components/features/files/modals/RenameModal.tsx';
 import { useFileExplorer } from '../components/features/files/hooks/useFileExplorer.ts';
-import { ProcessingOverlay } from '../components/features/quality/components/ViewStates.tsx';
+import { ProcessingOverlay, QualityEmptyState } from '../components/features/quality/components/ViewStates.tsx';
 import ClientDashboard from './dashboards/ClientDashboard.tsx'; // Importa o componente ClientDashboard
 // import { CommandPalette } from '../components/common/CommandPalette.tsx'; // Removido
 import { useLayoutState } from '../components/layout/hooks/useLayoutState.ts';
@@ -272,7 +275,6 @@ const ClientPage: React.FC = () => {
             />
           </div>
         );
-      // Removed 'favorites' case
       default:
         return <ClientDashboard />;
     }

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React from 'react'; // Removido useState
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext.tsx';
@@ -11,6 +11,8 @@ import { useLayoutState } from './hooks/useLayoutState.ts';
 import { useSystemSync } from './hooks/useSystemSync.ts';
 import { UserRole, normalizeRole } from '../../types/index.ts';
 import { ClientDock } from './ClientDock.tsx';
+import { SidebarClient } from './SidebarClient.tsx'; 
+// import { NotificationModal } from '../features/notifications/NotificationModal.tsx'; // Importa o modal - REMOVIDO
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -28,12 +30,15 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
   const layout = useLayoutState();
   const system = useSystemSync(user, authSystemStatus);
 
-  // Handler para o botão de voltar no mobile
+  // Removido o estado e handlers do modal de notificação
+  // const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  // const handleOpenNotificationsModal = () => setIsNotificationsModalOpen(true);
+  // const handleCloseNotificationsModal = () => setIsNotificationsModalOpen(false);
+
   const handleNavigateBack = () => {
     navigate(-1);
   };
 
-  // Handler para navegar para a página de configurações
   const handleNavigateToSettingsPage = () => {
     navigate('/settings');
   };
@@ -41,7 +46,20 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       <CookieBanner />
-      {/* PrivacyModal e ChangePasswordModal removidos, pois agora são controlados pela ConfigPage */}
+      {/* Removido o NotificationModal */}
+      {/* <NotificationModal 
+        isOpen={isNotificationsModalOpen} 
+        onClose={handleCloseNotificationsModal} 
+      /> */}
+
+      <SidebarClient 
+        user={user} 
+        role={role} 
+        isCollapsed={layout.sidebarCollapsed} 
+        onToggle={layout.toggleSidebar} 
+        onLogout={logout}
+        onNavigateToSettings={handleNavigateToSettingsPage}
+      />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <MaintenanceBanner status={system.status} isAdmin={role === UserRole.ADMIN} />
@@ -52,9 +70,10 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
           role={role} 
           unreadCount={system.unreadCount} 
           onLogout={logout}
-          onOpenMobileMenu={layout.openMobileMenu} // O ícone de configurações mobile abre o drawer
-          onNavigateBack={handleNavigateBack} // Passa o handler para o botão de voltar
+          onOpenMobileMenu={layout.openMobileMenu} 
+          onNavigateBack={handleNavigateBack} 
           variant="blue"
+          // onOpenNotificationsModal={handleOpenNotificationsModal} // Prop removida
         />
 
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col pb-20">
@@ -67,7 +86,6 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] text-slate-500">{t('login.monitoring')}</span>
               </div>
-              {/* Removido o botão de Privacidade */}
               <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] text-slate-500">
                 © 2026 {t('menu.brand').toUpperCase()}
               </div>
@@ -80,7 +98,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
           isMenuOpen={layout.mobileMenuOpen}
           onCloseMenu={layout.closeMobileMenu}
           onLogout={logout}
-          onNavigateToSettings={handleNavigateToSettingsPage} // Passa o handler para navegar para a ConfigPage
+          onNavigateToSettings={handleNavigateToSettingsPage} 
         />
 
         <ClientDock 

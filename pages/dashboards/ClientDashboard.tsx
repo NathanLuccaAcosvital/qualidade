@@ -175,13 +175,14 @@ const DashboardHero = ({ name, t }: { name: string, t: any }) => (
   <div className="bg-[#081437] rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl border border-white/5">
     <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
     <div className="relative z-10 space-y-4">
-      <div className="flex items-center gap-3">
-          {/* Badge "Portal do Cliente" com a nova cor */}
-          <span className="px-3 py-1 bg-[#b23c0e] rounded-full text-[9px] font-black uppercase tracking-[3px] shadow-lg shadow-[#b23c0e]/20">Portal do Cliente</span>
-          <div className="flex items-center gap-2">
+      {/* Container dos badges "Acesso Seguro" e "Portal do Cliente" */}
+      <div className="flex flex-wrap items-center gap-2 md:gap-4"> {/* Alterado para flex-wrap e adicionado gap */}
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/20 text-emerald-300 shadow-lg shadow-emerald-500/10 whitespace-nowrap">
             <ShieldCheck size={12} className="text-emerald-500" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acesso Seguro</span>
-          </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Acesso Seguro</span>
+          </span>
+          {/* Badge "Portal do Cliente" com a nova cor e sem mt-2 */}
+          <span className="px-3 py-1 bg-[#b23c0e] rounded-full text-[9px] font-black uppercase tracking-[3px] shadow-lg shadow-[#b23c0e]/20 whitespace-nowrap">Portal do Cliente</span>
       </div>
       <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight max-w-xl">
         Bem-vindo, <span className="text-[#4c81c6]">{name}.</span>

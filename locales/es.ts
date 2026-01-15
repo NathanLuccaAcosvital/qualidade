@@ -132,7 +132,7 @@ export const es: typeof pt = {
     portalName: "Portal de Calidad",
     brand: "Aços Vital",
     systemMonitoring: "MONITOREO DEL SISTEMA",
-    settings: "Configuración" // New translation key
+    settings: "Configuración", 
   },
   files: {
     authenticatingAccess: "Autenticando Acceso...",
@@ -203,7 +203,8 @@ export const es: typeof pt = {
     minCharacters: "Mínimo {{count}} caracteres",
     matchError: "Las contraseñas no coinciden.",
     success: "¡Contraseña cambiada exitosamente!",
-    errorUpdatingPassword: "Error al actualizar la contraseña."
+    errorUpdatingPassword: "Error al actualizar la contraseña.",
+    submit: "Confirmar Cambios" 
   },
   privacy: {
     title: "Política de Privacidad",
@@ -212,5 +213,16 @@ export const es: typeof pt = {
     section1: "Sobre el Portal",
     section2: "Datos Recopilados",
     section3: "Seguridad de Datos"
+  },
+  notifications: {
+    title: "Mis Notificaciones",
+    markAllAsRead: "Marcar todas como leídas",
+    markedAsRead: "Notificación marcada como leída.",
+    markedAllAsRead: "Todas las notificaciones marcadas como leídas.",
+    emptyState: "No tiene notificaciones.",
+    loading: "Cargando Notificaciones...",
+    errorLoading: "Error al cargar notificaciones: {{message}}",
+    errorMarkingAsRead: "Error al marcar notificación como leída: {{message}}",
+    errorMarkingAllAsRead: "Error al marcar todas como leídas: {{message}}",
   }
 };

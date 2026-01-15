@@ -34,7 +34,7 @@ export const MobileNavigation: React.FC<MobileNavProps> = ({
   return (
     <>
       {/* Bottom Action Bar (Apenas visível se NÃO for CLIENTE, pois ClientDock agora é universal) */}
-      {!isClient && (
+      {!isClient && bottomNavItems.length > 0 && ( // Adiciona verificação bottomNavItems.length
         <nav className="md:hidden h-16 bg-white border-t border-slate-200 flex items-center justify-around shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[45]">
           {bottomNavItems.map((item, idx) => {
             const active = isActive(item.path, item.exact);

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { adminService, notificationService } from '../../../lib/services/index.ts';
 import { SystemStatus, User } from '../../../types/index.ts';
 
@@ -21,10 +22,12 @@ export const useSystemSync = (user: User | null, initialSystemStatus: SystemStat
   useEffect(() => {
     if (!user) return;
     
-    // Fetch initial unread count, system status is already provided by initialSystemStatus
+    // Função para buscar a contagem de não lidas e atualizar
     const syncNotifications = async () => {
-      const count = await notificationService.getUnreadCount(user);
-      setUnreadCount(count);
+      if (user) { // Verifica se user ainda existe no contexto (previne erros após logout)
+        const count = await notificationService.getUnreadCount(user);
+        setUnreadCount(count);
+      }
     };
 
     syncNotifications();

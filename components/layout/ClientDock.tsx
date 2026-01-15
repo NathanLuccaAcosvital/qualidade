@@ -14,7 +14,7 @@ export const ClientDock: React.FC<ClientDockProps> = ({ activeView, onViewChange
   const navItems = [
     { id: 'home', label: t('menu.dashboard'), icon: LayoutDashboard },
     { id: 'files', label: t('menu.library'), icon: Library },
-    // Removed Favorites: { id: 'favorites', label: t('menu.favorites'), icon: Star },
+    // Removido "Favorites" e outros itens que agora estão na SidebarClient
   ];
 
   return (
@@ -22,7 +22,7 @@ export const ClientDock: React.FC<ClientDockProps> = ({ activeView, onViewChange
       className="flex fixed bottom-0 md:bottom-6 left-1/2 -translate-x-1/2 z-[80] 
                  bg-white/50 backdrop-blur-xl border border-white/20 
                  p-2.5 rounded-full shadow-lg shadow-slate-900/10 
-                 animate-in slide-in-from-bottom-6 duration-500"
+                 animate-in slide-in-from-bottom-6 duration-500 md:hidden" // Adicionado `md:hidden` para ocultar no desktop
     >
       <nav className="flex items-center gap-2" role="navigation" aria-label="Navegação Principal do Cliente">
         {navItems.map((item) => {

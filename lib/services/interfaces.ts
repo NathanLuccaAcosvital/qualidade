@@ -1,4 +1,5 @@
 
+
 import { 
   User, 
   UserRole, 
@@ -102,7 +103,7 @@ export interface IFileService {
   deleteFile: (user: User, fileIds: string[]) => Promise<void>;
   // Fix: Added renameFile to IFileService
   renameFile: (user: User, fileId: string, newName: string) => Promise<void>;
-  searchFiles: (user: User, query: string, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
+  searchFiles: (user: User, query: string, page?: number, number?: number) => Promise<PaginatedResponse<FileNode>>;
   getBreadcrumbs: (folderId: string | null) => Promise<BreadcrumbItem[]>;
   // Removed toggleFavorite: (user: User, fileId: string) => Promise<boolean>;
   // Removed getFavorites: (user: User) => Promise<FileNode[]>;
@@ -141,5 +142,5 @@ export interface INotificationService {
   getUnreadCount: (user: User) => Promise<number>;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: (user: User) => Promise<void>;
-  addNotification: (targetUserId: string, title: string, message: string, type: AppNotification['type'], link?: string) => Promise<void>;
+  addNotification: (targetUserId: string | null, title: string, message: string, type: AppNotification['type'], link?: string) => Promise<void>;
 }

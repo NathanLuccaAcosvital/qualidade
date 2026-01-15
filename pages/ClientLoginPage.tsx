@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/authContext.tsx';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +10,7 @@ import { CheckCircle2 } from 'lucide-react'; // Import CheckCircle2
 // Componentes Refatorados
 import { LoginHero } from '../components/features/auth/login/LoginHero.tsx';
 import { LoginForm } from '../components/features/auth/login/LoginForm.tsx';
-import { LanguageSelector } from '../components/features/auth/login/LanguageSelector.tsx';
+// O LanguageSelector foi removido deste arquivo.
 
 const ClientLoginPage: React.FC = () => {
   const { login, isLoading, user } = useAuth();
@@ -81,9 +82,7 @@ const ClientLoginPage: React.FC = () => {
       <main className="flex-1 h-full flex flex-col items-center justify-center p-6 md:p-8 lg:p-10 xl:p-12 bg-white lg:rounded-l-[3.5rem] relative z-10 shadow-[-20px_0_60px_rgba(0,0,0,0.2)] lg:shadow-[-40px_0_100px_rgba(0,0,0,0.4)] overflow-y-auto">
         
         {/* Language Switcher */}
-        <div className="absolute top-4 right-6 md:top-6 md:right-8 z-50 animate-in fade-in duration-1000">
-          <LanguageSelector />
-        </div>
+        {/* Removido LanguageSelector daqui */}
 
         {/* Login Container: Max width e spacing vertical otimizados */}
         <div className="w-full max-w-[340px] xl:max-w-[360px] animate-in zoom-in-95 duration-700 py-4">
