@@ -1,8 +1,5 @@
-// nathanluccaacosvital/qualidade/.../context/authContext.tsx
-
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient.ts';
-// Importamos o appService centralizado do index
 import { userService, supabaseAppService } from '../lib/services/index.ts'; 
 import { User, SystemStatus } from '../types/index.ts';
 
@@ -31,10 +28,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const mounted = useRef(true);
 
-  // --- LÓGICA RPC (VELOCIDADE MÁXIMA) ---
+  // --- LÓGICA RPC OTIMIZADA ---
   const initializeApp = async () => {
     try {
-      // Chama o seu novo serviço RPC
+      // 1 Request Único: Busca User + Sistema com atomicidade no banco
       const { user, systemStatus } = await supabaseAppService.getInitialData();
 
       if (mounted.current) {
@@ -46,14 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (error: any) {
-      console.error("[Auth] Erro na inicialização:", error);
+      console.error("[Auth] Erro crítico RPC:", error);
       if (mounted.current) {
-        // Fallback seguro: Assume sistema ONLINE se a API falhar, para não travar o usuário
         setState(prev => ({ 
           ...prev, 
           isLoading: false, 
           error: "Erro de conexão.",
-          systemStatus: { mode: 'ONLINE' } 
+          systemStatus: { mode: 'ONLINE' } // Fallback para não travar o app
         }));
       }
     }
@@ -61,12 +57,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     mounted.current = true;
-    
-    // 1. Inicializa App (Busca User + Sistema em 1 request)
-    initializeApp();
 
-    // 2. Escuta mudanças de sessão (Login/Logout)
+    const bootstrap = async () => {
+      // OTIMIZAÇÃO DE VELOCIDADE:
+      // Aguarda o Supabase ler o token do LocalStorage ANTES de chamar o RPC.
+      // Isso evita que o RPC rode como "Visitante" e depois rode de novo como "Admin".
+      await supabase.auth.getSession(); 
+      
+      if (mounted.current) {
+        await initializeApp();
+      }
+    };
+
+    bootstrap();
+
+    // Listener para eventos futuros (Login/Logout manual)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      // Ignora INITIAL_SESSION pois o 'bootstrap' acima já cuida disso mais rápido
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         await initializeApp();
       }
@@ -81,14 +88,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
-    // Login padrão do Supabase
     const result = await userService.authenticate(email, password);
     
     if (!result.success) {
       setState(prev => ({ ...prev, isLoading: false, error: result.error }));
       return result;
     }
-    // O 'onAuthStateChange' vai disparar o initializeApp automaticamente
+    // O onAuthStateChange (SIGNED_IN) dispara o initializeApp automaticamente
     return { success: true };
   };
 
@@ -96,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await userService.logout();
-      window.location.href = '/'; // Limpa a memória forçando refresh
+      window.location.href = '/'; // Hard refresh para limpar cache de memória
     } catch (error) {
        console.error("Erro ao sair", error);
        setState(prev => ({ ...prev, isLoading: false }));
