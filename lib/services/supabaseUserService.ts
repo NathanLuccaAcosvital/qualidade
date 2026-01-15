@@ -130,31 +130,16 @@ export const SupabaseUserService: IUserService = {
       );
       const { data: profile, error } = profileFetchResult;
 
-      if (error) {
-        // Tenta buscar um perfil básico se a query com join falhar
-        const basicProfileQuery = supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        
-        // Fix: Explicitly destructure result to correctly infer types from withTimeout
-        const basicProfileFetchResult: PostgrestSingleResponse<RawProfile> = await withTimeout( 
-          basicProfileQuery,
-          API_TIMEOUT, // Usar API_TIMEOUT completo aqui
-          "Tempo esgotado ao buscar perfil básico."
-        );
-        const { data: basicProfile } = basicProfileFetchResult;
-          
-        if (!basicProfile) return null;
-        return toDomainUser(basicProfile, session.user.email);
+      // Se houver erro na query ou o perfil não for encontrado, retornar null.
+      // Removida a lógica de fallback para buscar perfil básico, simplificando o fluxo.
+      if (error || !profile) {
+        if (error) console.error("[getCurrentUser] Erro ao buscar perfil com organização:", error.message);
+        return null; 
       }
-
-      if (!profile) return null;
 
       return toDomainUser(profile, session.user.email);
     } catch (e: any) {
-      console.error("[getCurrentUser] Erro:", e.message);
+      console.error("[getCurrentUser] Erro geral ao buscar usuário:", e.message);
       return null;
     }
   },

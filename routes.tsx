@@ -48,41 +48,52 @@ const InitialAuthRedirect = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // 1. Carregamento inicial do AuthContext (antes de saber se está logado ou não)
-    if (!isInitialSyncComplete && isLoading) {
+    // Se o AuthContext está ativamente carregando ou realizando sua sincronização inicial,
+    // exibe o loader. Esta é a verificação primária para "aguardando dados de auth/sistema".
+    if (isLoading) {
         return <PageLoader message="Conectando ao sistema Vital" />;
     }
 
-    // 2. Erro crítico na sincronização inicial do AuthContext
+    // Neste ponto, isLoading é false, o que significa que o AuthContext terminou sua determinação inicial.
+
+    // Se um erro crítico ocorreu durante a sincronização inicial, exibe a tela de retry.
+    // Esta verificação é importante *após* o carregamento, quando isInitialSyncComplete deve ser true.
     if (isInitialSyncComplete && authError) {
         console.error("Erro no AuthContext após sincronização inicial:", authError);
         return <PageLoader message={`Ocorreu um problema ao iniciar: ${authError}.`} onRetry={retryInitialSync} />;
     }
     
-    // 3. Se há um usuário, mas o status do sistema ainda não foi carregado (pode ser raro após sync inicial)
+    // Se há um usuário autenticado, mas, por alguma razão, o status do sistema ainda não está disponível,
+    // continua exibindo o loader. (É um safety net, pois o systemStatus é buscado com o perfil do usuário).
     if (user && !systemStatus) {
         return <PageLoader message="Verificando a segurança do sistema" />;
     }
 
-    // 4. Se o usuário está autenticado e na rota raiz ('/'), redireciona para o dashboard correto
-    if (user && location.pathname === '/') {
-        const role = normalizeRole(user.role);
-        const roleRoutes: Record<UserRole, string> = {
-            [UserRole.ADMIN]: '/admin/dashboard',
-            [UserRole.QUALITY]: '/quality/dashboard',
-            [UserRole.CLIENT]: '/client/dashboard'
-        };
-        return <Navigate to={roleRoutes[role] || '/'} replace />;
+    // Se o usuário está autenticado:
+    if (user) {
+        // Se estiver na rota raiz ('/'), redireciona para o dashboard apropriado.
+        if (location.pathname === '/') {
+            const role = normalizeRole(user.role);
+            const roleRoutes: Record<UserRole, string> = {
+                [UserRole.ADMIN]: '/admin/dashboard',
+                [UserRole.QUALITY]: '/quality/dashboard',
+                [UserRole.CLIENT]: '/client/dashboard'
+            };
+            return <Navigate to={roleRoutes[role] || '/'} replace />;
+        }
+        // Se autenticado e não na rota raiz, permite que o router continue o mapeamento.
+        // Isso é crucial para situações onde um usuário logado pode cair em `/login` ou um link direto.
+        return null;
     }
 
-    // 5. Se não há usuário e na rota raiz ('/'), redireciona para a página de login
+    // Se não há usuário (não autenticado):
+    // Se estiver na rota raiz ('/'), redireciona para a página de login.
     if (!user && location.pathname === '/') {
       return <Navigate to="/login" replace />;
     }
 
-    // 6. Caso contrário (usuário logado em rota privada ou não logado em /login),
-    // retorna null para permitir que o React Router continue a correspondência das rotas.
-    // O ClientLoginPage agora lida com sua própria animação e redirecionamento.
+    // Se não autenticado e não na rota raiz, permite que o router continue o mapeamento.
+    // Isso permite que a rota `/login` seja renderizada se o usuário já estiver lá.
     return null;
 };
 
@@ -118,12 +129,12 @@ export const AppRoutes: React.FC = () => {
                     <Route path="/quality/dashboard" element={<QualityDashboard />} />
                     <Route path="/quality" element={<QualityPage />} />
                     <Route path="/quality/files/:fileId" element={<FileInspection />} /> {/* Rota adicionada */}
-                </RoleMiddleware>
+                </Route>
 
                 {/* Rotas de Cliente */}
                 <Route element={<RoleMiddleware allowedRoles={[UserRole.CLIENT, UserRole.ADMIN]} />}>
                     <Route path="/client/dashboard" element={<ClientPage />} />
-                </RoleMiddleware>
+                </Route>
             </Route>
         </Route>
 
