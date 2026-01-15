@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient.ts';
-import { userService, supabaseAppService } from '../lib/services/index.ts'; 
+import { userService, supabaseAppService } from '../lib/services/index.ts'; // Importe o appService
 import { User, SystemStatus } from '../types/index.ts';
 
 interface AuthState {
@@ -28,28 +28,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const mounted = useRef(true);
 
-  // --- LÓGICA RPC OTIMIZADA ---
-  const initializeApp = async () => {
+  // NOVA LÓGICA: 1 Request Único (RPC)
+  const initializeAuth = async () => {
     try {
-      // 1 Request Único: Busca User + Sistema com atomicidade no banco
+      // Chama o RPC que busca TUDO de uma vez (User + SystemStatus)
       const { user, systemStatus } = await supabaseAppService.getInitialData();
 
       if (mounted.current) {
         setState({
           user,
-          systemStatus,
+          systemStatus: systemStatus as SystemStatus,
           isLoading: false,
-          error: null,
+          error: null
         });
       }
     } catch (error: any) {
-      console.error("[Auth] Erro crítico RPC:", error);
+      console.error("[AuthContext] Erro Crítico:", error);
       if (mounted.current) {
-        setState(prev => ({ 
-          ...prev, 
+        setState(s => ({ 
+          ...s, 
           isLoading: false, 
-          error: "Erro de conexão.",
-          systemStatus: { mode: 'ONLINE' } // Fallback para não travar o app
+          error: "Erro de conexão com o servidor." 
         }));
       }
     }
@@ -57,25 +56,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     mounted.current = true;
+    
+    // 1. Inicializa App
+    initializeAuth();
 
-    const bootstrap = async () => {
-      // OTIMIZAÇÃO DE VELOCIDADE:
-      // Aguarda o Supabase ler o token do LocalStorage ANTES de chamar o RPC.
-      // Isso evita que o RPC rode como "Visitante" e depois rode de novo como "Admin".
-      await supabase.auth.getSession(); 
-      
-      if (mounted.current) {
-        await initializeApp();
-      }
-    };
-
-    bootstrap();
-
-    // Listener para eventos futuros (Login/Logout manual)
+    // 2. Ouve mudanças de login/logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      // Ignora INITIAL_SESSION pois o 'bootstrap' acima já cuida disso mais rápido
+      // Apenas recarrega dados se houver mudança real de sessão
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        await initializeApp();
+        await initializeAuth();
       }
     });
 
@@ -88,13 +77,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
+    // Login padrão do Supabase
     const result = await userService.authenticate(email, password);
     
     if (!result.success) {
       setState(prev => ({ ...prev, isLoading: false, error: result.error }));
       return result;
     }
-    // O onAuthStateChange (SIGNED_IN) dispara o initializeApp automaticamente
+    
+    // Se o login funcionar, o 'onAuthStateChange' acima vai disparar o initializeAuth() automaticamente
     return { success: true };
   };
 
@@ -102,18 +93,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await userService.logout();
-      window.location.href = '/'; // Hard refresh para limpar cache de memória
+      // O redirecionamento é bom para limpar estados de memória
+      window.location.href = '/'; 
     } catch (error) {
        console.error("Erro ao sair", error);
        setState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
+  // Permite recarregar manualmente se necessário
   const refreshProfile = async () => {
-    await initializeApp();
+    await initializeAuth();
   };
 
-  const contextValue = useMemo(() => ({
+  const value = useMemo(() => ({
     ...state,
     login,
     logout,
@@ -121,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }), [state]);
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
