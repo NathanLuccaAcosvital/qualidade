@@ -10,7 +10,7 @@ import './lib/i18n.ts';
 const GlobalSuspenseFallback = () => (
   <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#081437]">
     <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
-    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[4px]">Iniciando Portal Aços Vital</p> {/* Mensagem mais descritiva */}
+    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[4px]">Preparando o Portal da Qualidade Aços Vital</p>
   </div>
 );
 

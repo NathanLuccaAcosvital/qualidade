@@ -38,15 +38,12 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('[Critical System Error]', error, errorInfo);
   }
 
-  // Fix: Convert to arrow function to correctly bind 'this'
   private handleReset = () => {
     this.setState({ hasError: false });
     window.location.reload();
   };
 
   public render(): ReactNode {
-    // Fix: 'this.props' is correctly inferred when 'this' context is properly bound for class methods.
-    // By making handleReset an arrow function, we ensure the correct 'this' context for the class.
     if (!this.state.hasError) return this.props.children;
 
     return (

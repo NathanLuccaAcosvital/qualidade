@@ -21,7 +21,7 @@ const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage.tsx'));
 /**
  * Loader minimalista para transições de módulos
  */
-const PageLoader = ({ message = "Sincronizando" }: { message?: string }) => (
+const PageLoader = ({ message = "Carregando..." }: { message?: string }) => (
   <div className="h-screen w-screen bg-white flex flex-col items-center justify-center text-[#081437]">
       <Loader2 size={32} className="animate-spin text-blue-500 mb-6" />
       <p className="text-[10px] font-black text-slate-400 tracking-[6px] uppercase animate-pulse">{message}</p>
@@ -38,12 +38,12 @@ const RootRedirect = () => {
         if (authError) {
           console.error("Erro no AuthContext:", authError);
           // Podemos renderizar uma tela de erro específica aqui ou redirecionar para login com uma mensagem
-          return <PageLoader message={`Erro de inicialização: ${authError}`} />;
+          return <PageLoader message={`Houve um problema ao iniciar: ${authError}`} />;
         }
 
         if (!user) return <ClientLoginPage />; // Se não há usuário, mostra o login de cliente
 
-        if (!systemStatus) return <PageLoader message="Verificando Gateway Seguro" />; // Aguarda o status do sistema
+        if (!systemStatus) return <PageLoader message="Verificando a segurança do sistema" />; // Aguarda o status do sistema
 
         const role = normalizeRole(user.role);
         const roleRoutes: Record<UserRole, string> = {
@@ -60,14 +60,14 @@ export const AppRoutes: React.FC = () => {
   const { user, isLoading, error: authError } = useAuth();
   
   // Durante o carregamento inicial da sessão, mostramos um estado neutro 
-  if (isLoading) return <PageLoader message="Sincronizando Acesso Vital" />;
+  if (isLoading) return <PageLoader message="Conectando ao sistema Vital" />;
 
   // Se houver um erro crítico no AuthContext após o carregamento, mostre-o
-  if (authError) return <PageLoader message={`Erro Crítico: ${authError}`} />;
+  if (authError) return <PageLoader message={`Ocorreu um erro grave: ${authError}`} />;
 
 
   return (
-    <Suspense fallback={<PageLoader message="Carregando Componentes Essenciais" />}>
+    <Suspense fallback={<PageLoader message="Finalizando carregamento" />}>
       <Routes>
         {/* A PRIMEIRA PÁGINA: Login do Cliente na Raiz */}
         <Route path="/" element={user ? <RootRedirect /> : <ClientLoginPage />} />
