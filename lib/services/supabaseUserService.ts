@@ -1,4 +1,3 @@
-
 import { User, UserRole, AccountStatus } from '../../types/auth.ts';
 import { IUserService, RawProfile } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
@@ -9,7 +8,7 @@ import { withTimeout } from '../utils/apiUtils.ts'; // Import withTimeout
 import { AuthError, Session, UserResponse, PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js';
 
 
-const API_TIMEOUT = 15000; // Definido localmente
+const API_TIMEOUT = 30000; // Definido localmente (Aumentado para 30 segundos)
 
 /**
  * Mapper: Database Row (Profiles) -> Domain User (App)

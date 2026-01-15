@@ -1,4 +1,3 @@
-
 import { IAdminService, AdminStatsData, PaginatedResponse, RawClientOrganization } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
 import { SystemStatus, MaintenanceEvent } from '../../types/system.ts';
@@ -9,7 +8,7 @@ import { withTimeout } from '../utils/apiUtils.ts'; // Import withTimeout
 // Fix: Import necessary Supabase types for explicit typing
 import { PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
 
-const API_TIMEOUT = 15000; // Definido localmente
+const API_TIMEOUT = 30000; // Definido localmente (Aumentado para 30 segundos)
 
 /**
  * Implementação Supabase para Gestão Administrativa.

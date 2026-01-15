@@ -7,7 +7,7 @@ import { withTimeout } from '../lib/utils/apiUtils.ts'; // Import withTimeout
 // Fix: Import necessary Supabase types for explicit typing
 import { AuthError, Session } from '@supabase/supabase-js';
 
-const API_TIMEOUT = 15000; // Definido localmente
+const API_TIMEOUT = 30000; // Definido localmente (Aumentado para 30 segundos)
 
 interface AuthState {
   user: User | null;
