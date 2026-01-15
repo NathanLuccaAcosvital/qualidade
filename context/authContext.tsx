@@ -52,11 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("[AuthContext] Erro Crítico na inicialização:", error);
       if (mounted.current) {
+        // Fix: Explicitly cast the systemStatus object to SystemStatus to prevent type widening.
         setState(s => ({ 
           ...s, 
           isLoading: false, 
           isInitialSyncComplete: true, // Marca como concluído mesmo em erro para permitir UI de retry
-          error: "Erro de conexão inicial. Tente novamente." // Mensagem mais amigável
+          error: "Erro de conexão inicial. Tente novamente.", // Mensagem mais amigável
+          systemStatus: { mode: 'ONLINE', message: 'Falha ao carregar status inicial do sistema.' } as SystemStatus
         }));
       }
     }
