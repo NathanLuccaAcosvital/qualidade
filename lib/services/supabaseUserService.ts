@@ -13,8 +13,8 @@ const API_TIMEOUT = 30000; // Definido localmente (Aumentado para 30 segundos)
 /**
  * Mapper: Database Row (Profiles) -> Domain User (App)
  */
-const toDomainUser = (row: RawProfile, sessionEmail?: string): User => { // Fix: Use RawProfile for input row
-  if (!row) return null as any;
+const toDomainUser = (row: RawProfile | null, sessionEmail?: string): User | null => { // Fix: Use RawProfile for input row and allow null return
+  if (!row) return null;
   
   // Trata organizações vindo como objeto ou array (comum no Supabase)
   const orgData = Array.isArray(row.organizations) ? row.organizations[0] : row.organizations;
@@ -110,7 +110,7 @@ export const SupabaseUserService: IUserService = {
       // Fix: Explicitly destructure result to correctly infer types from withTimeout
       const sessionResult: { data: { session: Session | null }; error: AuthError | null } = await withTimeout( 
         supabase.auth.getSession(),
-        API_TIMEOUT / 2, // Menor tempo para getSession
+        API_TIMEOUT, // Usar API_TIMEOUT completo aqui
         "Tempo esgotado ao buscar sessão de usuário."
       );
       const { data: { session } } = sessionResult;
@@ -141,7 +141,7 @@ export const SupabaseUserService: IUserService = {
         // Fix: Explicitly destructure result to correctly infer types from withTimeout
         const basicProfileFetchResult: PostgrestSingleResponse<RawProfile> = await withTimeout( 
           basicProfileQuery,
-          API_TIMEOUT / 2, // Menor tempo para perfil básico
+          API_TIMEOUT, // Usar API_TIMEOUT completo aqui
           "Tempo esgotado ao buscar perfil básico."
         );
         const { data: basicProfile } = basicProfileFetchResult;
@@ -184,7 +184,7 @@ export const SupabaseUserService: IUserService = {
     );
     const { data, error } = result; // Fix: Destructure data and error
     if (error) throw error;
-    return (data || []).map(p => toDomainUser(p));
+    return (data || []).map(p => toDomainUser(p) as User); // Fix: Cast to User[] after mapping
   },
 
   getUsersByRole: async (role) => {
@@ -200,7 +200,7 @@ export const SupabaseUserService: IUserService = {
     );
     const { data, error } = result; // Fix: Destructure data and error
     if (error) throw error;
-    return (data || []).map(p => toDomainUser(p));
+    return (data || []).map(p => toDomainUser(p) as User); // Fix: Cast to User[] after mapping
   },
 
   saveUser: async (u) => {

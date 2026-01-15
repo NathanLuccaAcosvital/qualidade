@@ -2,45 +2,41 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { supabase } from '../lib/supabaseClient.ts';
 import { userService, adminService } from '../lib/services/index.ts';
 import { User, UserRole, normalizeRole, SystemStatus } from '../types/index.ts';
-import { withTimeout } from '../lib/utils/apiUtils.ts'; // Import withTimeout
-// import { config } from '../lib/config.ts'; // Removido
-// Fix: Import necessary Supabase types for explicit typing
+import { withTimeout } from '../lib/utils/apiUtils.ts';
 import { AuthError, Session } from '@supabase/supabase-js';
 
-const API_TIMEOUT = 30000; // Definido localmente (Aumentado para 30 segundos)
+const API_TIMEOUT = 30000;
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   systemStatus: SystemStatus | null;
+  isInitialSyncComplete: boolean; // Novo estado para indicar se a primeira sincronização já ocorreu
 }
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<User | null>;
+  retryInitialSync: () => Promise<void>; // Novo método para retentar a sincronização inicial
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * AuthProvider Remasterizado
- * Gerencia a sessão do Supabase e sincroniza o perfil do usuário (Profiles).
- */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
     user: null,
     isLoading: true,
     error: null,
     systemStatus: null,
+    isInitialSyncComplete: false, // Inicialmente falso
   });
 
   const initialized = useRef(false);
 
   const syncUserProfile = useCallback(async () => {
     try {
-      // Aplicar timeout às chamadas de serviço para prevenir hangs
       const [currentUser, sysStatus] = await Promise.all([
         withTimeout(userService.getCurrentUser(), API_TIMEOUT, "Falha ao carregar perfil: tempo esgotado."),
         withTimeout(adminService.getSystemStatus(), API_TIMEOUT, "Falha ao carregar status do sistema: tempo esgotado."),
@@ -61,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return currentUser;
     } catch (error: any) {
       console.error("[AuthContext] Erro na Sincronização:", error);
+      // Não rejeta, mas atualiza o estado com o erro para permitir retry na UI
       setState(prev => ({ 
         ...prev, 
         user: null, 
@@ -72,47 +69,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const initAuth = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoading: true, error: null })); // Reset error on init
+    try {
+      const result: { data: { session: Session | null }; error: AuthError | null } = await withTimeout( 
+        supabase.auth.getSession(), 
+        API_TIMEOUT, // Usar API_TIMEOUT completo aqui
+        "Tempo esgotado ao verificar sessão."
+      );
+      const { data, error } = result;
+
+      if (error) throw error; // Handle potential error from getSession
+      
+      if (data.session) {
+        await syncUserProfile();
+      } else {
+        const sysStatus = await withTimeout(
+          adminService.getSystemStatus(), 
+          API_TIMEOUT, 
+          "Falha ao carregar status do sistema (sem sessão): tempo esgotado."
+        );
+        setState(prev => ({ ...prev, isLoading: false, systemStatus: sysStatus, user: null }));
+      }
+    } catch (error: any) {
+      console.error("[AuthContext] Erro na inicialização do Auth:", error);
+      setState(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        user: null, 
+        error: error.message || "Falha crítica na inicialização.", 
+        systemStatus: null 
+      }));
+    } finally {
+      setState(prev => ({ ...prev, isInitialSyncComplete: true })); // Sinaliza que a tentativa inicial foi concluída
+    }
+  }, [syncUserProfile]);
+
+  const retryInitialSync = useCallback(async () => {
+    initialized.current = false; // Permite re-executar o useEffect da inicialização
+    await initAuth();
+  }, [initAuth]);
+
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-
-    const initAuth = async () => {
-      setState(prev => ({ ...prev, isLoading: true, error: null })); // Reset error on init
-      try {
-        // Fix: Explicitly destructure `result` to correctly infer types from `withTimeout`
-        // Fix: Added explicit type for result from withTimeout(supabase.auth.getSession())
-        const result: { data: { session: Session | null }; error: AuthError | null } = await withTimeout( 
-          supabase.auth.getSession(), 
-          API_TIMEOUT / 2, 
-          "Tempo esgotado ao verificar sessão."
-        );
-        const { data, error } = result;
-
-        if (error) throw error; // Handle potential error from getSession
-        
-        if (data.session) {
-          await syncUserProfile();
-        } else {
-          // Mesmo sem sessão, tenta obter o status do sistema, mas com timeout
-          const sysStatus = await withTimeout(
-            adminService.getSystemStatus(), 
-            API_TIMEOUT, 
-            "Falha ao carregar status do sistema (sem sessão): tempo esgotado."
-          );
-          setState(prev => ({ ...prev, isLoading: false, systemStatus: sysStatus }));
-        }
-      } catch (error: any) {
-        console.error("[AuthContext] Erro na inicialização do Auth:", error);
-        setState(prev => ({ 
-          ...prev, 
-          isLoading: false, 
-          user: null, 
-          error: error.message || "Falha crítica na inicialização.", 
-          systemStatus: null 
-        }));
-      }
-    };
-
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -120,21 +120,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session) await syncUserProfile();
       } else if (event === 'SIGNED_OUT') {
         try {
-          const sysStatus = await withTimeout( // Timeout para obter status após logout
+          const sysStatus = await withTimeout( 
             adminService.getSystemStatus(), 
             API_TIMEOUT, 
             "Falha ao carregar status do sistema (após logout): tempo esgotado."
           );
-          setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus });
+          // Fix: Set isInitialSyncComplete to true on SIGNED_OUT
+          setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus, isInitialSyncComplete: true });
         } catch (error: any) {
           console.error("[AuthContext] Erro ao carregar status do sistema após logout:", error);
-          setState({ user: null, isLoading: false, error: error.message, systemStatus: null });
+          // Fix: Set isInitialSyncComplete to true on SIGNED_OUT error
+          setState({ user: null, isLoading: false, error: error.message, systemStatus: null, isInitialSyncComplete: true });
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [syncUserProfile]);
+  }, [initAuth, syncUserProfile]);
 
   const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -159,15 +161,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await userService.logout();
     } finally {
       try {
-        const sysStatus = await withTimeout( // Timeout para obter status após logout
+        const sysStatus = await withTimeout( 
           adminService.getSystemStatus(), 
           API_TIMEOUT, 
           "Falha ao carregar status do sistema (após logout): tempo esgotado."
         );
-        setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus });
+        setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus, isInitialSyncComplete: true });
       } catch (error: any) {
         console.error("[AuthContext] Erro ao carregar status do sistema após logout:", error);
-        setState({ user: null, isLoading: false, error: error.message, systemStatus: null });
+        setState({ user: null, isLoading: false, error: error.message, systemStatus: null, isInitialSyncComplete: true });
       }
       window.location.hash = '#/login';
     }
@@ -177,8 +179,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ...state,
     login,
     logout,
-    refreshProfile: syncUserProfile
-  }), [state, syncUserProfile]);
+    refreshProfile: syncUserProfile,
+    retryInitialSync // Expondo o novo método
+  }), [state, syncUserProfile, retryInitialSync]);
 
   return (
     <AuthContext.Provider value={contextValue}>
