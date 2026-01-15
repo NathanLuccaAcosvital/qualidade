@@ -5,43 +5,41 @@ import { adminService } from '../lib/services/index.ts';
 import { UserRole, SystemStatus, normalizeRole } from '../types/index.ts';
 import { MaintenanceScreen } from '../components/common/MaintenanceScreen.tsx';
 
-/**
- * Middleware de Controle de Disponibilidade do Sistema.
- * Otimizado para não causar flicker com o Auth.
- */
 export const MaintenanceMiddleware: React.FC = () => {
   const { user, isLoading: authLoading, systemStatus: initialSystemStatusFromAuth } = useAuth();
   
-  // Local state para segurar o status do sistema "ao vivo", inicializado do AuthContext
+  // Local state para status "ao vivo"
   const [liveSystemStatus, setLiveSystemStatus] = useState<SystemStatus | null>(initialSystemStatusFromAuth);
 
-  // Sincroniza o estado local `liveSystemStatus` com o `initialSystemStatusFromAuth` do AuthContext
-  // Isso garante que `liveSystemStatus` esteja sempre atualizado com o valor mais recente do AuthContext
+  // 1. Sincroniza estado inicial (Apenas quando o Auth termina de carregar)
   useEffect(() => {
     setLiveSystemStatus(initialSystemStatusFromAuth);
   }, [initialSystemStatusFromAuth]);
 
-  // Efeito para se inscrever em atualizações em tempo real do status do sistema
+  // 2. Inscrição Realtime (CORRIGIDO: Sem dependência cíclica)
   useEffect(() => {
-    // Apenas se inscreve se houver um status inicial do AuthContext (indicando que ele carregou)
     if (initialSystemStatusFromAuth) {
+      // Inscreve apenas se já temos um status inicial válido
       const unsubscribe = adminService.subscribeToSystemStatus(setLiveSystemStatus);
-      return () => unsubscribe();
+      return () => {
+        unsubscribe();
+      };
+    } else {
+       // Se não tem status inicial (ex: logout), limpa o local
+       setLiveSystemStatus(null);
     }
-    // Se initialSystemStatusFromAuth for null (ex: após logout), reseta o status local
-    if (!initialSystemStatusFromAuth && liveSystemStatus) {
-      setLiveSystemStatus(null);
-    }
-  }, [initialSystemStatusFromAuth, liveSystemStatus]); // Adicionado liveSystemStatus para dependências para resetar no logout se necessário
+    // IMPORTANTE: 'liveSystemStatus' REMOVIDO DAQUI para evitar loop infinito
+  }, [initialSystemStatusFromAuth]); 
 
   const handleRetry = useCallback(async () => {
-    // Força uma nova busca do status e atualiza o estado local
-    const s = await adminService.getSystemStatus();
-    setLiveSystemStatus(s);
+    try {
+      const s = await adminService.getSystemStatus();
+      setLiveSystemStatus(s);
+    } catch (error) {
+      console.error("Erro ao reconectar:", error);
+    }
   }, []);
 
-  // Se o Auth ainda está carregando ou o status do sistema "ao vivo" ainda não foi determinado,
-  // retorna null para permitir que o AuthProvider gerencie o splash screen único.
   if (authLoading || !liveSystemStatus) return null;
 
   const isAuthorizedToBypass = user && normalizeRole(user.role) === UserRole.ADMIN;
