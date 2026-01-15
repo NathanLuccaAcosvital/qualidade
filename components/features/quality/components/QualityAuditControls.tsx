@@ -13,11 +13,11 @@ interface AuditToolbarProps {
 export const AuditLogToolbar: React.FC<AuditToolbarProps> = ({ search, onSearchChange, severity, onSeverityChange, t }) => (
   <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col xl:flex-row justify-between items-center gap-4">
     <div className="relative w-full max-w-xl group">
-      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={18} />
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--color-detail-blue)]" size={18} />
       <input
         type="text"
         placeholder={t('quality.allActivities')}
-        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all font-medium"
+        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-[var(--color-detail-blue)]/10 focus:bg-white transition-all font-medium"
         value={search}
         onChange={e => onSearchChange(e.target.value)}
       />

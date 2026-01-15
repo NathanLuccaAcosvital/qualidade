@@ -19,7 +19,7 @@ export const InvestigationModal: React.FC<InvestigationModalProps> = ({ isOpen, 
       <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col">
         <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-100 text-blue-600 rounded-2xl shadow-sm"><Eye size={22}/></div>
+            <div className="p-2.5 bg-blue-100 text-[var(--color-detail-blue)] rounded-2xl shadow-sm"><Eye size={22}/></div>
             <div>
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Investigação Técnica</h3>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Log ID: {log.id.split('-')[0]}</p>
@@ -36,9 +36,9 @@ export const InvestigationModal: React.FC<InvestigationModalProps> = ({ isOpen, 
             <LogInfo label="Estampa de Tempo" value={new Date(log.timestamp).toLocaleString()} />
           </div>
 
-          <div className="p-5 bg-slate-900 rounded-3xl relative overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-blue-400"><Info size={40} /></div>
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-[3px] mb-4">Payload de Auditoria</p>
+          <div className="p-5 bg-[var(--color-primary-dark-blue)] rounded-3xl relative overflow-hidden shadow-xl">
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-[var(--color-detail-blue)]"><Info size={40} /></div>
+            <p className="text-[10px] font-black text-[var(--color-detail-blue)] uppercase tracking-[3px] mb-4">Payload de Auditoria</p>
             <pre className="text-[11px] text-slate-300 font-mono overflow-x-auto custom-scrollbar leading-relaxed">
               {JSON.stringify(log.metadata, null, 2)}
             </pre>

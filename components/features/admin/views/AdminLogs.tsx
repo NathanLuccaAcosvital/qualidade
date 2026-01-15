@@ -49,11 +49,11 @@ export const AdminLogs: React.FC = () => {
 const LogsToolbar = ({ searchTerm, onSearchChange, severityFilter, onSeverityChange, t }: any) => (
   <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border border-slate-200 p-4 flex flex-col md:flex-row justify-between items-center gap-4 rounded-2xl shadow-sm">
     <div className="relative group w-full md:w-auto flex-1 max-w-lg">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors" size={16} />
       <input 
         type="text" 
         placeholder="Pesquisar por usuário, ação ou IP..." 
-        className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-blue-500/20" 
+        className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-[var(--color-detail-blue)]/20" 
         value={searchTerm} 
         onChange={e => onSearchChange(e.target.value)} 
       />
@@ -83,7 +83,7 @@ const LogInvestigationModal = ({ isOpen, onClose, data, t }: { isOpen: boolean, 
       <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col">
         <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><Eye size={20}/></div>
+            <div className="p-2 bg-blue-100 text-[var(--color-detail-blue)] rounded-xl"><Eye size={20}/></div>
             <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Investigação Forense</h3>
           </div>
           <button onClick={onClose} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400"><X size={24}/></button>
@@ -106,7 +106,7 @@ const LogInvestigationModal = ({ isOpen, onClose, data, t }: { isOpen: boolean, 
 
           <div className="space-y-2">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payload de Metadados</p>
-            <pre className="bg-slate-900 p-5 rounded-2xl text-[10px] overflow-x-auto text-blue-400 shadow-inner">
+            <pre className="bg-slate-900 p-5 rounded-2xl text-[10px] overflow-x-auto text-[var(--color-detail-blue)] shadow-inner">
               {JSON.stringify(log.metadata, null, 2)}
             </pre>
           </div>
@@ -125,7 +125,7 @@ const InfoBlock = ({ label, value }: { label: string, value: string }) => (
 
 const LoadingLogsState = ({ t }: any) => (
   <div className="flex flex-col items-center justify-center h-64 bg-white rounded-3xl border border-slate-200 shadow-inner" role="status">
-    <Loader2 size={40} className="animate-spin text-blue-500" aria-hidden="true" />
+    <Loader2 size={40} className="animate-spin text-[var(--color-detail-blue)]" aria-hidden="true" />
     <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-[4px]">{t('common.loading')}</p>
   </div>
 );

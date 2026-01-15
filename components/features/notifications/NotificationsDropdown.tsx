@@ -105,7 +105,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ is
     >
       <header className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 text-blue-600 rounded-xl shadow-sm"><Bell size={18} /></div>
+          <div className="p-2 bg-blue-100 text-[var(--color-detail-blue)] rounded-xl shadow-sm"><Bell size={18} /></div>
           <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">{t('notifications.title')}</h3>
         </div>
         <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400" aria-label={t('common.close')}>
@@ -115,7 +115,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ is
 
       {isLoading ? (
         <div className="p-8 text-center text-slate-400">
-          <Loader2 size={24} className="animate-spin mx-auto mb-3 text-blue-500" />
+          <Loader2 size={24} className="animate-spin mx-auto mb-3 text-[var(--color-detail-blue)]" />
           <p className="text-xs font-black uppercase tracking-widest">{t('notifications.loading')}</p>
         </div>
       ) : (
@@ -137,7 +137,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ is
         <footer className="p-3 border-t border-slate-100 bg-slate-50/50 flex justify-end">
           <button 
             onClick={markAllAsRead} 
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all shadow-md active:scale-95"
+            className="px-5 py-2 bg-[var(--color-detail-blue)] hover:bg-blue-700 text-white rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all shadow-md active:scale-95"
           >
             {t('notifications.markAllAsRead')}
           </button>
@@ -187,7 +187,7 @@ const NotificationItem: React.FC<{ notification: AppNotification; onMarkAsRead: 
       {!notification.isRead && (
         <button 
           onClick={() => onMarkAsRead(notification.id)}
-          className="absolute top-1.5 right-1.5 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+          className="absolute top-1.5 right-1.5 p-1 text-slate-400 hover:text-[var(--color-detail-blue)] hover:bg-slate-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
           title={t('notifications.markAsRead')}
           aria-label={t('notifications.markAsRead')}
         >
@@ -197,7 +197,7 @@ const NotificationItem: React.FC<{ notification: AppNotification; onMarkAsRead: 
       {notification.link && (
         <button 
           onClick={navigateToLink}
-          className="ml-auto p-1 text-blue-600 hover:text-blue-800 rounded-full transition-colors"
+          className="ml-auto p-1 text-[var(--color-detail-blue)] hover:text-blue-800 rounded-full transition-colors"
           title="Ver Detalhes"
           aria-label="Ver Detalhes"
         >

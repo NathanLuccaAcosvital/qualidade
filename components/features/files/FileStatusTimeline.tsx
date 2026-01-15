@@ -57,7 +57,7 @@ const buildTimelineEvents = (file: FileNode, t: any): TimelineEvent[] => {
     date: file.updatedAt,
     user: t('common.na'),
     icon: Clock,
-    color: 'text-blue-500',
+    color: 'text-[var(--color-detail-blue)]',
     bg: 'bg-blue-50'
   });
 

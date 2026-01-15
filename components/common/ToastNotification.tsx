@@ -42,7 +42,7 @@ const TOAST_VARIANTS: Record<ToastType, any> = {
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     border: 'border-blue-200',
-    progress: 'bg-blue-500',
+    progress: 'bg-[var(--color-detail-blue)]', // Usar a variável para o progresso do info
   },
 };
 

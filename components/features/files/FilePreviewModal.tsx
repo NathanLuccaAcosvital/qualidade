@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Download, ExternalLink, Loader2, FileText, AlertCircle, LucideIcon, ChevronLeft, ChevronRight, Info, Calendar, User, HardDrive, Maximize2, Minimize2 } from 'lucide-react';
 import { FileNode, FileType } from '../../../types/index.ts';
@@ -205,7 +206,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ initialFile,
 
 const LoadingOverlay: React.FC<{ label: string }> = ({ label }) => (
   <div className="flex flex-col items-center gap-3 text-white animate-in fade-in">
-    <Loader2 size={40} className="animate-spin text-blue-400" />
+    <Loader2 size={40} className="animate-spin text-[var(--color-detail-blue)]" />
     <p className="text-xs font-black uppercase tracking-[4px]">{label}</p>
   </div>
 );
@@ -238,7 +239,7 @@ const ErrorOverlay: React.FC<ErrorOverlayProps> = ({ message, subtext, onRetry, 
 
 const MetadataSidebar: React.FC<{ file: FileNode; t: any }> = ({ file, t }) => (
   <aside className="w-80 shrink-0 bg-white/10 backdrop-blur-xl border-l border-white/20 p-6 space-y-6 text-white text-sm">
-    <h3 id="file-preview-title" className="text-xl font-bold mb-4 tracking-tight leading-none text-blue-200">{file.name}</h3>
+    <h3 id="file-preview-title" className="text-xl font-bold mb-4 tracking-tight leading-none text-[var(--color-detail-blue)]">{file.name}</h3>
 
     <MetadataItem icon={FileText} label="Tipo" value={file.mimeType || 'N/A'} />
     <MetadataItem icon={HardDrive} label="Tamanho" value={file.size || 'N/A'} />
@@ -270,7 +271,7 @@ const MetadataSidebar: React.FC<{ file: FileNode; t: any }> = ({ file, t }) => (
 
 const MetadataItem: React.FC<{ icon: LucideIcon; label: string; value: string }> = ({ icon: Icon, label, value }) => (
   <div className="flex items-center gap-3">
-    <Icon size={16} className="text-blue-300 shrink-0" />
+    <Icon size={16} className="text-[var(--color-detail-blue)] shrink-0" />
     <div className="flex-1">
       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">{label}</p>
       <p className="font-medium text-white break-words">{value}</p>

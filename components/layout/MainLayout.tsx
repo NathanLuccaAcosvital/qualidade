@@ -80,21 +80,4 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px]">{t('login.monitoring')}</span>
               </div>
-              <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px]">
-                © 2026 {t('menu.brand').toUpperCase()}
-              </div>
-          </footer>
-        </main>
-
-        <MobileNavigation 
-          user={user}
-          userRole={role}
-          isMenuOpen={layout.mobileMenuOpen}
-          onCloseMenu={layout.closeMobileMenu}
-          onLogout={logout}
-          onNavigateToSettings={handleNavigateToSettingsPage} 
-        />
-      </div>
-    </div>
-  );
-};
+              <div className="text-[10

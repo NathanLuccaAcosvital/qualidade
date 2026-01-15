@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Folder, FileText, ChevronRight, CheckSquare, Square, Download, Trash2, Edit2, MoreVertical } from 'lucide-react';
 import { FileNode, FileType, UserRole } from '../../../../types/index.ts';
@@ -43,22 +44,22 @@ export const FileListView: React.FC<FileViewProps> = ({
             onDoubleClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
           >
             <button 
-              className="p-1 mr-2 text-slate-400 hover:text-blue-600 transition-colors shrink-0"
+              className="p-1 mr-2 text-slate-400 hover:text-[var(--color-detail-blue)] transition-colors shrink-0"
               onClick={(e) => { e.stopPropagation(); onToggleFileSelection(file.id); }}
               aria-label={t('files.selectItem', { name: file.name })}
             >
-              <IconComponent size={18} className={isSelected ? 'text-blue-600' : 'text-slate-400'} />
+              <IconComponent size={18} className={isSelected ? 'text-[var(--color-detail-blue)]' : 'text-slate-400'} />
             </button>
 
             <div 
               className="flex-1 flex items-center gap-3 min-w-0"
               onClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
             >
-              <div className={`w-9 h-9 rounded-md shrink-0 flex items-center justify-center shadow-sm ${file.type === FileType.FOLDER ? 'bg-blue-50 text-blue-500' : 'bg-red-50 text-red-500'}`}>
+              <div className={`w-9 h-9 rounded-md shrink-0 flex items-center justify-center shadow-sm ${file.type === FileType.FOLDER ? 'bg-blue-50 text-[var(--color-detail-blue)]' : 'bg-red-50 text-red-500'}`}>
                 {file.type === FileType.FOLDER ? <Folder size={18} /> : <FileText size={18} />}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-700 group-hover:text-blue-600 transition-colors truncate">{file.name}</p>
+                <p className="text-xs font-semibold text-slate-700 group-hover:text-[var(--color-detail-blue)] transition-colors truncate">{file.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-[10px] text-slate-400 font-mono">{file.size || '--'}</span>
                   {file.type !== FileType.FOLDER && <FileStatusBadge status={file.metadata?.status} />}
@@ -108,21 +109,21 @@ export const FileGridView: React.FC<FileViewProps> = ({
             onDoubleClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
           >
             <button 
-              className="absolute top-2 left-2 p-1 text-slate-400 hover:text-blue-600 z-10 transition-colors"
+              className="absolute top-2 left-2 p-1 text-slate-400 hover:text-[var(--color-detail-blue)] z-10 transition-colors"
               onClick={(e) => { e.stopPropagation(); onToggleFileSelection(file.id); }}
               aria-label={t('files.selectItem', { name: file.name })}
             >
-              <IconComponent size={20} className={isSelected ? 'text-blue-600' : 'text-slate-400'} />
+              <IconComponent size={20} className={isSelected ? 'text-[var(--color-detail-blue)]' : 'text-slate-400'} />
             </button>
 
             <div 
               className="flex flex-col items-center flex-1 w-full pt-4" // Added pt-4 to account for checkbox
               onClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
             >
-              <div className={`w-16 h-16 mb-3 flex items-center justify-center rounded-2xl shadow-sm transition-all group-hover:scale-110 ${file.type === FileType.FOLDER ? 'bg-blue-50 text-blue-500' : 'bg-red-50 text-red-500'}`}>
+              <div className={`w-16 h-16 mb-3 flex items-center justify-center rounded-2xl shadow-sm transition-all group-hover:scale-110 ${file.type === FileType.FOLDER ? 'bg-blue-50 text-[var(--color-detail-blue)]' : 'bg-red-50 text-red-500'}`}>
                 {file.type === FileType.FOLDER ? <Folder size={32} /> : <FileText size={32} />}
               </div>
-              <p className="text-sm font-semibold text-slate-700 line-clamp-2 leading-tight group-hover:text-blue-600">{file.name}</p>
+              <p className="text-sm font-semibold text-slate-700 line-clamp-2 leading-tight group-hover:text-[var(--color-detail-blue)]">{file.name}</p>
               {file.type !== FileType.FOLDER && (
                 <div className="mt-2 scale-75">
                   <FileStatusBadge status={file.metadata?.status} />

@@ -64,11 +64,11 @@ const ClientRow: React.FC<{ client: ClientOrganization; onSelect: () => void }> 
   <tr className="hover:bg-slate-50/80 transition-colors group cursor-pointer" onClick={onSelect}>
     <td className="px-6 py-4">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100 shadow-sm">
+        <div className="w-10 h-10 rounded-xl bg-blue-50 text-[var(--color-detail-blue)] flex items-center justify-center font-bold border border-blue-100 shadow-sm">
             {client.name?.[0] || '?'}
         </div>
         <div>
-          <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{client.name}</p>
+          <p className="text-sm font-bold text-slate-800 group-hover:text-[var(--color-detail-blue)] transition-colors">{client.name}</p>
           <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{client.cnpj}</p>
         </div>
       </div>
@@ -88,7 +88,7 @@ const ClientRow: React.FC<{ client: ClientOrganization; onSelect: () => void }> 
       </div>
     </td>
     <td className="px-6 py-4 text-right">
-      <button className="p-2 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all">
+      <button className="p-2 text-slate-300 group-hover:text-[var(--color-detail-blue)] group-hover:translate-x-1 transition-all">
         <ChevronRight size={18} />
       </button>
     </td>
@@ -98,14 +98,14 @@ const ClientRow: React.FC<{ client: ClientOrganization; onSelect: () => void }> 
 const ClientCard: React.FC<{ client: ClientOrganization; onSelect: () => void }> = ({ client, onSelect }) => (
   <div 
     onClick={onSelect} 
-    className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-2xl hover:border-blue-500 transition-all cursor-pointer group relative overflow-hidden"
+    className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-2xl hover:border-[var(--color-detail-blue)] transition-all cursor-pointer group relative overflow-hidden"
   >
     <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-50 transition-colors" />
     <div className="relative z-10">
-      <div className="w-14 h-14 rounded-2xl bg-[#081437] text-white flex items-center justify-center text-xl font-black mb-6 shadow-xl shadow-slate-900/20 group-hover:scale-110 transition-transform">
+      <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary-dark-blue)] text-white flex items-center justify-center text-xl font-black mb-6 shadow-xl shadow-[var(--color-primary-dark-blue)]/20 group-hover:scale-110 transition-transform">
         {client.name?.[0] || '?'}
       </div>
-      <h4 className="text-lg font-black text-[#081437] leading-tight mb-1">{client.name}</h4>
+      <h4 className="text-lg font-black text-[var(--color-primary-dark-blue)] leading-tight mb-1">{client.name}</h4>
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-6">CNPJ: {client.cnpj}</p>
       
       <div className="flex items-center justify-between pt-6 border-t border-slate-100">
@@ -115,7 +115,7 @@ const ClientCard: React.FC<{ client: ClientOrganization; onSelect: () => void }>
             {client.pendingDocs || 0} Arquivos
           </p>
         </div>
-        <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+        <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-[var(--color-detail-blue)] group-hover:text-white transition-all shadow-sm">
           <ChevronRight size={18} />
         </div>
       </div>
@@ -137,7 +137,7 @@ const StatusBadge: React.FC<{ count: number }> = ({ count }) => {
 
 const LoadingPortfolio = () => (
   <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 animate-pulse">
-    <Loader2 size={40} className="text-blue-500 animate-spin mb-4" />
+    <Loader2 size={40} className="text-[var(--color-detail-blue)] animate-spin mb-4" />
     <p className="text-xs font-black uppercase tracking-[4px] text-slate-400">Varrendo Portfólio Industrial...</p>
   </div>
 );
@@ -147,7 +147,7 @@ const LoadMoreButton: React.FC<{ loading: boolean; onClick: () => void }> = ({ l
     <button 
         onClick={(e) => { e.stopPropagation(); onClick(); }} 
         disabled={loading} 
-        className="px-6 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all disabled:opacity-50 shadow-sm"
+        className="px-6 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-[var(--color-detail-blue)] hover:border-blue-200 transition-all disabled:opacity-50 shadow-sm"
     >
       {loading ? "Sincronizando..." : "Carregar Mais Clientes"}
     </button>

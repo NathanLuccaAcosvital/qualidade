@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AlertOctagon, RefreshCw, Phone } from 'lucide-react';
 // Fix: Updated import path for 'types' module to explicitly include '/index'
@@ -17,12 +18,12 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ status, on
         : t('maintenance.soon');
 
     return (
-        <div className="h-screen w-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black opacity-80 pointer-events-none" aria-hidden="true"></div>
+        <div className="h-screen w-screen bg-[var(--color-primary-dark-blue)] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 via-[var(--color-primary-dark-blue)] to-black opacity-80 pointer-events-none" aria-hidden="true"></div>
             
             <div className="relative z-10 max-w-md animate-in fade-in zoom-in-95 duration-500">
-                <div className="bg-orange-500/10 p-6 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center border-4 border-orange-500/20 shadow-2xl shadow-orange-500/10">
-                    <AlertOctagon size={64} className="text-orange-500" aria-hidden="true" />
+                <div className="bg-[var(--color-accent-orange)]/10 p-6 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center border-4 border-[var(--color-accent-orange)]/20 shadow-2xl shadow-[var(--color-accent-orange)]/10">
+                    <AlertOctagon size={64} className="text-[var(--color-accent-orange)]" aria-hidden="true" />
                 </div>
                 
                 <h1 className="text-3xl font-bold text-white mb-4 tracking-tight">{t('maintenance.title')}</h1>

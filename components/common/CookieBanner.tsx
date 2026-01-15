@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cookie, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +41,7 @@ export const CookieBanner: React.FC = () => {
       <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-[2rem] shadow-2xl max-w-5xl w-full p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-8 border border-white/10">
         
         <div className="bg-white/5 p-4 rounded-2xl shrink-0 hidden md:block border border-white/10">
-            <Cookie className="text-blue-400" size={36} />
+            <Cookie className="text-[var(--color-detail-blue)]" size={36} />
         </div>
 
         <div className="flex-1">
@@ -61,7 +62,7 @@ export const CookieBanner: React.FC = () => {
             </button>
             <button 
                 onClick={acceptConsent}
-                className="flex-1 md:flex-none px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-600/20 active:scale-95 border border-transparent"
+                className="flex-1 md:flex-none px-8 py-3.5 bg-[var(--color-detail-blue)] hover:bg-[var(--color-primary-dark-blue)] text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-[var(--color-detail-blue)]/20 active:scale-95 border border-transparent"
             >
                 {t('cookie.accept')}
             </button>

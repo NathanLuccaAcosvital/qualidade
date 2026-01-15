@@ -21,7 +21,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({ isOpen, onClose, title, childre
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
         <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
           <div className="flex items-center gap-2">
-            {Icon && <Icon size={20} className="text-blue-600" />}
+            {Icon && <Icon size={20} className="text-[var(--color-detail-blue)]" />}
             <h3 className="font-bold text-slate-800">{title}</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors" aria-label="Fechar"><X size={20}/></button>
@@ -40,11 +40,11 @@ const FormField: React.FC<{ label: string; id: string; children: React.ReactNode
 );
 
 const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input {...props} className="w-full px-4 py-2.5 rounded-lg outline-none font-semibold text-slate-900 bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white transition-all disabled:opacity-50" />
+  <input {...props} className="w-full px-4 py-2.5 rounded-lg outline-none font-semibold text-slate-900 bg-slate-50 border border-slate-300 focus:border-[var(--color-detail-blue)] focus:bg-white transition-all disabled:opacity-50" />
 );
 
 const SelectInput = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
-  <select {...props} className="w-full px-4 py-2.5 rounded-lg font-bold text-slate-900 bg-slate-50 border border-slate-300 focus:border-blue-500 transition-all" />
+  <select {...props} className="w-full px-4 py-2.5 rounded-lg font-bold text-slate-900 bg-slate-50 border border-slate-300 focus:border-[var(--color-detail-blue)] transition-all" />
 );
 
 export interface UserFormData {
@@ -143,7 +143,7 @@ export const UserModal: React.FC<UserModalProps> = ({
 
         <div className="pt-4 flex justify-end gap-3">
           <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">{t('common.cancel')}</button>
-          <button type="submit" className="px-8 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg">{t('common.save')}</button>
+          <button type="submit" className="px-8 py-2 bg-[var(--color-primary-dark-blue)] text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg">{t('common.save')}</button>
         </div>
       </form>
     </ModalFrame>
@@ -257,7 +257,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
         <div className="pt-4 flex justify-end gap-3">
           <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">{t('common.cancel')}</button>
-          <button type="submit" className="px-8 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg">{t('common.save')}</button>
+          <button type="submit" className="px-8 py-2 bg-[var(--color-primary-dark-blue)] text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg">{t('common.save')}</button>
         </div>
       </form>
     </ModalFrame>
@@ -335,7 +335,7 @@ export const ScheduleMaintenanceModal: React.FC<ScheduleMaintenanceModalProps> =
         <FormField label={t('maintenanceSchedule.customMessage')} id="m-desc">
           <textarea 
             id="m-desc"
-            className="w-full px-4 py-2.5 rounded-lg font-medium text-slate-900 bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white transition-all min-h-[100px] outline-none"
+            className="w-full px-4 py-2.5 rounded-lg font-medium text-slate-900 bg-slate-50 border border-slate-300 focus:border-[var(--color-detail-blue)] focus:bg-white transition-all min-h-[100px] outline-none"
             value={formData.description} 
             onChange={e => setFormData({...formData, description: e.target.value})} 
           />
@@ -343,7 +343,7 @@ export const ScheduleMaintenanceModal: React.FC<ScheduleMaintenanceModalProps> =
 
         <div className="pt-4 flex justify-end gap-3">
           <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">{t('common.cancel')}</button>
-          <button type="submit" disabled={isSaving} className="px-8 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
+          <button type="submit" disabled={isSaving} className="px-8 py-2 bg-[var(--color-primary-dark-blue)] text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
             {isSaving && <Loader2 size={16} className="animate-spin" />}
             {t('maintenanceSchedule.scheduleButton')}
           </button>

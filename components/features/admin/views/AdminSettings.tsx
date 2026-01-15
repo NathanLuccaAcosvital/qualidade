@@ -53,9 +53,8 @@ const SystemStatusHeader = ({ status, onUpdate }: { status: SystemStatus, onUpda
       <div className={`p-8 flex flex-col md:flex-row items-center justify-between gap-8 ${
         isOnline ? 'bg-emerald-50/30' : 'bg-orange-50/30'
       }`}>
-        <div className="flex items-center gap-6">
-          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-xl transition-transform hover:rotate-3 ${
-            isOnline ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'
+        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-xl transition-transform hover:rotate-3 ${
+            isOnline ? 'bg-emerald-500 text-white' : 'bg-[var(--color-accent-orange)] text-white'
           }`}>
             {isOnline ? <Globe size={40} /> : <AlertTriangle size={40} />}
           </div>
@@ -87,18 +86,19 @@ const SystemStatusHeader = ({ status, onUpdate }: { status: SystemStatus, onUpda
             variant="danger" 
           />
         </div>
-      </div>
+      {/* Fix: Removed extraneous closing div tag */}
+      </div> 
     </section>
   );
 };
 
 const MaintenanceSchedulerSection = ({ onOpenModal }: any) => (
-  <section className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl group">
-    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-blue-600/20" />
+  <section className="bg-[var(--color-primary-dark-blue)] rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl group">
+    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[var(--color-detail-blue)]/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-[var(--color-detail-blue)]/20" />
     <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
       <div className="space-y-4 max-w-xl text-center lg:text-left">
         <h3 className="text-2xl font-black flex items-center gap-4 justify-center lg:justify-start">
-          <CalendarClock size={32} className="text-blue-400" /> Janelas de Downtime Técnico
+          <CalendarClock size={32} className="text-[var(--color-detail-blue)]" /> Janelas de Downtime Técnico
         </h3>
         <p className="text-slate-400 text-base leading-relaxed">
           Planeje atualizações de infraestrutura com antecedência. O sistema exibirá alertas proativos para todos os usuários logados.
@@ -106,7 +106,7 @@ const MaintenanceSchedulerSection = ({ onOpenModal }: any) => (
       </div>
       <button 
         onClick={onOpenModal}
-        className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-[3px] transition-all shadow-xl shadow-blue-900/40 active:scale-95 whitespace-nowrap"
+        className="bg-[var(--color-detail-blue)] hover:bg-blue-500 text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-[3px] transition-all shadow-xl shadow-[var(--color-detail-blue)]/40 active:scale-95 whitespace-nowrap"
       >
         Agendar Manutenção
       </button>

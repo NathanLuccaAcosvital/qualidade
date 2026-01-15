@@ -1,8 +1,11 @@
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, ShieldCheck, Cpu } from 'lucide-react';
 
 const BACKGROUND_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/header_login.webp";
+// Fix: Added missing LOGO_URL definition
+const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
 
 export const LoginHero: React.FC = () => {
   const { t } = useTranslation();
@@ -25,7 +28,7 @@ export const LoginHero: React.FC = () => {
       {/* Header: Logo */}
       <div className="relative z-10 shrink-0 -mt-2 md:-mt-4 lg:-mt-6 animate-in fade-in slide-in-from-top-4 duration-1000">
         <img 
-          src="https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png" 
+          src={LOGO_URL} 
           alt="Aços Vital - Logo Industrial" 
           className="h-12 lg:h-14 xl:h-16 2xl:h-24 object-contain object-left filter brightness-0 invert drop-shadow-2xl" 
         />
@@ -38,16 +41,16 @@ export const LoginHero: React.FC = () => {
           {/* Subtitle com Detalhe Laranja Vital */}
           <div className="space-y-2 lg:space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-[2px] w-8 bg-[#ff6b2b] shadow-[0_0_12px_rgba(255,107,43,0.4)]" aria-hidden="true"></div>
-              <span className="text-[#ff6b2b] text-xs lg:text-sm xl:text-base font-black uppercase tracking-[3px]">
+              <div className="h-[2px] w-8 bg-[var(--color-accent-orange)] shadow-[0_0_12px_rgba(255,107,43,0.4)]" aria-hidden="true"></div>
+              <span className="text-[var(--color-accent-orange)] text-xs lg:text-sm xl:text-base font-black uppercase tracking-[3px]">
                 {t('login.subtitle')}
               </span>
             </div>
             
             <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-7xl font-black leading-[1.1] tracking-tighter uppercase max-w-lg lg:max-w-2xl">
               ESTRUTURAS<br/>
-              <span className="text-slate-300">DE CONFIANÇA.</span><br/>
-              <span className="text-white/20">DADOS DE PRECISÃO.</span>
+              <span className="text-white/70">DE CONFIANÇA.</span><br/>
+              <span className="text-white/40">DADOS DE PRECISÃO.</span>
             </h1>
           </div>
           
@@ -60,7 +63,7 @@ export const LoginHero: React.FC = () => {
              <StatusTag icon={CheckCircle2} label={t('login.certification')} />
              <StatusTag icon={ShieldCheck} label={t('login.secureData')} />
              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-white/70 group cursor-default transition-all hover:bg-white/10" role="listitem">
-                <Cpu size={10} className="text-blue-400 opacity-70" aria-hidden="true" />
+                <Cpu size={10} className="text-[var(--color-detail-blue)] opacity-70" aria-hidden="true" />
                 <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px]">Real-Time Monitoring</span>
              </div>
           </div>
@@ -85,8 +88,8 @@ export const LoginHero: React.FC = () => {
           alt=""
           className="w-full h-full object-cover opacity-60 animate-slow-zoom"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#01040f] via-[#081437]/90 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[var(--color-primary-dark-blue)] via-[var(--color-primary-dark-blue)]/90 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-[var(--color-detail-blue)]/10 via-transparent to-transparent" />
       </div>
     </div>
   );
@@ -94,7 +97,7 @@ export const LoginHero: React.FC = () => {
 
 const StatusTag = ({ icon: Icon, label }: { icon: any, label: string }) => (
   <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 transition-all hover:border-white/20" role="listitem">
-    <Icon size={10} className="text-blue-400 opacity-70" aria-hidden="true" /> 
+    <Icon size={10} className="text-[var(--color-detail-blue)] opacity-70" aria-hidden="true" /> 
     {label}
   </div>
 );

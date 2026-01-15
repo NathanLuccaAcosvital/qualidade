@@ -26,7 +26,7 @@ export const MetallurgicalDataDisplay: React.FC<MetallurgicalDataDisplayProps> =
       {/* Análise Química */}
       <section className="space-y-4">
         <div className="flex items-center gap-2.5 text-slate-400">
-          <FlaskConical size={14} className="text-blue-500" />
+          <FlaskConical size={14} className="text-[var(--color-detail-blue)]" />
           <span className="text-[10px] font-black uppercase tracking-[2px]">Composição Química (%)</span>
         </div>
         <div className="grid grid-cols-5 gap-2">
@@ -34,9 +34,9 @@ export const MetallurgicalDataDisplay: React.FC<MetallurgicalDataDisplayProps> =
             <div 
                 key={el.label} 
                 title={el.title}
-                className="p-3 border border-slate-100 rounded-xl text-center bg-slate-50/30 hover:bg-white hover:shadow-sm hover:border-blue-100 transition-all group"
+                className="p-3 border border-slate-100 rounded-xl text-center bg-slate-50/30 hover:bg-white hover:shadow-sm hover:border-[var(--color-detail-blue)] transition-all group"
             >
-              <p className="text-[9px] font-black text-slate-400 uppercase group-hover:text-blue-500 transition-colors">{el.label}</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase group-hover:text-[var(--color-detail-blue)] transition-colors">{el.label}</p>
               <p className="text-xs font-black text-slate-800 mt-1">{el.value ?? '-'}</p>
             </div>
           ))}
@@ -63,7 +63,7 @@ const PropertyRow: React.FC<{ label: string; value?: number; unit: string }> = (
   <div className="flex justify-between items-center px-4 py-3.5 hover:bg-white hover:rounded-xl transition-all group">
     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900 transition-colors">{label}</span>
     <div className="flex items-baseline gap-1.5">
-        <span className="text-sm font-mono font-black text-blue-600">
+        <span className="text-sm font-mono font-black text-[var(--color-detail-blue)]">
             {value ?? '--'}
         </span>
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{unit}</span>

@@ -60,11 +60,11 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ setIsSaving }) => {
 const UsersControlPanel = ({ searchTerm, onSearchChange, roleFilter, onRoleFilterChange, onCreateClick, t }: any) => (
   <div className="bg-white p-4 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col lg:flex-row justify-between items-center gap-4 w-full sticky top-20 z-20 backdrop-blur-md bg-white/90">
     <div className="relative w-full max-w-xl group">
-      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors" size={20} />
       <input
         type="text"
         placeholder="Identidade, e-mail ou departamento..."
-        className="pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm w-full outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 transition-all font-medium"
+        className="pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm w-full outline-none focus:ring-4 focus:ring-[var(--color-detail-blue)]/10 focus:bg-white focus:border-[var(--color-detail-blue)] transition-all font-medium"
         value={searchTerm}
         onChange={e => onSearchChange(e.target.value)}
       />
@@ -81,9 +81,9 @@ const UsersControlPanel = ({ searchTerm, onSearchChange, roleFilter, onRoleFilte
 
       <button 
         onClick={onCreateClick}
-        className="bg-slate-900 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-[3px] flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all shrink-0 hover:bg-slate-800"
+        className="bg-[var(--color-primary-dark-blue)] text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-[3px] flex items-center gap-3 shadow-xl shadow-[var(--color-primary-dark-blue)]/20 active:scale-95 transition-all shrink-0 hover:bg-slate-800"
       >
-        <UserPlus size={18} className="text-blue-400" /> Criar Acesso
+        <UserPlus size={18} className="text-[var(--color-detail-blue)]" /> Criar Acesso
       </button>
     </div>
   </div>
@@ -108,8 +108,8 @@ const RoleFilterBar = ({ currentFilter, onFilterChange, t }: any) => (
 const LoadingUsersState = () => (
   <div className="flex flex-col items-center justify-center h-96 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
     <div className="relative mb-6">
-      <Loader2 size={56} className="animate-spin text-blue-500" />
-      <ShieldCheck size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-900" />
+      <Loader2 size={56} className="animate-spin text-[var(--color-detail-blue)]" />
+      <ShieldCheck size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--color-primary-dark-blue)]" />
     </div>
     <p className="font-black text-[10px] uppercase tracking-[6px] text-slate-400">Validando Base Cadastral...</p>
   </div>

@@ -41,7 +41,7 @@ export const AdminOverview: React.FC<{ stats: AdminStatsData | null }> = ({ stat
 
 const LoadingOverview = () => (
   <div className="h-64 bg-white border border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4">
-    <Loader2 size={32} className="animate-spin text-blue-500" />
+    <Loader2 size={32} className="animate-spin text-[var(--color-detail-blue)]" />
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Sincronizando Métricas Reais...</p>
   </div>
 );

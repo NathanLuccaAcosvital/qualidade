@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -33,8 +34,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ inHeader = f
           aria-label={`Mudar idioma para ${lang.full}`}
           className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all duration-300 ${
             i18n.language.startsWith(lang.code) 
-              ? `${inHeader ? 'bg-blue-600' : 'bg-[#081437]'} text-white shadow-lg scale-105` 
-              : `${inHeader ? 'text-slate-300 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-[#081437] hover:bg-white'}`
+              ? `${inHeader ? 'bg-[var(--color-detail-blue)]' : 'bg-[var(--color-primary-dark-blue)]'} text-white shadow-lg scale-105` 
+              : `${inHeader ? 'text-slate-300 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-[var(--color-primary-dark-blue)] hover:bg-white'}`
           }`}
         >
           {lang.label}

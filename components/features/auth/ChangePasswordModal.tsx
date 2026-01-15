@@ -39,7 +39,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
         
         <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl shadow-sm">
+            <div className="p-2 bg-blue-100 text-[var(--color-detail-blue)] rounded-xl shadow-sm">
                 <Lock size={20} />
             </div>
             <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">
@@ -109,7 +109,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 <button 
                     type="submit" 
                     disabled={isLoading || newPasswordMismatch}
-                    className="order-1 sm:order-2 px-8 py-3 bg-[#081437] text-white font-black text-[10px] uppercase tracking-[3px] rounded-xl hover:bg-blue-900 transition-all shadow-lg shadow-blue-900/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="order-1 sm:order-2 px-8 py-3 bg-[var(--color-primary-dark-blue)] text-white font-black text-[10px] uppercase tracking-[3px] rounded-xl hover:bg-blue-900 transition-all shadow-lg shadow-[var(--color-primary-dark-blue)]/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     {isLoading ? (
                         <Loader2 size={16} className="animate-spin" />
@@ -149,7 +149,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({ label, value, onChange, i
             <div className={`flex items-center bg-slate-50 border-[1.5px] rounded-2xl overflow-hidden transition-all duration-300
                 ${hasError 
                     ? 'border-red-200 bg-red-50/30 focus-within:border-red-500 ring-4 ring-red-500/10' 
-                    : 'border-slate-100 focus-within:border-blue-500 focus-within:bg-white ring-4 ring-blue-500/0 focus-within:ring-blue-500/10'
+                    : 'border-slate-100 focus-within:border-[var(--color-detail-blue)] focus-within:bg-white ring-4 ring-[var(--color-detail-blue)]/0 focus-within:ring-[var(--color-detail-blue)]/10'
                 }
             `}>
                 <input 
@@ -166,7 +166,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({ label, value, onChange, i
                     <button 
                         type="button" 
                         onClick={onToggleShowPassword} 
-                        className="w-12 h-14 flex items-center justify-center text-slate-300 hover:text-blue-700 transition-colors"
+                        className="w-12 h-14 flex items-center justify-center text-slate-300 hover:text-[var(--color-detail-blue)] transition-colors"
                         aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}
                     >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

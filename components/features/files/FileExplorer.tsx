@@ -1,3 +1,4 @@
+
 import React, { useState, forwardRef, useImperativeHandle } from 'react'; 
 import { Loader2, FileText, Download, Trash2, Edit2, LayoutGrid, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -73,7 +74,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
 
 const LoadingState = () => (
   <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[300px]">
-    <Loader2 size={32} className="animate-spin text-blue-500" />
+    <Loader2 size={32} className="animate-spin text-[var(--color-detail-blue)]" />
     <span className="text-[10px] font-black uppercase tracking-[4px]">Sincronizando Arquivos...</span>
   </div>
 );

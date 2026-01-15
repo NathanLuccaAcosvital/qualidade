@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#081437" />
+    <meta name="theme-color" content="var(--color-primary-dark-blue)" />
     <meta name="description" content="Portal da Qualidade Aços Vital - Gestão Técnica de Certificados e Metalurgia" />
     <title>Aços Vital - SGQ</title>
     
@@ -15,11 +16,18 @@
     <link rel="stylesheet" href="styles/responsive.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      :root {
+        --color-primary-dark-blue: #081437;
+        --color-accent-orange: #c2410c;
+        --color-accent-orange-hover: #9A3412;
+        --color-detail-blue: #2563eb;
+      }
+
       body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
       .custom-scrollbar::-webkit-scrollbar { width: 6px; }
       .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-      .bg-vital-dark { background-color: #081437; }
+      .bg-vital-dark { background-color: var(--color-primary-dark-blue); }
 
       /* Fix para autofill do navegador */
       input:-webkit-autofill,

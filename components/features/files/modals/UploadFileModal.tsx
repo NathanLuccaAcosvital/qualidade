@@ -56,7 +56,7 @@ export const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClos
       <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 flex flex-col">
         <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl shadow-sm"><UploadCloud size={22} /></div>
+            <div className="p-2.5 bg-blue-100 text-[var(--color-detail-blue)] rounded-xl shadow-sm"><UploadCloud size={22} /></div>
             <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{t('files.upload.title')}</h3>
           </div>
           <button onClick={onClose} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400"><X size={24} /></button>
@@ -76,7 +76,7 @@ export const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClos
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 hover:bg-blue-100 transition-all font-bold text-sm"
+                className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-blue-50 text-[var(--color-detail-blue)] rounded-xl border border-blue-100 hover:bg-blue-100 transition-all font-bold text-sm"
               >
                 <FileText size={18} /> {selectedFile ? selectedFile.name : t('files.upload.chooseFile')}
               </button>
@@ -91,7 +91,7 @@ export const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClos
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
               placeholder={t('files.upload.fileNamePlaceholder')}
-              className="w-full px-4 py-2.5 rounded-lg outline-none font-semibold text-slate-900 bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white transition-all"
+              className="w-full px-4 py-2.5 rounded-lg outline-none font-semibold text-slate-900 bg-slate-50 border border-slate-300 focus:border-[var(--color-detail-blue)] focus:bg-white transition-all"
               required
             />
           </div>
@@ -104,7 +104,7 @@ export const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClos
           
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">{t('common.cancel')}</button>
-            <button type="submit" disabled={isUploading || !selectedFile || !fileName.trim()} className="px-8 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
+            <button type="submit" disabled={isUploading || !selectedFile || !fileName.trim()} className="px-8 py-2 bg-[var(--color-primary-dark-blue)] text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
               {isUploading && <Loader2 size={16} className="animate-spin" />}
               {t('files.upload.uploadButton')}
             </button>

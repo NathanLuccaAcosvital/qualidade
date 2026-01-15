@@ -21,7 +21,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8">
             <PrivacySection 
               title={t('privacy.section1')} 
-              icon={<FileText size={20} className="text-blue-500" />}
+              icon={<FileText size={20} className="text-[var(--color-detail-blue)]" />}
             >
                 <p className="text-sm text-slate-600 leading-relaxed text-justify">
                     O <strong>{t('menu.portalName')} {t('menu.brand')}</strong> é uma plataforma B2B destinada ao gerenciamento de documentos técnicos e certificados de qualidade. Esta política visa esclarecer a conformidade com a ISO 9001 e a legislação LGPD vigente.
@@ -30,7 +30,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
 
             <PrivacySection 
               title={t('privacy.section2')} 
-              icon={<Eye size={20} className="text-blue-500" />}
+              icon={<Eye size={20} className="text-[var(--color-detail-blue)]" />}
             >
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
@@ -43,7 +43,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
 
             <PrivacySection 
               title={t('privacy.section3')} 
-              icon={<Lock size={20} className="text-blue-500" />}
+              icon={<Lock size={20} className="text-[var(--color-detail-blue)]" />}
             >
                 <p className="text-sm text-slate-600 leading-relaxed">
                     Utilizamos criptografia TLS 1.2+ e segregação estrita por organização (Multi-tenant). Seus documentos nunca são acessíveis por outras empresas do portfólio.
@@ -54,7 +54,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
         <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end">
             <button 
                 onClick={onClose}
-                className="px-6 py-2.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
+                className="px-6 py-2.5 bg-[var(--color-primary-dark-blue)] text-white font-bold rounded-lg hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
             >
                 {t('privacy.close')}
             </button>
@@ -69,7 +69,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
 const ModalHeader = ({ title, subtitle, onClose }: any) => (
   <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
     <div className="flex items-center gap-3">
-      <div className="bg-blue-100 p-2 rounded-lg"><Shield className="text-blue-600" size={24} /></div>
+      <div className="bg-blue-100 p-2 rounded-lg"><Shield className="text-[var(--color-detail-blue)]" size={24} /></div>
       <div>
           <h2 className="text-xl font-bold text-slate-800">{title}</h2>
           <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">{subtitle}</p>

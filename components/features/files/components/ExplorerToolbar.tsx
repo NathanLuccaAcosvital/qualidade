@@ -1,3 +1,4 @@
+
 import React from 'react';
 // Fix: Added missing Lucide icon imports
 import { Home, ChevronRight, List, LayoutGrid, Search, UploadCloud, FolderPlus, X, Edit2, Download, MoreVertical, Trash2 } from 'lucide-react';
@@ -84,7 +85,7 @@ const Breadcrumbs: React.FC<{ breadcrumbs: BreadcrumbItem[]; onNavigate: (id: st
       <React.Fragment key={item.id || 'home'}>
         <button 
           onClick={() => onNavigate(item.id)}
-          className={`px-2 py-1 rounded-lg transition-colors ${index === breadcrumbs.length - 1 ? 'font-bold text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-100'}`}
+          className={`px-2 py-1 rounded-lg transition-colors ${index === breadcrumbs.length - 1 ? 'font-bold text-[var(--color-detail-blue)] bg-blue-50' : 'text-slate-600 hover:bg-slate-100'}`}
           aria-label={item.name}
         >
           {item.name}
@@ -97,11 +98,11 @@ const Breadcrumbs: React.FC<{ breadcrumbs: BreadcrumbItem[]; onNavigate: (id: st
 
 const SearchInput: React.FC<{ searchTerm: string; onSearchChange: (term: string) => void; t: any }> = ({ searchTerm, onSearchChange, t }) => (
   <div className="relative flex-1 min-w-[200px] max-w-sm ml-4 hidden md:block">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors" size={16} />
     <input 
       type="text" 
       placeholder={t('files.searchPlaceholder')}
-      className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium" 
+      className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-[var(--color-detail-blue)]/20 focus:border-[var(--color-detail-blue)] font-medium" 
       value={searchTerm} 
       onChange={e => onSearchChange(e.target.value)} 
       aria-label={t('files.searchPlaceholder')}
@@ -127,14 +128,14 @@ const PrimaryActions: React.FC<{
         <>
           <button 
             onClick={onUpload} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-600/20"
+            className="bg-[var(--color-detail-blue)] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[var(--color-detail-blue)]/20"
             aria-label={t('files.upload.title')}
           >
             <UploadCloud size={16} /> <span className="hidden md:inline">{t('files.upload.button')}</span>
           </button>
           <button 
             onClick={onCreateFolder} 
-            className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+            className="bg-[var(--color-primary-dark-blue)] hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[var(--color-primary-dark-blue)]/20"
             aria-label={t('files.createFolder.title')}
           >
             <FolderPlus size={16} /> <span className="hidden md:inline">{t('files.createFolder.button')}</span>
@@ -218,7 +219,7 @@ const SelectedActions: React.FC<{
 const ViewButton = ({ active, onClick, icon: Icon, label }: any) => (
   <button 
     onClick={onClick} 
-    className={`p-1.5 rounded-md transition-all ${active ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+    className={`p-1.5 rounded-md transition-all ${active ? 'bg-white shadow-sm text-[var(--color-detail-blue)]' : 'text-slate-400 hover:text-slate-600'}`}
     aria-label={`Visualização em ${label}`}
   >
     <Icon size={16}/>

@@ -82,7 +82,7 @@ export const InspectionSidebar: React.FC<InspectionSidebarProps> = ({
 const SidebarHeader: React.FC<{ fileName: string; onClose: () => void }> = ({ fileName, onClose }) => (
   <header className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
     <div className="flex items-center gap-3 overflow-hidden">
-      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0 shadow-sm"><FileText size={18} /></div>
+      <div className="p-2 bg-blue-100 text-[var(--color-detail-blue)] rounded-lg shrink-0 shadow-sm"><FileText size={18} /></div>
       <p className="text-sm font-black text-slate-800 truncate">{fileName}</p>
     </div>
     <button 
@@ -98,7 +98,7 @@ const SidebarHeader: React.FC<{ fileName: string; onClose: () => void }> = ({ fi
 const StatusMonitor: React.FC<{ status?: string }> = ({ status }) => {
     const isApproved = status === QualityStatus.APPROVED;
     return (
-        <div className="bg-slate-900 p-5 rounded-2xl text-white relative overflow-hidden shadow-lg">
+        <div className="bg-[var(--color-primary-dark-blue)] p-5 rounded-2xl text-white relative overflow-hidden shadow-lg">
             <div className="relative z-10">
                 <span className="text-[9px] font-black uppercase tracking-widest opacity-50 block mb-2">Conformidade Global</span>
                 <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ const TraceabilityLog: React.FC<{ metadata: any }> = ({ metadata }) => (
           <p className="text-xs font-bold text-slate-700 font-mono">{metadata?.batchNumber || 'N/A'}</p>
        </div>
        <div className="space-y-1">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Classe Mat.</p>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Classe Mat. </p>
           <p className="text-xs font-bold text-slate-700">{metadata?.grade || 'N/A'}</p>
        </div>
     </div>
@@ -188,13 +188,13 @@ const SidebarFooter: React.FC<{ onPreview: () => void; onDownload: () => void }>
   <footer className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2">
     <button 
         onClick={onPreview} 
-        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[3px] shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95"
+        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[var(--color-primary-dark-blue)] text-white rounded-xl text-[10px] font-black uppercase tracking-[3px] shadow-xl shadow-[var(--color-primary-dark-blue)]/20 hover:bg-slate-800 transition-all active:scale-95"
     >
         <Eye size={16} /> Ver Certificado
     </button>
     <button 
         onClick={onDownload} 
-        className="p-3.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+        className="p-3.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-[var(--color-detail-blue)] hover:border-blue-200 transition-all shadow-sm"
         title="Download PDF"
     >
         <Download size={20}/>
