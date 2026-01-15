@@ -1,4 +1,3 @@
-
 import { ID, ISO8601Date, CNPJ } from './common.ts';
 
 // Added CLIENT to the UserRole enum
@@ -12,6 +11,18 @@ export enum AccountStatus {
   ACTIVE = 'ACTIVE',
   BLOCKED = 'BLOCKED',
   INACTIVE = 'INACTIVE'
+}
+
+// Adicione isto aos seus tipos
+export interface InitialAppData {
+  user: any | null; // Será mapeado para o tipo User depois
+  systemStatus: {
+    mode: 'ONLINE' | 'MAINTENANCE' | 'SCHEDULED';
+    message?: string;
+    scheduledStart?: string; // Changed from scheduled_start
+    scheduledEnd?: string;   // Changed from scheduled_end
+    updatedBy?: string;      // Changed from updated_by
+  } | null;
 }
 
 export interface ClientOrganization {

@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { supabase } from '../lib/supabaseClient.ts';
-import { userService, adminService } from '../lib/services/index.ts';
-import { User, UserRole, normalizeRole, SystemStatus } from '../types/index.ts';
-import { withTimeout } from '../lib/utils/apiUtils.ts';
-import { AuthError, Session } from '@supabase/supabase-js';
+// nathanluccaacosvital/qualidade/.../context/authContext.tsx
 
-const API_TIMEOUT = 15000;
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import { supabase } from '../lib/supabaseClient.ts';
+// Importamos o appService centralizado do index
+import { userService, supabaseAppService } from '../lib/services/index.ts'; 
+import { User, SystemStatus } from '../types/index.ts';
 
 interface AuthState {
   user: User | null;
@@ -17,7 +16,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  refreshProfile: () => Promise<User | null>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,146 +24,95 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
     user: null,
-    isLoading: true, // Começa carregando
+    isLoading: true,
     error: null,
     systemStatus: null,
   });
 
-  const initialized = useRef(false);
+  const mounted = useRef(true);
 
-  // Carrega APENAS o perfil do usuário (Crítico)
-  const loadUserOnly = async () => {
-      try {
-          const currentUser = await withTimeout(
-              userService.getCurrentUser(), 
-              API_TIMEOUT, 
-              "Tempo esgotado ao carregar perfil."
-          );
-          if (currentUser) currentUser.role = normalizeRole(currentUser.role);
-          return currentUser;
-      } catch (err) {
-          console.warn("[AuthContext] Falha ao carregar usuário:", err);
-          return null;
+  // --- LÓGICA RPC (VELOCIDADE MÁXIMA) ---
+  const initializeApp = async () => {
+    try {
+      // Chama o seu novo serviço RPC
+      const { user, systemStatus } = await supabaseAppService.getInitialData();
+
+      if (mounted.current) {
+        setState({
+          user,
+          systemStatus,
+          isLoading: false,
+          error: null,
+        });
       }
-  };
-
-  // Carrega APENAS o status do sistema (Não Crítico para login inicial)
-  const loadSystemStatusOnly = async () => {
-      try {
-          return await withTimeout(
-              adminService.getSystemStatus(), 
-              API_TIMEOUT, 
-              "Tempo esgotado ao verificar sistema."
-          );
-      } catch (err) {
-          console.warn("[AuthContext] Falha ao carregar status do sistema:", err);
-          return null; // Retorna null mas não trava o app
-      }
-  };
-
-  // Sincronização Unificada
-  const syncUserProfile = useCallback(async () => {
-    // 1. Dispara as requisições em paralelo, mas SEM Promise.all que falha se um falhar
-    const userPromise = loadUserOnly();
-    const statusPromise = loadSystemStatusOnly();
-
-    // 2. Aguarda resultados
-    const currentUser = await userPromise;
-    const sysStatus = await statusPromise;
-
-    setState(prev => ({ 
-        ...prev, 
-        user: currentUser, 
-        isLoading: false,
-        error: null,
-        systemStatus: sysStatus,
-    }));
-      
-    return currentUser;
-  }, []);
-
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const initAuth = async () => {
-      try {
-        // Tenta obter sessão do Supabase (rápido, local)
-        const { data, error } = await supabase.auth.getSession();
-
-        if (error) throw error;
-        
-        if (data.session) {
-          // Se tem sessão, sincroniza perfil completo
-          await syncUserProfile();
-        } else {
-          // Sem sessão: carrega status do sistema e libera loading
-          const sysStatus = await loadSystemStatusOnly();
-          setState(prev => ({ ...prev, isLoading: false, user: null, systemStatus: sysStatus }));
-        }
-      } catch (error: any) {
-        console.error("[AuthContext] Erro fatal na inicialização:", error);
-        // Em caso de erro grave, tenta limpar estado para não travar em loop
+    } catch (error: any) {
+      console.error("[Auth] Erro na inicialização:", error);
+      if (mounted.current) {
+        // Fallback seguro: Assume sistema ONLINE se a API falhar, para não travar o usuário
         setState(prev => ({ 
           ...prev, 
           isLoading: false, 
-          user: null, 
-          error: error.message || "Falha de conexão.", 
-          systemStatus: null 
+          error: "Erro de conexão.",
+          systemStatus: { mode: 'ONLINE' } 
         }));
       }
-    };
+    }
+  };
 
-    initAuth();
+  useEffect(() => {
+    mounted.current = true;
+    
+    // 1. Inicializa App (Busca User + Sistema em 1 request)
+    initializeApp();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        if (session) await syncUserProfile();
-      } else if (event === 'SIGNED_OUT') {
-         setState(prev => ({ ...prev, user: null, isLoading: false }));
-         // Recarrega status após logout para garantir infos atualizadas (ex: modo manutenção)
-         const sysStatus = await loadSystemStatusOnly();
-         setState(prev => ({ ...prev, systemStatus: sysStatus }));
+    // 2. Escuta mudanças de sessão (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        await initializeApp();
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [syncUserProfile]);
+    return () => {
+      mounted.current = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
-    try {
-      const authResult = await userService.authenticate(email, password);
-      if (!authResult.success) {
-        setState(prev => ({ ...prev, isLoading: false, error: authResult.error }));
-        return authResult;
-      }
-      await syncUserProfile();
-      return { success: true };
-    } catch (err: any) {
-      const msg = err.message || "Falha na autenticação.";
-      setState(prev => ({ ...prev, isLoading: false, error: msg }));
-      return { success: false, error: msg };
+    
+    // Login padrão do Supabase
+    const result = await userService.authenticate(email, password);
+    
+    if (!result.success) {
+      setState(prev => ({ ...prev, isLoading: false, error: result.error }));
+      return result;
     }
+    // O 'onAuthStateChange' vai disparar o initializeApp automaticamente
+    return { success: true };
   };
 
   const logout = async () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await userService.logout();
-    } finally {
-      const sysStatus = await loadSystemStatusOnly();
-      setState({ user: null, isLoading: false, error: null, systemStatus: sysStatus });
-      window.location.hash = '#/login';
+      window.location.href = '/'; // Limpa a memória forçando refresh
+    } catch (error) {
+       console.error("Erro ao sair", error);
+       setState(prev => ({ ...prev, isLoading: false }));
     }
+  };
+
+  const refreshProfile = async () => {
+    await initializeApp();
   };
 
   const contextValue = useMemo(() => ({
     ...state,
     login,
     logout,
-    refreshProfile: syncUserProfile
-  }), [state, syncUserProfile]);
+    refreshProfile
+  }), [state]);
 
   return (
     <AuthContext.Provider value={contextValue}>

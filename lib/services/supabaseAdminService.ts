@@ -15,8 +15,8 @@ const API_TIMEOUT = 8000; // Definido localmente (Reduzido para 8 segundos)
  */
 export const SupabaseAdminService: IAdminService = {
   getSystemStatus: async () => {
-    // Fix: Explicitly type fetchStatusPromise to match the expected return type for withTimeout
-    const fetchStatusPromise: Promise<PostgrestSingleResponse<SystemStatus>> = supabase.from('system_settings').select('*').single();
+    // Fix: Wrap the PostgrestBuilder in Promise.resolve to match withTimeout's expected Promise<T>
+    const fetchStatusPromise = Promise.resolve(supabase.from('system_settings').select('*').single());
     
     // Aplica timeout à requisição do status do sistema
     // Fix: Explicitly destructure result to correctly infer types from withTimeout
@@ -39,14 +39,15 @@ export const SupabaseAdminService: IAdminService = {
 
   updateSystemStatus: async (user, newStatus) => {
     const action = async () => {
-      const { data, error } = await supabase.from('system_settings').update({
+      // Fix: Wrap the PostgrestBuilder in Promise.resolve
+      const { data, error } = await Promise.resolve(supabase.from('system_settings').update({
         mode: newStatus.mode,
         message: newStatus.message,
         scheduled_start: newStatus.scheduledStart, // Fix: Use snake_case for DB column
         scheduled_end: newStatus.scheduledEnd,     // Fix: Use snake_case for DB column
         updated_by: user.id,                       // Fix: Use snake_case for DB column
         updated_at: new Date().toISOString()
-      }).eq('id', 1).select().single();
+      }).eq('id', 1).select().single());
       
       if (error) throw error;
       return data as SystemStatus;
@@ -63,7 +64,15 @@ export const SupabaseAdminService: IAdminService = {
     const channel = supabase
       .channel('system_state')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_settings' }, payload => {
-        listener(payload.new as SystemStatus);
+        // Fix: Map snake_case properties from payload.new to camelCase for SystemStatus
+        const newStatus: SystemStatus = {
+          mode: payload.new.mode,
+          message: payload.new.message,
+          scheduledStart: payload.new.scheduled_start,
+          scheduledEnd: payload.new.scheduled_end,
+          updatedBy: payload.new.updated_by,
+        };
+        listener(newStatus);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -72,10 +81,10 @@ export const SupabaseAdminService: IAdminService = {
   getAdminStats: async (): Promise<AdminStatsData> => {
     // As chamadas de stats geralmente são rápidas, mas podemos adicionar timeout aqui também se necessário.
     const [u, a, c, l] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
-      supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
-      supabase.from('audit_logs').select('*', { count: 'exact', head: true }).gt('created_at', new Date(Date.now() - 86400000).toISOString())
+      Promise.resolve(supabase.from('profiles').select('*', { count: 'exact', head: true })),
+      Promise.resolve(supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE')),
+      Promise.resolve(supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE')),
+      Promise.resolve(supabase.from('audit_logs').select('*', { count: 'exact', head: true }).gt('created_at', new Date(Date.now() - 86400000).toISOString()))
     ]);
 
     const getOscillatedValue = (base: number, range: number) => 
@@ -103,8 +112,8 @@ export const SupabaseAdminService: IAdminService = {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // Fix: Explicitly type the promise to match the expected return type for withTimeout
-    const queryPromise: Promise<PostgrestResponse<RawClientOrganization>> = query.range(from, to).order('name');
+    // Fix: Wrap the PostgrestFilterBuilder in Promise.resolve
+    const queryPromise: Promise<PostgrestResponse<RawClientOrganization>> = Promise.resolve(query.range(from, to).order('name'));
     const result = await withTimeout( 
       queryPromise,
       API_TIMEOUT,
@@ -145,8 +154,8 @@ export const SupabaseAdminService: IAdminService = {
       };
       const query = data.id ? supabase.from('organizations').update(payload).eq('id', data.id) : supabase.from('organizations').insert(payload);
       
-      // Fix: Explicitly type the promise to match the expected return type for withTimeout
-      const queryPromise: Promise<PostgrestSingleResponse<ClientOrganization>> = query.select().single();
+      // Fix: Wrap the PostgrestBuilder in Promise.resolve
+      const queryPromise: Promise<PostgrestSingleResponse<ClientOrganization>> = Promise.resolve(query.select().single());
       const result = await withTimeout( 
         queryPromise,
         API_TIMEOUT,
@@ -162,8 +171,8 @@ export const SupabaseAdminService: IAdminService = {
 
   deleteClient: async (user, id) => {
     const action = async () => {
-      // Fix: Explicitly type the promise to match the expected return type for withTimeout
-      const deletePromise: Promise<PostgrestResponse<null>> = supabase.from('organizations').delete().eq('id', id);
+      // Fix: Wrap the PostgrestFilterBuilder in Promise.resolve
+      const deletePromise: Promise<PostgrestResponse<null>> = Promise.resolve(supabase.from('organizations').delete().eq('id', id));
       const result = await withTimeout( 
         deletePromise,
         API_TIMEOUT,
@@ -184,15 +193,15 @@ export const SupabaseAdminService: IAdminService = {
   getPorts: async () => [],
   getMaintenanceEvents: async () => [],
   scheduleMaintenance: async (user, event) => {
-    // Fix: Explicitly type the promise to match the expected return type for withTimeout
-     const insertPromise: Promise<PostgrestSingleResponse<MaintenanceEvent>> = supabase.from('maintenance_events').insert({
+    // Fix: Wrap the PostgrestBuilder in Promise.resolve
+     const insertPromise: Promise<PostgrestSingleResponse<MaintenanceEvent>> = Promise.resolve(supabase.from('maintenance_events').insert({
          title: event.title,
          scheduled_date: event.scheduledDate, // Fix: Use snake_case for DB column
          duration_minutes: event.durationMinutes,
          description: event.description,
          status: 'SCHEDULED',
          created_by: user.id
-       }).select().single();
+       }).select().single());
      const result = await withTimeout( 
        insertPromise,
        API_TIMEOUT,
@@ -205,8 +214,8 @@ export const SupabaseAdminService: IAdminService = {
   },
   cancelMaintenance: async (user, id) => {
     const action = async () => {
-      // Fix: Explicitly type the promise to match the expected return type for withTimeout
-      const updatePromise: Promise<PostgrestResponse<null>> = supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id);
+      // Fix: Wrap the PostgrestFilterBuilder in Promise.resolve
+      const updatePromise: Promise<PostgrestResponse<null>> = Promise.resolve(supabase.from('maintenance_events').update({ status: 'CANCELLED' }).eq('id', id));
       const result = await withTimeout( 
         updatePromise,
         API_TIMEOUT,

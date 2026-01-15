@@ -1,4 +1,5 @@
 
+
 import { supabase } from '../supabaseClient.ts';
 import { User, UserRole } from '../../types/auth.ts';
 import { FileNode, FileType, LibraryFilters, BreadcrumbItem, normalizeRole } from '../../types/index.ts';
@@ -97,25 +98,39 @@ export const SupabaseFileService: IFileService = {
   getDashboardStats: async (user): Promise<DashboardStatsData> => {
     const role = normalizeRole(user.role);
     
-    let baseQuery = supabase.from('files').select('*', { count: 'exact', head: true }).neq('type', 'FOLDER');
-    
+    // 1. Query para arquivos APROVADOS
+    let approvedQuery = supabase.from('files').select('*', { count: 'exact', head: true }).neq('type', 'FOLDER');
     if (role === UserRole.CLIENT && user.organizationId) {
-        baseQuery = baseQuery.eq('owner_id', user.organizationId);
+        approvedQuery = approvedQuery.eq('owner_id', user.organizationId);
+    }
+    approvedQuery = approvedQuery.eq('metadata->>status', QualityStatus.APPROVED);
+
+    // 2. Query para arquivos PENDENTES (lógica diferente para clientes)
+    let pendingQueryPromise;
+    if (role === UserRole.CLIENT) {
+        // Clientes não veem a contagem de pendências técnicas internas diretamente
+        pendingQueryPromise = Promise.resolve({ count: 0, data: null, error: null }); 
+    } else {
+        // Admin/Quality veem todas as pendências
+        let basePendingQuery = supabase.from('files').select('*', { count: 'exact', head: true }).neq('type', 'FOLDER');
+        pendingQueryPromise = basePendingQuery.eq('metadata->>status', QualityStatus.PENDING);
     }
 
-    // Fix: Use .copy() instead of .clone() for Supabase query builder
-    const [totalApproved, totalPending] = await Promise.all([
-      baseQuery.copy().eq('metadata->>status', QualityStatus.APPROVED),
-      role === UserRole.CLIENT 
-        ? { count: 0 } // Clientes não veem contagem de pendências técnicas internas da mesma forma
-        : baseQuery.copy().eq('metadata->>status', QualityStatus.PENDING)
+    // Executa ambas as queries em paralelo
+    const [totalApprovedRes, totalPendingRes] = await Promise.all([
+      approvedQuery,
+      pendingQueryPromise
     ]);
     
+    // Extrai as contagens
+    const totalApproved = totalApprovedRes.count || 0;
+    const totalPending = totalPendingRes.count || 0;
+
     return {
-        mainValue: totalApproved.count || 0,
-        subValue: totalApproved.count || 0,
-        pendingValue: totalPending.count || 0,
-        status: (totalPending.count || 0) > 0 ? 'PENDING' : 'REGULAR',
+        mainValue: totalApproved,
+        subValue: totalApproved, 
+        pendingValue: totalPending,
+        status: totalPending > 0 ? 'PENDING' : 'REGULAR',
         mainLabel: role === UserRole.CLIENT ? 'Meus Certificados' : 'Certificados Globais',
         subLabel: role === UserRole.CLIENT ? 'Validados e Prontos' : 'Docs. Validados'
     };

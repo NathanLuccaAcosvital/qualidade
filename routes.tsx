@@ -44,13 +44,14 @@ const PageLoader = ({ message = "Carregando...", onRetry }: { message?: string; 
  * são responsabilidade do `ClientLoginPage` para centralizar a animação.
  */
 const InitialAuthRedirect = () => {
+    // Fix: Access isInitialSyncComplete and retryInitialSync from useAuth
     const { user, systemStatus, isLoading, error: authError, isInitialSyncComplete, retryInitialSync } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
 
     // Se o AuthContext está ativamente carregando ou realizando sua sincronização inicial,
     // exibe o loader. Esta é a verificação primária para "aguardando dados de auth/sistema".
-    if (isLoading) {
+    if (!isInitialSyncComplete || isLoading) { // Check `isInitialSyncComplete` for initial render
         return <PageLoader message="Conectando ao sistema Vital" />;
     }
 
