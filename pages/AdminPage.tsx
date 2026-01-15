@@ -12,7 +12,7 @@ const AdminSettings = React.lazy(() => import('../components/features/admin/view
 
 const AdminPage: React.FC = () => {
   const { t } = useTranslation();
-  const { activeTab, isLoading, isSaving, setIsSaving, adminStats, systemStatus, changeTab } = useAdminPage(); // Removido setSystemStatus
+  const { activeTab, isLoading, isSaving, setIsSaving, adminStats, systemStatus, setSystemStatus, changeTab } = useAdminPage();
 
   const tabs = [
     { id: 'overview', label: t('admin.tabs.overview'), icon: LayoutDashboard },
@@ -40,7 +40,7 @@ const AdminPage: React.FC = () => {
             {activeTab === 'settings' && systemStatus && (
               <AdminSettings 
                 systemStatus={systemStatus} 
-                // Removido: setSystemStatusGlobal={setSystemStatus} 
+                setSystemStatus={setSystemStatus} 
                 setIsSaving={setIsSaving} 
               />
             )}

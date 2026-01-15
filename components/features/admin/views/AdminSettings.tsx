@@ -10,19 +10,19 @@ import { useAdminSystemManagement } from '../hooks/useAdminSystemManagement.ts';
 
 interface AdminSettingsProps {
   systemStatus: SystemStatus;
-  // Removido: setSystemStatusGlobal: React.Dispatch<React.SetStateAction<SystemStatus | null>>;
+  setSystemStatus: React.Dispatch<React.SetStateAction<SystemStatus | null>>;
   setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 /**
  * AdminSettings View (Orchestrator)
  */
-export const AdminSettings: React.FC<AdminSettingsProps> = ({ systemStatus, setIsSaving }) => { // Removido setSystemStatusGlobal
+export const AdminSettings: React.FC<AdminSettingsProps> = ({ systemStatus, setSystemStatus, setIsSaving }) => {
   const { t } = useTranslation();
   const sysManager = useAdminSystemManagement({
     setIsSaving,
     initialSystemStatus: systemStatus,
-    // Removido: setSystemStatusGlobal: setSystemStatusGlobal,
+    setPageSystemStatus: setSystemStatus,
   });
 
   return (
@@ -31,7 +31,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({ systemStatus, setI
         isOpen={sysManager.isScheduleMaintenanceModalOpen}
         onClose={() => sysManager.setIsScheduleMaintenanceModalOpen(false)}
         onSave={sysManager.handleScheduleMaintenance}
-        isSaving={sysManager.isScheduling} // Passa o estado de isScheduling do hook
+        isSaving={false}
       />
 
       <SystemStatusHeader status={sysManager.systemStatus} onUpdate={sysManager.handleUpdateMaintenance} />

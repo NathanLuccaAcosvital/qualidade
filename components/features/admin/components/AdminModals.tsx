@@ -52,8 +52,8 @@ export interface UserFormData {
   email: string;
   password?: string;
   role: UserRole;
-  organizationId?: string; // Alterado para opcional
-  department?: string;    // Alterado para opcional
+  organizationId: string;
+  department: string;
   status: AccountStatus;
 }
 
@@ -122,7 +122,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           <FormField label={t('admin.users.department')} id="user-department">
             <TextInput 
               id="user-department"
-              value={formData.department || ''} // Usar valor default para input
+              value={formData.department} 
               onChange={e => setFormData({...formData, department: e.target.value})} 
             />
           </FormField>
@@ -131,8 +131,8 @@ export const UserModal: React.FC<UserModalProps> = ({
         <FormField label={t('admin.users.org')} id="user-org">
           <SelectInput 
             id="user-org"
-            value={formData.organizationId || ''} // Usar valor default para input
-            onChange={e => setFormData({...formData, organizationId: e.target.value || undefined})}
+            value={formData.organizationId} 
+            onChange={e => setFormData({...formData, organizationId: e.target.value})}
           >
             <option value="">Aços Vital (Interno)</option>
             {organizations.map(org => (
@@ -155,7 +155,7 @@ export interface ClientFormData {
   cnpj: string;
   contractDate: string;
   status: AccountStatus;
-  qualityAnalystId?: string; // Alterado para opcional
+  qualityAnalystId: string;
 }
 
 interface ClientModalProps {
@@ -227,8 +227,8 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         <FormField label="Analista de Qualidade" id="qa-assign">
           <SelectInput 
             id="qa-assign"
-            value={clientFormData.qualityAnalystId || ''} // Usar valor default para input
-            onChange={e => setClientFormData({...clientFormData, qualityAnalystId: e.target.value || undefined})}
+            value={clientFormData.qualityAnalystId} 
+            onChange={e => setClientFormData({...clientFormData, qualityAnalystId: e.target.value})}
           >
             <option value="">{t('common.na')}</option>
             {qualityAnalysts.map(qa => <option key={qa.id} value={qa.id}>{qa.name}</option>)}
@@ -268,7 +268,7 @@ interface ScheduleMaintenanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (eventData: Partial<MaintenanceEvent> & { scheduledTime: string }) => Promise<void>;
-  isSaving: boolean; // Adicionado
+  isSaving: boolean;
 }
 
 export const ScheduleMaintenanceModal: React.FC<ScheduleMaintenanceModalProps> = ({ 

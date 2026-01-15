@@ -30,7 +30,7 @@ export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAd
     cnpj: '',
     contractDate: '',
     status: AccountStatus.ACTIVE,
-    qualityAnalystId: undefined, // Inicializado como undefined
+    qualityAnalystId: '',
   });
 
   const loadClients = useCallback(async () => {
@@ -94,7 +94,7 @@ export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAd
         cnpj: client.cnpj,
         contractDate: client.contractDate,
         status: client.status,
-        qualityAnalystId: client.qualityAnalystId || undefined, // Inicializado como undefined
+        qualityAnalystId: client.qualityAnalystId || '',
       });
     } else {
       setEditingClient(null);
@@ -103,7 +103,7 @@ export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAd
         cnpj: '',
         contractDate: new Date().toISOString().split('T')[0],
         status: AccountStatus.ACTIVE,
-        qualityAnalystId: undefined, // Inicializado como undefined
+        qualityAnalystId: '',
       });
     }
     setIsClientModalOpen(true);

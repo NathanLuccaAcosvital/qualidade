@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ClientHub } from '../components/ClientHub.tsx';
@@ -8,7 +7,6 @@ import { ClientListToolbar, ClientListFilters } from '../components/ClientListCo
 import { ProcessingOverlay } from '../components/ViewStates.tsx';
 import { useQualityClientManagement } from '../hooks/useQualityClientManagement.ts';
 import { ClientOrganization } from '../../../../types/index.ts';
-import { AccountStatus } from '../../../../types/auth.ts'; // Importar AccountStatus
 
 interface ClientListProps {
   onSelectClient: (client: ClientOrganization) => void;
@@ -21,13 +19,12 @@ interface ClientListProps {
 export const ClientList: React.FC<ClientListProps> = ({ onSelectClient }) => {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  // const [sortKey, setSortKey] = useState<'NAME' | 'PENDING' | 'NEWEST' | 'LAST_ANALYSIS'>('NAME'); // Removido daqui
+  const [sortKey, setSortKey] = useState<'NAME' | 'PENDING' | 'NEWEST' | 'LAST_ANALYSIS'>('NAME');
 
   const {
     sortedClients, clientSearch, setClientSearch, clientStatus, setClientStatus,
     isLoadingClients, isLoadingMoreClients, hasMoreClients, handleLoadMoreClients,
-    isProcessing, qualityAnalysts, userModal, clientModal,
-    sortKey, setSortKey // Obtido do hook
+    isProcessing, qualityAnalysts, userModal, clientModal
   } = useQualityClientManagement(0);
 
   return (
@@ -69,9 +66,9 @@ export const ClientList: React.FC<ClientListProps> = ({ onSelectClient }) => {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         sortKey={sortKey}
-        onSortChange={(key) => setSortKey(key as 'NAME' | 'PENDING' | 'NEWEST' | 'LAST_ANALYSIS')} // Cast para o tipo correto
+        onSortChange={setSortKey}
         status={clientStatus}
-        onStatusChange={(status) => setClientStatus(status as 'ALL' | AccountStatus)} // Cast para o tipo correto
+        onStatusChange={setClientStatus}
         t={t}
       />
 
