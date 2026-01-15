@@ -1,4 +1,5 @@
 
+
 import { 
   User, 
   UserRole, 
@@ -89,7 +90,8 @@ export interface IUserService {
 }
 
 export interface IFileService {
-  getFiles: (user: User, folderId: string | null, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
+  // Fix: Added searchTerm to getFiles signature
+  getFiles: (user: User, folderId: string | null, page?: number, pageSize?: number, searchTerm?: string) => Promise<PaginatedResponse<FileNode>>;
   getFilesByOwner: (ownerId: string) => Promise<FileNode[]>;
   getRecentFiles: (user: User, limit?: number) => Promise<FileNode[]>;
   getLibraryFiles: (user: User, filters: LibraryFilters, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
@@ -97,7 +99,10 @@ export interface IFileService {
   createFolder: (user: User, parentId: string | null, name: string, ownerId?: string) => Promise<FileNode | null>;
   uploadFile: (user: User, fileData: Partial<FileNode> & { fileBlob?: Blob }, ownerId: string) => Promise<FileNode>;
   updateFile: (user: User, fileId: string, updates: Partial<FileNode>) => Promise<void>;
-  deleteFile: (user: User, fileId: string) => Promise<void>;
+  // Fix: Updated deleteFile signature to accept an array of IDs
+  deleteFile: (user: User, fileIds: string[]) => Promise<void>;
+  // Fix: Added renameFile to IFileService
+  renameFile: (user: User, fileId: string, newName: string) => Promise<void>;
   searchFiles: (user: User, query: string, page?: number, pageSize?: number) => Promise<PaginatedResponse<FileNode>>;
   getBreadcrumbs: (folderId: string | null) => Promise<BreadcrumbItem[]>;
   toggleFavorite: (user: User, fileId: string) => Promise<boolean>;

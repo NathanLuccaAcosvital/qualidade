@@ -15,9 +15,10 @@ import { UserRole, normalizeRole } from '../../types/index.ts';
 interface LayoutProps {
   children: React.ReactNode;
   title: string;
+  onOpenCommandPalette?: () => void; // New prop for Command Palette
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, title, onOpenCommandPalette }) => {
   const { user, logout, systemStatus: authSystemStatus } = useAuth(); // Get systemStatus from AuthContext
   const { t } = useTranslation();
   const role = normalizeRole(user?.role);
@@ -48,6 +49,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           unreadCount={system.unreadCount} 
           onLogout={logout}
           onOpenMobileMenu={layout.openMobileMenu}
+          onOpenCommandPalette={onOpenCommandPalette || layout.openCommandPalette} // Pass through
         />
 
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col">

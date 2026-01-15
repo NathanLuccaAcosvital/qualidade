@@ -1,4 +1,5 @@
 
+
 import { supabase } from '../supabaseClient.ts';
 import { User, UserRole } from '../../types/auth.ts';
 import { FileNode, FileType, LibraryFilters, BreadcrumbItem, normalizeRole } from '../../types/index.ts';
@@ -20,6 +21,7 @@ const toDomainFile = (row: any): FileNode => ({
   name: row.name,
   type: row.type as FileType,
   size: row.size,
+  mimeType: row.mime_type, // Mapeado
   updatedAt: row.updated_at,
   ownerId: row.owner_id,
   storagePath: row.storage_path,
@@ -28,7 +30,7 @@ const toDomainFile = (row: any): FileNode => ({
 });
 
 export const SupabaseFileService: IFileService = {
-  getFiles: async (user, folderId, page = 1, pageSize = 50): Promise<PaginatedResponse<FileNode>> => {
+  getFiles: async (user, folderId, page = 1, pageSize = 50, searchTerm = ''): Promise<PaginatedResponse<FileNode>> => {
     let query = supabase.from('files').select('*', { count: 'exact' });
 
     const role = normalizeRole(user.role);
@@ -43,7 +45,6 @@ export const SupabaseFileService: IFileService = {
       }
       
       // Filtra apenas por APPROVED se for arquivo (folders não tem status em metadata geralmente, ou tratamos via owner_id)
-      // Nota: No Supabase JSONB filtering
       query = query.or(`type.eq.FOLDER,metadata->>status.eq.${QualityStatus.APPROVED}`);
     }
 
@@ -51,6 +52,10 @@ export const SupabaseFileService: IFileService = {
       query = query.eq('parent_id', folderId);
     } else {
       query = query.is('parent_id', null);
+    }
+
+    if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
     }
 
     const from = (page - 1) * pageSize;
@@ -127,8 +132,9 @@ export const SupabaseFileService: IFileService = {
         type: 'FOLDER',
         parent_id: parentId,
         owner_id: ownerId || null,
-        storage_path: 'system/folder',
-        updated_at: new Date().toISOString()
+        storage_path: 'system/folder', // Pastas não têm um arquivo físico no storage, só metadados
+        updated_at: new Date().toISOString(),
+        mime_type: 'folder' // Tipo MIME para pastas
     }).select().single();
     
     if (error) throw error;
@@ -137,18 +143,36 @@ export const SupabaseFileService: IFileService = {
 
   uploadFile: async (user, fileData, ownerId) => {
     // Validações de upload
-    if (fileData.fileBlob && fileData.fileBlob.size > MAX_FILE_SIZE_BYTES) {
+    if (!fileData.fileBlob) {
+        throw new Error("Blob do arquivo não fornecido.");
+    }
+    if (fileData.fileBlob.size > MAX_FILE_SIZE_BYTES) {
       throw new Error(`O arquivo é muito grande. Tamanho máximo: ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB.`);
     }
-    // TODO: Adicionar checagem de mimeType do fileBlob vs ALLOWED_MIME_TYPES
+    if (!ALLOWED_MIME_TYPES.includes(fileData.fileBlob.type)) {
+        throw new Error(`Tipo de arquivo não permitido: ${fileData.fileBlob.type}. Tipos aceitos: ${ALLOWED_MIME_TYPES.join(', ')}.`);
+    }
+
+    // Gerar um caminho único no storage
+    const filePath = `${ownerId}/${fileData.parentId || 'root'}/${crypto.randomUUID()}-${fileData.name}`;
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(filePath, fileData.fileBlob, {
+            contentType: fileData.fileBlob.type,
+            upsert: false
+        });
+
+    if (uploadError) throw uploadError;
 
     const { data, error } = await supabase.from('files').insert({
         name: fileData.name,
-        type: fileData.type || 'PDF',
+        type: fileData.type || (fileData.fileBlob.type.startsWith('image/') ? 'IMAGE' : 'PDF'),
         parent_id: fileData.parentId,
         owner_id: ownerId,
-        storage_path: fileData.storagePath,
-        size: fileData.size,
+        storage_path: uploadData.path, // Caminho real no Supabase Storage
+        size: `${(fileData.fileBlob.size / 1024 / 1024).toFixed(2)} MB`,
+        mime_type: fileData.fileBlob.type, // Salva o tipo MIME
         metadata: fileData.metadata || { status: QualityStatus.PENDING },
         uploaded_by: user.id,
         updated_at: new Date().toISOString()
@@ -168,9 +192,53 @@ export const SupabaseFileService: IFileService = {
     if (error) throw error;
   },
 
-  deleteFile: async (user, fileId) => {
-    const { error } = await supabase.from('files').delete().eq('id', fileId);
+  renameFile: async (user, fileId, newName) => {
+    const { error } = await supabase.from('files').update({
+      name: newName,
+      updated_at: new Date().toISOString()
+    }).eq('id', fileId);
     if (error) throw error;
+  },
+
+  // Fix: Updated deleteFile to accept an array of IDs
+  deleteFile: async (user, fileIds: string[]) => {
+    // Primeiro, recuperar os caminhos dos arquivos no storage para deletar
+    const { data: filesToDelete, error: fetchError } = await supabase.from('files').select('id, storage_path, type').in('id', fileIds);
+    if (fetchError) throw fetchError;
+
+    const storagePaths: string[] = [];
+    const fileNodeIdsToDelete: string[] = [];
+
+    for (const file of filesToDelete || []) {
+        fileNodeIdsToDelete.push(file.id);
+        if (file.type !== 'FOLDER' && file.storage_path && file.storage_path !== 'system/folder') {
+            storagePaths.push(file.storage_path);
+        }
+        // Para pastas, também precisamos deletar seus filhos recursivamente
+        // Nota: Esta é uma exclusão em profundidade. Se a intenção é apenas excluir a pasta e seus conteúdos diretos,
+        // mas não subpastas e seus conteúdos, a lógica precisaria ser adaptada.
+        // Por enquanto, vamos manter a exclusão de filhos diretos apenas.
+        if (file.type === 'FOLDER') {
+            const { data: childFiles, error: childError } = await supabase.from('files').select('id, storage_path, type').eq('parent_id', file.id);
+            if (childError) throw childError;
+            for (const child of childFiles || []) {
+                fileNodeIdsToDelete.push(child.id);
+                if (child.type !== 'FOLDER' && child.storage_path && child.storage_path !== 'system/folder') {
+                    storagePaths.push(child.storage_path);
+                }
+            }
+        }
+    }
+
+    // Deletar do Storage
+    if (storagePaths.length > 0) {
+        const { error: deleteStorageError } = await supabase.storage.from(STORAGE_BUCKET).remove(storagePaths);
+        if (deleteStorageError) throw deleteStorageError;
+    }
+
+    // Deletar do banco de dados (tabela 'files')
+    const { error: deleteDbError } = await supabase.from('files').delete().in('id', fileNodeIdsToDelete);
+    if (deleteDbError) throw deleteDbError;
   },
 
   searchFiles: async (user, query, page = 1, pageSize = 20) => {
@@ -193,10 +261,27 @@ export const SupabaseFileService: IFileService = {
     };
   },
 
-  getBreadcrumbs: async (folderId) => {
-    if (!folderId) return [{ id: null, name: 'Home' }];
-    const { data } = await supabase.from('files').select('id, name').eq('id', folderId).single();
-    return [{ id: null, name: 'Home' }, { id: folderId, name: data?.name || 'Pasta' }];
+  getBreadcrumbs: async (currentFolderId: string | null): Promise<BreadcrumbItem[]> => {
+    const breadcrumbs: BreadcrumbItem[] = [{ id: null, name: 'Início' }];
+    let folderId = currentFolderId;
+
+    while (folderId) {
+      const { data, error } = await supabase
+        .from('files')
+        .select('id, name, parent_id, owner_id') // Include owner_id to check access
+        .eq('id', folderId)
+        .single();
+
+      if (error || !data) break;
+
+      // Security check: ensure the user has access to this folder (e.g., it's within their organization)
+      // This is a basic check; a more robust ACL would be needed for complex scenarios.
+      // For now, assuming if it's in their path, they should see it.
+      
+      breadcrumbs.unshift({ id: data.id, name: data.name }); // Adiciona ao início
+      folderId = data.parent_id;
+    }
+    return breadcrumbs;
   },
 
   toggleFavorite: async (user, fileId) => {
@@ -226,8 +311,20 @@ export const SupabaseFileService: IFileService = {
   },
 
   getFileSignedUrl: async (user, fileId): Promise<string> => {
-    const { data: file, error } = await supabase.from('files').select('storage_path').eq('id', fileId).single();
+    const { data: file, error } = await supabase.from('files').select('storage_path, owner_id, metadata').eq('id', fileId).single();
     if (error || !file) throw new Error("Documento não encontrado.");
+
+    const role = normalizeRole(user.role);
+    // Client-side check for security: ensure client can only access their own approved files
+    if (role === UserRole.CLIENT) {
+      if (file.owner_id !== user.organizationId) {
+        throw new Error("Acesso negado: Este documento não pertence à sua organização.");
+      }
+      if (file.metadata?.status !== QualityStatus.APPROVED) {
+        throw new Error("Acesso negado: Este documento não foi aprovado.");
+      }
+    }
+
 
     const { data, error: storageError } = await supabase.storage
       .from(STORAGE_BUCKET)

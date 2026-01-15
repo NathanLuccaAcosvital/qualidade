@@ -21,11 +21,13 @@ export const en: typeof pt = {
     showPassword: "Show password",
     hidePassword: "Hide password",
     close: "Close",
+    delete: "Delete",
     language: {
       pt: "Portuguese",
       en: "English",
       es: "Spanish"
-    }
+    },
+    clear: "Clear"
   },
   login: {
     title: "Quality Portal",
@@ -128,7 +130,8 @@ export const en: typeof pt = {
     management: "Management",
     qualityManagement: "Quality Management",
     portalName: "Quality Portal",
-    brand: "Aços Vital"
+    brand: "Aços Vital",
+    systemMonitoring: "SYSTEM MONITORING"
   },
   files: {
     authenticatingAccess: "Authenticating Access...",
@@ -143,6 +146,52 @@ export const en: typeof pt = {
     },
     sort: {
       nameAsc: "Name (A-Z)"
-    }
+    },
+    searchPlaceholder: "Search files and folders...",
+    listView: "List View",
+    gridView: "Grid View",
+    itemSelected: "item selected",
+    itemsSelected: "items selected",
+    processingFiles: "Processing files...",
+    upload: {
+      title: "Upload File",
+      button: "Upload",
+      selectFile: "Select file to upload",
+      chooseFile: "Choose file",
+      fileName: "File name",
+      fileNamePlaceholder: "Ex: RawMaterial_Cert_Batch123.pdf",
+      uploadButton: "Upload",
+      noFileSelected: "No file selected.",
+      fileNameRequired: "File name is required.",
+      success: "File uploaded successfully!",
+      noOrgLinked: "User not linked to an organization. Cannot upload files."
+    },
+    createFolder: {
+      title: "Create New Folder",
+      button: "New Folder",
+      folderName: "Folder name",
+      folderNamePlaceholder: "Ex: Batch 2024 Documents",
+      createButton: "Create Folder",
+      nameRequired: "Folder name is required.",
+      success: "Folder created successfully!",
+      noOrgLinked: "User not linked to an organization. Cannot create folders."
+    },
+    rename: {
+      title: "Rename",
+      newName: "New name",
+      newNamePlaceholder: "Enter new name",
+      renameButton: "Rename",
+      nameRequired: "New name is required.",
+      success: "Item renamed successfully!"
+    },
+    delete: {
+      confirmTitle: "Confirm Deletion",
+      confirmMessage: "Are you sure you want to delete {{count}} selected item(s)? This action cannot be undone.",
+      button: "Delete"
+    },
+    downloadButton: "Download",
+    selectItem: "Select {{name}}",
+    noResultsFound: "No results found.",
+    typeToSearch: "Type to search files and folders..."
   }
 };

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, LogOut, User as UserIcon } from 'lucide-react';
@@ -13,9 +14,10 @@ interface HeaderProps {
   unreadCount: number;
   onLogout: () => void;
   onOpenMobileMenu: () => void;
+  onOpenCommandPalette: () => void; // New prop
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, user, role, unreadCount, onLogout, onOpenMobileMenu }) => {
+export const Header: React.FC<HeaderProps> = ({ title, user, role, unreadCount, onLogout, onOpenMobileMenu, onOpenCommandPalette }) => {
   const { t } = useTranslation();
 
   return (
@@ -32,6 +34,13 @@ export const Header: React.FC<HeaderProps> = ({ title, user, role, unreadCount, 
         </div>
 
         <div className="flex items-center gap-6">
+          <button 
+            onClick={onOpenCommandPalette} 
+            className="px-3 py-1.5 bg-slate-100 rounded-lg text-slate-500 text-xs font-medium uppercase tracking-wider hover:bg-slate-200 transition-colors"
+            title="Search (Cmd+K)"
+          >
+            Cmd+K
+          </button>
           <NotificationTrigger count={unreadCount} />
           <div className="h-8 w-px bg-slate-100" />
           <button 

@@ -38,11 +38,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleReset = () => {
+    // Fix: `this.setState` exists on Component, no need to suppress TS error.
     this.setState({ hasError: false });
     window.location.reload();
   };
 
   public render(): ReactNode {
+    // Fix: `this.props` exists on Component, no need to suppress TS error.
     if (!this.state.hasError) return this.props.children;
 
     return (

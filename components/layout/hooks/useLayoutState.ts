@@ -8,6 +8,7 @@ export const useLayoutState = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false); // New state for Command Palette
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => {
@@ -26,6 +27,9 @@ export const useLayoutState = () => {
   const openChangePassword = useCallback(() => setIsChangePasswordOpen(true), []);
   const closeChangePassword = useCallback(() => setIsChangePasswordOpen(false), []);
 
+  const openCommandPalette = useCallback(() => setIsCommandPaletteOpen(true), []); // New open
+  const closeCommandPalette = useCallback(() => setIsCommandPaletteOpen(false), []); // New close
+
   return {
     sidebarCollapsed,
     toggleSidebar,
@@ -37,6 +41,9 @@ export const useLayoutState = () => {
     closePrivacy,
     isChangePasswordOpen,
     openChangePassword,
-    closeChangePassword
+    closeChangePassword,
+    isCommandPaletteOpen, // New return
+    openCommandPalette,   // New return
+    closeCommandPalette   // New return
   };
 };

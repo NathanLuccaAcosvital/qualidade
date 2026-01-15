@@ -21,11 +21,13 @@ export const es: typeof pt = {
     showPassword: "Mostrar contraseña",
     hidePassword: "Ocultar contraseña",
     close: "Cerrar",
+    delete: "Eliminar",
     language: {
     pt: "Portugués",
     en: "Inglés",
     es: "Español"
-  }
+  },
+    clear: "Limpiar"
   },
   login: {
     title: "Portal de Calidad",
@@ -128,7 +130,8 @@ export const es: typeof pt = {
     management: "Gestión",
     qualityManagement: "Gestión de Calidad",
     portalName: "Portal de Calidad",
-    brand: "Aços Vital"
+    brand: "Aços Vital",
+    systemMonitoring: "MONITOREO DEL SISTEMA"
   },
   files: {
     authenticatingAccess: "Autenticando Acceso...",
@@ -143,6 +146,52 @@ export const es: typeof pt = {
     },
     sort: {
       nameAsc: "Nombre (A-Z)"
-    }
+    },
+    searchPlaceholder: "Buscar archivos y carpetas...",
+    listView: "Vista de lista",
+    gridView: "Vista de cuadrícula",
+    itemSelected: "elemento seleccionado",
+    itemsSelected: "elementos seleccionados",
+    processingFiles: "Procesando archivos...",
+    upload: {
+      title: "Subir archivo",
+      button: "Subir",
+      selectFile: "Seleccione el archivo para subir",
+      chooseFile: "Elegir archivo",
+      fileName: "Nombre del archivo",
+      fileNamePlaceholder: "Ej: Certificado_MateriaPrima_Lote123.pdf",
+      uploadButton: "Subir",
+      noFileSelected: "Ningún archivo seleccionado.",
+      fileNameRequired: "El nombre del archivo es obligatorio.",
+      success: "¡Archivo subido exitosamente!",
+      noOrgLinked: "Usuario no vinculado a una organización. No se pueden subir archivos."
+    },
+    createFolder: {
+      title: "Crear nueva carpeta",
+      button: "Nueva carpeta",
+      folderName: "Nombre de la carpeta",
+      folderNamePlaceholder: "Ej: Documentos Lote 2024",
+      createButton: "Crear carpeta",
+      nameRequired: "El nombre de la carpeta es obligatorio.",
+      success: "¡Carpeta creada exitosamente!",
+      noOrgLinked: "Usuario no vinculado a una organización. No se pueden crear carpetas."
+    },
+    rename: {
+      title: "Renombrar",
+      newName: "Nuevo nombre",
+      newNamePlaceholder: "Ingrese el nuevo nombre",
+      renameButton: "Renombrar",
+      nameRequired: "El nuevo nombre es obligatorio.",
+      success: "¡Elemento renombrado exitosamente!"
+    },
+    delete: {
+      confirmTitle: "Confirmar Eliminación",
+      confirmMessage: "¿Está seguro de que desea eliminar {{count}} elemento(s) seleccionado(s)? Esta acción no se puede deshacer.",
+      button: "Eliminar"
+    },
+    downloadButton: "Descargar",
+    selectItem: "Seleccionar {{name}}",
+    noResultsFound: "No se encontraron resultados.",
+    typeToSearch: "Escriba para buscar archivos y carpetas..."
   }
 };

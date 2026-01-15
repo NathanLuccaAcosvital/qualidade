@@ -19,11 +19,13 @@ export const pt = {
     showPassword: "Mostrar senha",
     hidePassword: "Ocultar senha",
     close: "Fechar",
+    delete: "Excluir",
     language: {
       pt: "Português",
       en: "Inglês",
       es: "Espanhol"
-    }
+    },
+    clear: "Limpar"
   },
   login: {
     title: "Portal da Qualidade",
@@ -126,7 +128,8 @@ export const pt = {
     management: "Gestão",
     qualityManagement: "Gestão da Qualidade",
     portalName: "Portal da Qualidade",
-    brand: "Aços Vital"
+    brand: "Aços Vital",
+    systemMonitoring: "MONITORAMENTO DO SISTEMA"
   },
   files: {
     authenticatingAccess: "Autenticando Acesso...",
@@ -141,6 +144,52 @@ export const pt = {
     },
     sort: {
       nameAsc: "Nome (A-Z)"
-    }
+    },
+    searchPlaceholder: "Pesquisar arquivos e pastas...",
+    listView: "Lista",
+    gridView: "Grade",
+    itemSelected: "item selecionado",
+    itemsSelected: "itens selecionados",
+    processingFiles: "Processando arquivos...",
+    upload: {
+      title: "Carregar Arquivo",
+      button: "Upload",
+      selectFile: "Selecione o arquivo para upload",
+      chooseFile: "Escolher arquivo",
+      fileName: "Nome do arquivo",
+      fileNamePlaceholder: "Ex: Certificado_MateriaPrima_Lote123.pdf",
+      uploadButton: "Fazer Upload",
+      noFileSelected: "Nenhum arquivo selecionado.",
+      fileNameRequired: "O nome do arquivo é obrigatório.",
+      success: "Arquivo enviado com sucesso!",
+      noOrgLinked: "Usuário sem organização vinculada. Não é possível fazer upload."
+    },
+    createFolder: {
+      title: "Criar Nova Pasta",
+      button: "Nova Pasta",
+      folderName: "Nome da pasta",
+      folderNamePlaceholder: "Ex: Documentos Lote 2024",
+      createButton: "Criar Pasta",
+      nameRequired: "O nome da pasta é obrigatório.",
+      success: "Pasta criada com sucesso!",
+      noOrgLinked: "Usuário sem organização vinculada. Não é possível criar pastas."
+    },
+    rename: {
+      title: "Renomear",
+      newName: "Novo nome",
+      newNamePlaceholder: "Digite o novo nome",
+      renameButton: "Renomear",
+      nameRequired: "O novo nome é obrigatório.",
+      success: "Item renomeado com sucesso!"
+    },
+    delete: {
+      confirmTitle: "Confirmar Exclusão",
+      confirmMessage: "Tem certeza que deseja excluir {{count}} item(ns) selecionado(s)? Esta ação não pode ser desfeita.",
+      button: "Excluir"
+    },
+    downloadButton: "Download",
+    selectItem: "Selecionar {{name}}",
+    noResultsFound: "Nenhum resultado encontrado.",
+    typeToSearch: "Digite para buscar arquivos e pastas..."
   }
 };

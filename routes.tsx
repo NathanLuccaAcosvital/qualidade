@@ -44,6 +44,7 @@ const PageLoader = ({ message = "Carregando...", onRetry }: { message?: string; 
  * são responsabilidade do `ClientLoginPage` para centralizar a animação.
  */
 const InitialAuthRedirect = () => {
+    // Fix: Access isInitialSyncComplete and retryInitialSync from useAuth
     const { user, systemStatus, isLoading, error: authError, isInitialSyncComplete, retryInitialSync } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();

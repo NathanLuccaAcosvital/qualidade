@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { userService } from '../lib/services';
-import { appService } from '../lib/services/appService.tsx'; // Importe o novo serviço
+import { appService } from '../lib/services/appService.tsx';
 import { User, SystemStatus } from '../types';
 
 interface AuthState {
@@ -9,11 +9,15 @@ interface AuthState {
   isLoading: boolean;
   systemStatus: SystemStatus | null;
   error: string | null;
+  // Add new state properties for initial sync completion and retry mechanism
+  isInitialSyncComplete: boolean;
 }
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  // Add new methods for retry mechanism
+  retryInitialSync: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +27,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user: null,
     isLoading: true,
     systemStatus: null,
-    error: null
+    error: null,
+    isInitialSyncComplete: false, // Initialize as false
   });
 
   const mounted = useRef(true);
@@ -39,14 +44,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           user,
           systemStatus,
           isLoading: false,
-          error: null
+          error: null,
+          isInitialSyncComplete: true, // Mark as true once initial sync is done
         });
       }
     } catch (error) {
       console.error("Erro crítico na inicialização:", error);
-      if (mounted.current) setState(s => ({ ...s, isLoading: false, error: "Erro de conexão" }));
+      if (mounted.current) setState(s => ({ ...s, isLoading: false, error: "Erro de conexão", isInitialSyncComplete: true })); // Also mark as true on error to stop initial loader
     }
   };
+
+  // Function to retry the initial sync
+  const retryInitialSync = useCallback(async () => {
+    setState(s => ({ ...s, isLoading: true, error: null, isInitialSyncComplete: false }));
+    await refreshAuth();
+  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -55,6 +67,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listener para Login/Logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        // Ensure that onAuthStateChange also triggers a full refresh
+        setState(s => ({ ...s, isLoading: true, isInitialSyncComplete: false }));
         refreshAuth();
       }
     });
@@ -82,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.href = '/'; // Redirecionamento forçado para limpar memória
   };
 
-  const value = useMemo(() => ({ ...state, login, logout }), [state]);
+  const value = useMemo(() => ({ ...state, login, logout, retryInitialSync }), [state, retryInitialSync]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

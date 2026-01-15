@@ -1,44 +1,183 @@
 
+
 import React from 'react';
-import { Home, ChevronRight, List, LayoutGrid } from 'lucide-react';
+// Fix: Added missing Lucide icon imports
+import { Home, ChevronRight, List, LayoutGrid, Search, UploadCloud, FolderPlus, X, Edit2, Download, MoreVertical, Trash2 } from 'lucide-react';
+import { BreadcrumbItem, FileNode, FileType } from '../../../../types/index.ts';
+import { useTranslation } from 'react-i18next';
 
 interface ExplorerToolbarProps {
   viewMode: 'grid' | 'list';
   onViewChange: (mode: 'grid' | 'list') => void;
-  onHome: () => void;
-  title: string;
+  onNavigate: (folderId: string | null) => void;
+  breadcrumbs: BreadcrumbItem[];
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  onUploadClick: () => void;
+  onCreateFolderClick: () => void;
+  selectedCount: number;
+  onDeleteSelected: () => void;
+  onRenameSelected: () => void; // Apenas para um único item
+  onDownloadSelected: () => void; // Apenas para um único arquivo
+  selectedFilesData: FileNode[]; // Added to pass data about selected files
 }
 
-export const ExplorerToolbar: React.FC<ExplorerToolbarProps> = ({ viewMode, onViewChange, onHome, title }) => (
-  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-    <div className="flex items-center gap-2">
-      <button 
-        onClick={onHome} 
-        className="p-2 hover:bg-white rounded-xl transition-all hover:text-blue-600 group"
-        aria-label="Ir para raiz"
-      >
-        <Home size={18} className="text-slate-400 group-hover:text-blue-500"/>
-      </button>
-      <ChevronRight size={14} className="text-slate-300" />
-      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{title}</span>
+export const ExplorerToolbar: React.FC<ExplorerToolbarProps> = ({ 
+  viewMode, 
+  onViewChange, 
+  onNavigate, 
+  breadcrumbs, 
+  searchTerm, 
+  onSearchChange,
+  onUploadClick,
+  onCreateFolderClick,
+  selectedCount,
+  onDeleteSelected,
+  onRenameSelected,
+  onDownloadSelected,
+  selectedFilesData
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="sticky top-20 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/70 p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+      
+      {/* Breadcrumbs como navegação principal */}
+      <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+        <Breadcrumbs breadcrumbs={breadcrumbs} onNavigate={onNavigate} />
+        {/* Integração da busca no toolbar, para acesso rápido */}
+        <SearchInput searchTerm={searchTerm} onSearchChange={onSearchChange} t={t} />
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        {selectedCount > 0 ? (
+          <SelectedActions 
+            count={selectedCount} 
+            onDelete={onDeleteSelected} 
+            onRename={onRenameSelected} 
+            onDownload={onDownloadSelected}
+            selectedFilesData={selectedFilesData}
+            t={t}
+          />
+        ) : (
+          <PrimaryActions 
+            onUpload={onUploadClick} 
+            onCreateFolder={onCreateFolderClick} 
+            viewMode={viewMode} 
+            onViewChange={onViewChange}
+            t={t}
+          />
+        )}
+      </div>
     </div>
-    
+  );
+};
+
+/* --- Sub-componentes do Toolbar --- */
+
+const Breadcrumbs: React.FC<{ breadcrumbs: BreadcrumbItem[]; onNavigate: (id: string | null) => void }> = ({ breadcrumbs, onNavigate }) => (
+  <nav className="flex items-center text-sm font-medium text-slate-500 overflow-x-auto whitespace-nowrap custom-scrollbar -ml-2 -mr-2 px-2 py-1 bg-white/70 backdrop-blur-sm rounded-xl border border-slate-100 shadow-sm" aria-label="Navegação do diretório">
+    {breadcrumbs.map((item, index) => (
+      <React.Fragment key={item.id || 'home'}>
+        <button 
+          onClick={() => onNavigate(item.id)}
+          className={`px-2 py-1 rounded-lg transition-colors ${index === breadcrumbs.length - 1 ? 'font-bold text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-100'}`}
+          aria-label={item.name}
+        >
+          {item.name}
+        </button>
+        {index < breadcrumbs.length - 1 && <ChevronRight size={14} className="text-slate-400 mx-0.5" />}
+      </React.Fragment>
+    ))}
+  </nav>
+);
+
+const SearchInput: React.FC<{ searchTerm: string; onSearchChange: (term: string) => void; t: any }> = ({ searchTerm, onSearchChange, t }) => (
+  <div className="relative flex-1 min-w-[200px] max-w-sm ml-4 hidden md:block">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+    <input 
+      type="text" 
+      placeholder={t('files.searchPlaceholder')}
+      className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium" 
+      value={searchTerm} 
+      onChange={e => onSearchChange(e.target.value)} 
+      aria-label={t('files.searchPlaceholder')}
+    />
+  </div>
+);
+
+const PrimaryActions: React.FC<{ onUpload: () => void; onCreateFolder: () => void; viewMode: 'grid' | 'list'; onViewChange: (mode: 'grid' | 'list') => void; t: any }> = ({ 
+  onUpload, onCreateFolder, viewMode, onViewChange, t 
+}) => (
+  <div className="flex items-center gap-3">
+    <button 
+      onClick={onUpload} 
+      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-600/20"
+      aria-label={t('files.upload.title')}
+    >
+      <UploadCloud size={16} /> <span className="hidden md:inline">{t('files.upload.button')}</span>
+    </button>
+    <button 
+      onClick={onCreateFolder} 
+      className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+      aria-label={t('files.createFolder.title')}
+    >
+      <FolderPlus size={16} /> <span className="hidden md:inline">{t('files.createFolder.button')}</span>
+    </button>
+    <div className="h-6 w-px bg-slate-100 hidden md:block" />
     <div className="flex bg-slate-200/50 p-1 rounded-lg">
       <ViewButton 
         active={viewMode === 'list'} 
         onClick={() => onViewChange('list')} 
         icon={List} 
-        label="Lista" 
+        label={t('files.listView')} 
       />
       <ViewButton 
         active={viewMode === 'grid'} 
         onClick={() => onViewChange('grid')} 
         icon={LayoutGrid} 
-        label="Grade" 
+        label={t('files.gridView')} 
       />
     </div>
   </div>
 );
+
+const SelectedActions: React.FC<{ count: number; onDelete: () => void; onRename: () => void; onDownload: () => void; t: any; selectedFilesData: FileNode[] }> = ({ count, onDelete, onRename, onDownload, t, selectedFilesData }) => {
+  const isSingleFileSelected = count === 1 && selectedFilesData[0]?.type !== FileType.FOLDER;
+  const isSingleItemSelected = count === 1;
+
+  return (
+    <div className="flex items-center gap-3 bg-blue-50 text-blue-800 px-4 py-2.5 rounded-xl border border-blue-100 shadow-sm animate-in zoom-in-95">
+      <span className="text-xs font-black uppercase tracking-widest">{count} {count === 1 ? t('files.itemSelected') : t('files.itemsSelected')}</span>
+      <div className="h-6 w-px bg-blue-100" />
+      <button 
+        onClick={onDelete} 
+        className="p-2 text-red-600 hover:bg-red-100 rounded-md transition-all"
+        aria-label={t('common.delete')}
+      >
+        <Trash2 size={18} />
+      </button>
+      {isSingleItemSelected && (
+        <button 
+          onClick={onRename} 
+          className="p-2 text-slate-600 hover:bg-slate-100 rounded-md transition-all"
+          aria-label={t('files.rename.title')}
+        >
+          <Edit2 size={18} />
+        </button>
+      )}
+      {isSingleFileSelected && (
+        <button 
+          onClick={onDownload} 
+          className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-md transition-all"
+          aria-label={t('files.downloadButton')}
+        >
+          <Download size={18} />
+        </button>
+      )}
+    </div>
+  );
+};
 
 const ViewButton = ({ active, onClick, icon: Icon, label }: any) => (
   <button 

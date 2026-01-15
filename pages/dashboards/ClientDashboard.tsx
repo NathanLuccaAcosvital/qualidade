@@ -1,6 +1,6 @@
-import React, { useState, useEffect, Suspense, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Layout } from '../../components/layout/MainLayout.tsx';
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext.tsx';
 import { fileService } from '../../lib/services/index.ts';
 import { DashboardStatsData } from '../../lib/services/interfaces.ts';
@@ -13,27 +13,18 @@ import {
   ShieldCheck, 
   Library, 
   Star, 
-  Search,
-  Grid,
-  List as ListIcon,
-  ChevronRight,
-  Download,
-  MoreVertical,
-  History
+  History,
+  MoreVertical
 } from 'lucide-react';
-import { normalizeRole, UserRole, FileNode } from '../../types/index.ts';
-import { FileExplorer } from '../../components/features/files/FileExplorer.tsx';
+import { normalizeRole, UserRole, FileNode, FileType } from '../../types/index.ts';
 import { FilePreviewModal } from '../../components/features/files/FilePreviewModal.tsx';
 
+// ClientDashboard (para a view 'home')
 const ClientDashboard: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
   
-  const queryParams = new URLSearchParams(location.search);
-  const currentView = queryParams.get('view') || 'home';
-
   const [stats, setStats] = useState<DashboardStatsData | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -41,12 +32,8 @@ const ClientDashboard: React.FC = () => {
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
 
   useEffect(() => {
-    const role = normalizeRole(user?.role);
-    if (user && role !== UserRole.CLIENT && role !== UserRole.ADMIN) {
-      navigate('/quality/dashboard', { replace: true });
-      return;
-    }
-    
+    // Redirecionamento de roles já é tratado pelo ClientPage ou RoleMiddleware
+    // Este useEffect agora foca apenas no carregamento de dados para o dashboard.
     if (user) {
       fileService.getDashboardStats(user).then(setStats);
       setIsLoadingRecent(true);
@@ -55,7 +42,7 @@ const ClientDashboard: React.FC = () => {
           setIsLoadingRecent(false);
       });
     }
-  }, [user, navigate]);
+  }, [user]);
 
   const handleFileSelect = (file: FileNode | null) => {
     if (file && file.type !== 'FOLDER') {
@@ -65,7 +52,7 @@ const ClientDashboard: React.FC = () => {
   };
 
   return (
-    <Layout title={currentView === 'home' ? t('menu.dashboard') : t('menu.library')}>
+    <>
       <FilePreviewModal 
         file={selectedFile} 
         isOpen={isPreviewOpen} 
@@ -73,105 +60,91 @@ const ClientDashboard: React.FC = () => {
       />
 
       <div className="space-y-8 pb-12 animate-in fade-in duration-700">
-        {currentView === 'home' ? (
-          <>
-            <DashboardHero name={user?.name.split(' ')[0] || ''} t={t} />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <KpiCard 
-                icon={Library} 
-                label={t('dashboard.kpi.libraryLabel')} 
-                value={stats?.subValue ?? '--'} 
-                subtext={t('dashboard.kpi.activeDocsSubtext')} 
-                color="blue" 
-                onClick={() => navigate('/client/dashboard?view=files')} 
-                loading={!stats}
-              />
-              <KpiCard 
-                icon={Star} 
-                label={t('menu.favorites')} 
-                value={0} // Mock favorites count or implement in service
-                subtext="Arquivos Marcados" 
-                color="indigo" 
-                onClick={() => navigate('/client/dashboard?view=favorites')} 
-                loading={!stats}
-              />
-              <KpiCard 
-                icon={History} 
-                label="Recentes" 
-                value={recentFiles.length} 
-                subtext="Visualizados Hoje" 
-                color="slate" 
-                onClick={() => navigate('/client/dashboard?view=recent')} 
-                loading={!stats}
-              />
-            </div>
+        <DashboardHero name={user?.name.split(' ')[0] || ''} t={t} />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <KpiCard 
+            icon={Library} 
+            label={t('dashboard.kpi.libraryLabel')} 
+            value={stats?.subValue ?? '--'} 
+            subtext={t('dashboard.kpi.activeDocsSubtext')} 
+            color="blue" 
+            onClick={() => navigate('/client/dashboard?view=files')} 
+            loading={!stats}
+          />
+          <KpiCard 
+            icon={Star} 
+            label={t('menu.favorites')} 
+            value={0} // Mock favorites count or implement in service
+            subtext="Arquivos Marcados" 
+            color="indigo" 
+            onClick={() => navigate('/client/dashboard?view=favorites')} 
+            loading={!stats}
+          />
+          <KpiCard 
+            icon={History} 
+            label="Recentes" 
+            value={recentFiles.length} 
+            subtext="Visualizados Hoje" 
+            color="slate" 
+            onClick={() => navigate('/client/dashboard?view=files')} // Redireciona para a view de arquivos
+            loading={!stats}
+          />
+        </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Coluna Principal: Recentes / Sugestões */}
-                <div className="xl:col-span-2 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-400">Certificados Recentes</h3>
-                        <button onClick={() => navigate('/client/dashboard?view=files')} className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest">{t('dashboard.exploreAll')}</button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {isLoadingRecent ? (
-                            Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-white rounded-2xl animate-pulse border border-slate-100" />)
-                        ) : recentFiles.length > 0 ? (
-                            recentFiles.map(file => (
-                                <RecentFileCard key={file.id} file={file} onClick={() => handleFileSelect(file)} />
-                            ))
-                        ) : (
-                            <div className="col-span-full h-32 bg-slate-50 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm italic">
-                                Nenhum arquivo recente.
-                            </div>
-                        )}
-                    </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Coluna Principal: Recentes / Sugestões */}
+            <div className="xl:col-span-2 space-y-6">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-400">Certificados Recentes</h3>
+                    <button onClick={() => navigate('/client/dashboard?view=files')} className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest">{t('dashboard.exploreAll')}</button>
                 </div>
 
-                {/* Coluna Lateral: Status e Infos */}
-                <div className="space-y-6">
-                    <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-400">Status de Conformidade</h3>
-                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                                <ShieldCheck size={24} />
-                            </div>
-                            <div>
-                                <p className="text-sm font-bold text-slate-800">Operação Certificada</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ISO 9001:2015</p>
-                            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {isLoadingRecent ? (
+                        Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-36 bg-white rounded-2xl animate-pulse border border-slate-100" />)
+                    ) : recentFiles.length > 0 ? (
+                        recentFiles.map(file => (
+                            <RecentFileCard key={file.id} file={file} onClick={() => handleFileSelect(file)} />
+                        ))
+                    ) : (
+                        <div className="col-span-full h-32 bg-slate-50 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm italic">
+                            Nenhum arquivo recente.
                         </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                <span>Rastreabilidade</span>
-                                <span className="text-emerald-500">100% OK</span>
-                            </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 w-full" />
-                            </div>
-                        </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                            Todos os certificados exibidos neste portal foram validados pelo laboratório técnico da Aços Vital.
-                        </p>
-                    </div>
+                    )}
                 </div>
             </div>
-          </>
-        ) : (
-          <section className="bg-white rounded-3xl border border-slate-200 min-h-[700px] overflow-hidden shadow-sm flex flex-col">
-             <Suspense fallback={<ViewLoader />}>
-                {user?.organizationId ? (
-                  <FileExplorer onFileSelect={handleFileSelect} />
-                ) : (
-                  <div className="p-20 text-center text-slate-400 italic">Vínculo organizacional não detectado.</div>
-                )}
-             </Suspense>
-          </section>
-        )}
+
+            {/* Coluna Lateral: Status e Infos */}
+            <div className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-400">Status de Conformidade</h3>
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                            <ShieldCheck size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-slate-800">Operação Certificada</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ISO 9001:2015</p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            <span>Rastreabilidade</span>
+                            <span className="text-emerald-500">100% OK</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 w-full" />
+                        </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                        Todos os certificados exibidos neste portal foram validados pelo laboratório técnico da Aços Vital.
+                    </p>
+                </div>
+            </div>
+        </div>
       </div>
-    </Layout>
+    </>
   );
 };
 
@@ -250,16 +223,6 @@ const RecentFileCard: React.FC<{ file: FileNode; onClick: () => void }> = ({ fil
             </div>
         </div>
     </div>
-);
-
-const ViewLoader = () => (
-  <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4 min-h-[300px]">
-    <div className="relative">
-      <Loader2 className="animate-spin text-blue-500" size={40} />
-      <ShieldCheck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-900" size={16} />
-    </div>
-    <span className="text-[10px] font-black uppercase tracking-[4px]">Sincronizando Módulos...</span>
-  </div>
 );
 
 export default ClientDashboard;

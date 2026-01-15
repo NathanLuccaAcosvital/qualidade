@@ -17,11 +17,13 @@ export interface FileNode {
   name: string;
   type: FileType;
   size?: string;
+  mimeType?: string; // Adicionado para uploads
   updatedAt: ISO8601Date;
   ownerId?: ID;
   storagePath: string;
   isFavorite: boolean;
   metadata?: SteelBatchMetadata;
+  isSelected?: boolean; // Para gerenciar a seleção na UI
 }
 
 // Renamed from RepositoryFilters to LibraryFilters
