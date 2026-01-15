@@ -1,33 +1,20 @@
 import React, { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Layout } from '../components/layout/MainLayout.tsx';
 import { useAuth } from '../context/authContext.tsx';
 import { fileService } from '../lib/services/index.ts';
-import { DashboardStatsData } from '../lib/services/interfaces.ts';
 import { useTranslation } from 'react-i18next';
 import { 
-  Clock, 
   FileText, 
   Loader2, 
-  ArrowUpRight, 
   ShieldCheck, 
   Library, 
   Star, 
-  Search,
-  Grid,
-  List as ListIcon,
-  ChevronRight,
-  Download,
-  MoreVertical,
-  History,
-  XCircle,
   AlertTriangle,
   // Fix: Imported missing icons
   LayoutDashboard,
   Trash2,
-  Command
+  XCircle
 } from 'lucide-react';
-// Fix: Imported missing FileType
 import { normalizeRole, UserRole, FileNode, FileType } from '../types/index.ts';
 import { FileExplorer, FileExplorerHandle } from '../components/features/files/FileExplorer.tsx';
 import { FilePreviewModal } from '../components/features/files/FilePreviewModal.tsx';
@@ -40,7 +27,7 @@ import { ProcessingOverlay } from '../components/features/quality/components/Vie
 import ClientDashboard from './dashboards/ClientDashboard.tsx'; // Importa o componente ClientDashboard
 import { CommandPalette } from '../components/common/CommandPalette.tsx';
 import { useLayoutState } from '../components/layout/hooks/useLayoutState.ts';
-
+import { ClientLayout } from '../components/layout/ClientLayout.tsx'; // Importa o novo ClientLayout
 
 const ClientPage: React.FC = () => {
   const { user } = useAuth();
@@ -106,6 +93,17 @@ const ClientPage: React.FC = () => {
         return prev;
       }, { replace: true });
     }
+  }, [setSearchParams]);
+
+  // Function to change the active view in search params
+  const handleViewChange = useCallback((viewId: string) => {
+    setSearchParams(prev => {
+      prev.set('view', viewId);
+      if (viewId !== 'files') {
+        prev.delete('folderId'); // Clear folderId if not in files view
+      }
+      return prev;
+    }, { replace: true });
   }, [setSearchParams]);
 
   const handleFileSelectForPreview = useCallback((file: FileNode | null) => {
@@ -224,12 +222,6 @@ const ClientPage: React.FC = () => {
   const isSingleFileSelected = selectedFileIds.length === 1 && selectedFilesData[0]?.type !== FileType.FOLDER;
   const isSingleItemSelected = selectedFileIds.length === 1;
 
-  const VIEWS = [
-    { id: 'home', label: t('menu.dashboard'), icon: LayoutDashboard },
-    { id: 'files', label: t('menu.library'), icon: Library },
-    { id: 'favorites', label: t('menu.favorites'), icon: Star },
-  ];
-
   const renderContent = () => {
     switch (activeView) {
       case 'home':
@@ -251,7 +243,7 @@ const ClientPage: React.FC = () => {
               viewMode={viewMode}
               onViewChange={setViewMode}
               selectedFilesData={selectedFilesData}
-              userRole={userRole} {/* Pass userRole to toolbar */}
+              userRole={userRole}
             />
 
             <FileExplorer 
@@ -269,7 +261,7 @@ const ClientPage: React.FC = () => {
               onRenameFile={handleRenameSingleFile}
               onDeleteFile={handleDeleteSingleFile}
               viewMode={viewMode}
-              userRole={userRole} {/* Pass userRole to file explorer */}
+              userRole={userRole}
             />
           </div>
         );
@@ -295,7 +287,12 @@ const ClientPage: React.FC = () => {
   };
 
   return (
-    <Layout title={activeView === 'home' ? t('menu.dashboard') : t('menu.library')} onOpenCommandPalette={layout.openCommandPalette}>
+    <ClientLayout 
+      title={activeView === 'home' ? t('menu.dashboard') : t('menu.library')} 
+      activeView={activeView} 
+      onViewChange={handleViewChange}
+      onOpenCommandPalette={layout.openCommandPalette}
+    >
       <FilePreviewModal 
         file={selectedFileForPreview} 
         isOpen={isPreviewOpen} 
@@ -353,7 +350,8 @@ const ClientPage: React.FC = () => {
         </>
       )}
 
-      {/* Command Palette */}
+      {/* Command Palette (Integrado ao ClientLayout agora, mas sua lógica de busca ainda precisa vir daqui) */}
+      {/* Precisa ser renderizado aqui ou passar props para o ClientLayout para que ele possa renderizar e usar as funções de busca */}
       <CommandPalette
         isOpen={layout.isCommandPaletteOpen}
         onClose={layout.closeCommandPalette}
@@ -366,38 +364,10 @@ const ClientPage: React.FC = () => {
       {loading && <ProcessingOverlay message={t('files.processingFiles')} />}
 
       <div className="flex flex-col relative w-full gap-6 pb-20">
-        
-        {/* Navegação Superior por Abas - Estilo Industrial Premium */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-20 z-40">
-            <nav className="bg-white/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 inline-flex shadow-sm">
-                {VIEWS.map((view) => {
-                    const isActive = activeView === view.id;
-                    return (
-                        <button
-                            key={view.id}
-                            onClick={() => setSearchParams({ view: view.id })}
-                            className={`
-                                flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300
-                                ${isActive 
-                                    ? 'bg-[#081437] text-white shadow-lg shadow-slate-900/20 translate-y-[-1px]' 
-                                    : 'text-slate-500 hover:text-[#081437] hover:bg-slate-50'}
-                            `}
-                        >
-                            <view.icon size={14} className={isActive ? 'text-blue-400' : 'text-slate-400'} />
-                            {view.label}
-                        </button>
-                    );
-                })}
-            </nav>
-
-            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase bg-white/80 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="relative">
-                    <ShieldCheck size={16} className="text-emerald-500" />
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-ping opacity-75"></span>
-                </div>
-                Portal de Dados Seguro
-            </div>
-        </header>
+        {/*
+          A navegação superior por abas foi movida para o ClientDock.
+          A div de "Portal de Dados Seguro" também foi removida, se necessário, pode ser reintegrada no Header global ou no próprio dock.
+        */}
 
         {/* Container Principal de Conteúdo */}
         <main className="min-h-[calc(100vh-280px)] animate-in fade-in slide-in-from-bottom-3 duration-700">
@@ -406,7 +376,7 @@ const ClientPage: React.FC = () => {
             </Suspense>
         </main>
       </div>
-    </Layout>
+    </ClientLayout>
   );
 };
 

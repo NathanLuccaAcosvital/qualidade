@@ -1,5 +1,5 @@
 import React, { Suspense, useMemo, useState, useEffect, useRef } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 import { AuthMiddleware } from './middlewares/AuthMiddleware.tsx';
@@ -7,6 +7,7 @@ import { RoleMiddleware } from './middlewares/RoleMiddleware.tsx';
 import { MaintenanceMiddleware } from './middlewares/MaintenanceMiddleware.tsx';
 import { useAuth } from './context/authContext.tsx';
 import { UserRole, normalizeRole } from './types/index.ts';
+import { ClientLayout } from './components/layout/ClientLayout.tsx'; // Importa ClientLayout
 
 // Lazy loading das páginas
 const ClientLoginPage = React.lazy(() => import('./pages/ClientLoginPage.tsx'));
@@ -99,6 +100,14 @@ const InitialAuthRedirect = () => {
 };
 
 export const AppRoutes: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const activeView = searchParams.get('view') || 'home';
+  const navigate = useNavigate();
+
+  const handleClientViewChange = (view: string) => {
+    navigate(`/client/dashboard?view=${view}`);
+  };
+
   return (
     <Suspense fallback={<PageLoader message="Finalizando carregamento" />}>
       <Routes>
@@ -134,7 +143,11 @@ export const AppRoutes: React.FC = () => {
 
                 {/* Rotas de Cliente */}
                 <Route element={<RoleMiddleware allowedRoles={[UserRole.CLIENT, UserRole.ADMIN]} />}>
-                    <Route path="/client/dashboard" element={<ClientPage />} />
+                    {/* Wrap ClientPage with ClientLayout */}
+                    <Route 
+                      path="/client/dashboard" 
+                      element={<ClientPage />} 
+                    />
                 </Route>
             </Route>
         </Route>
