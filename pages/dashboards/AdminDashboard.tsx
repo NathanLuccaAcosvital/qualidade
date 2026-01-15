@@ -12,10 +12,10 @@ import { AdminOverview } from '../../components/features/admin/views/AdminOvervi
 import { normalizeRole } from '../../types/index.ts';
 
 const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, systemStatus } = useAuth(); // Consumir systemStatus diretamente do useAuth
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { adminStats, isLoading, systemStatus } = useAdminPage();
+  const { adminStats, isLoading } = useAdminPage(); // Removido systemStatus do useAdminPage
 
   useEffect(() => {
     const role = normalizeRole(user?.role);

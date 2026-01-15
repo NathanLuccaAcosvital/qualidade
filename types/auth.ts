@@ -1,6 +1,6 @@
 import { ID, ISO8601Date, CNPJ } from './common.ts';
+import { SystemStatus } from './system.ts'; // Importar SystemStatus
 
-// Added CLIENT to the UserRole enum
 export enum UserRole {
   ADMIN = 'ADMIN',
   QUALITY = 'QUALITY',
@@ -13,16 +13,10 @@ export enum AccountStatus {
   INACTIVE = 'INACTIVE'
 }
 
-// Adicione isto aos seus tipos
-export interface InitialAppData {
-  user: any | null; // Será mapeado para o tipo User depois
-  systemStatus: {
-    mode: 'ONLINE' | 'MAINTENANCE' | 'SCHEDULED';
-    message?: string;
-    scheduledStart?: string; // Changed from scheduled_start
-    scheduledEnd?: string;   // Changed from scheduled_end
-    updatedBy?: string;      // Changed from updated_by
-  } | null;
+// Renomeado de InitialAppData para AuthContextState
+export interface AuthContextState {
+  user: User | null; 
+  systemStatus: SystemStatus | null; // Usar o tipo importado
 }
 
 export interface ClientOrganization {

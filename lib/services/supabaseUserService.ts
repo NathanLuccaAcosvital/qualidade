@@ -4,9 +4,13 @@ import { supabase } from '../supabaseClient.ts';
 import { logAction } from './loggingService.ts';
 import { normalizeRole } from '../mappers/roleMapper.ts';
 import { withTimeout } from '../utils/apiUtils.ts';
-import { AuthError, Session, UserResponse, PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js';
+// Fix: Replace `UserResponse` with `AuthResponse` for methods that return auth data,
+// and alias Supabase's `User` type to avoid conflicts with local `User` interface.
+// Fix: Removed `UpdateUserResponse` as it's not exported by `@supabase/supabase-js`.
+import { AuthError, Session, User as SupabaseUser, AuthResponse, PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js';
 
-const API_TIMEOUT = 8000; // Timeout de 8s para feedback rápido
+const API_TIMEOUT = 8000; // Timeout de 8s para a maioria das operações
+const LOGOUT_API_TIMEOUT = 15000; // Timeout de 15s especificamente para logout
 
 /**
  * Mapper: Database Row (Profiles) -> Domain User (App)
@@ -67,7 +71,8 @@ export const SupabaseUserService: IUserService = {
         password 
       }));
     
-    const authResult: { data: { user: UserResponse['user'] | null }; error: AuthError | null } = await withTimeout( 
+    // Fix: Use `AuthResponse` directly as the return type for `signUp`
+    const authResult: AuthResponse = await withTimeout( 
       authPromise,
       API_TIMEOUT,
       "Tempo esgotado ao registrar usuário."
@@ -77,6 +82,7 @@ export const SupabaseUserService: IUserService = {
     if (authError) throw authError;
 
     // 2. Profile Creation
+    // Fix: `data.user` is now correctly typed as `SupabaseUser | null` from `AuthResponse`
     if (data.user) {
       const profilePromise: Promise<PostgrestResponse<null>> = Promise.resolve(supabase.from('profiles').upsert({
           id: data.user.id,
@@ -132,7 +138,6 @@ export const SupabaseUserService: IUserService = {
         return null; 
       }
       
-      // Fallback de segurança: se não vier perfil, retorna null ao invés de quebrar
       if (!profile) return null;
 
       return toDomainUser(profile, session.user.email);
@@ -145,12 +150,12 @@ export const SupabaseUserService: IUserService = {
   logout: async () => {
     const result: { error: AuthError | null } = await withTimeout( 
       Promise.resolve(supabase.auth.signOut()),
-      API_TIMEOUT,
+      LOGOUT_API_TIMEOUT, // Usar o timeout específico para logout
       "Tempo esgotado ao fazer logout."
     );
     const { error } = result;
     if (error) throw error;
-    localStorage.clear();
+    // localStorage.clear(); // Removido, agora gerenciado no AuthContext
   },
 
   getUsers: async () => {
@@ -167,8 +172,6 @@ export const SupabaseUserService: IUserService = {
     const { data, error } = result;
     if (error) throw error;
 
-    // --- CORREÇÃO DE SEGURANÇA AQUI ---
-    // Filtra usuários nulos para evitar crash na listagem
     return (data || [])
       .map(p => toDomainUser(p))
       .filter((u): u is User => u !== null);
@@ -188,8 +191,6 @@ export const SupabaseUserService: IUserService = {
     const { data, error } = result;
     if (error) throw error;
 
-    // --- CORREÇÃO DE SEGURANÇA AQUI ---
-    // Filtra usuários nulos para evitar crash na listagem
     return (data || [])
       .map(p => toDomainUser(p))
       .filter((u): u is User => u !== null);
@@ -214,10 +215,9 @@ export const SupabaseUserService: IUserService = {
     if (error) throw error;
   },
 
+  // Fix: Corrected the type of `updatePasswordPromise` from `UserResponse` to `AuthResponse` and simplified the promise creation.
   changePassword: async (userId, current, newPass) => {
-    const updatePasswordPromise: Promise<{ data: UserResponse['data']; error: AuthError | null }> = Promise.resolve(
-      supabase.auth.updateUser({ password: newPass })
-    );
+    const updatePasswordPromise = supabase.auth.updateUser({ password: newPass });
 
     const result = await withTimeout( 
       updatePasswordPromise,

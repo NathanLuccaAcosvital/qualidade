@@ -1,7 +1,9 @@
 
+
 import { useQualityClientList } from './useQualityClientList.ts';
 import { useQualityClientActions } from './useQualityClientActions.ts';
 import { ClientOrganization, User, UserRole, AccountStatus } from '../../../../types/index.ts';
+import { ClientFormData, UserFormData } from '../../admin/components/AdminModals.tsx'; // Importar tipos para uso no modal
 
 /**
  * useQualityClientManagement (Facade)
@@ -23,19 +25,19 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
             email: u.email, 
             password: '', 
             role: u.role, 
-            organizationId: u.organizationId || '', 
+            organizationId: u.organizationId, // Pode ser undefined
             status: u.status, 
-            department: u.department || '' 
-          } 
+            department: u.department // Pode ser undefined
+          } as UserFormData
         : { 
             name: '', 
             email: '', 
             password: '', 
             role: UserRole.CLIENT, 
-            organizationId: c?.id || '', 
-            department: '', 
+            organizationId: c?.id, // Pode ser undefined
+            department: undefined, // Pode ser undefined
             status: AccountStatus.ACTIVE 
-          }
+          } as UserFormData
     });
   };
 
@@ -50,15 +52,15 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
             cnpj: c.cnpj, 
             contractDate: c.contractDate, 
             status: c.status, 
-            qualityAnalystId: c.qualityAnalystId || '' 
-          }
+            qualityAnalystId: c.qualityAnalystId // Pode ser undefined
+          } as ClientFormData
         : { 
             name: '', 
             cnpj: '', 
             contractDate: new Date().toISOString().split('T')[0], 
             status: AccountStatus.ACTIVE, 
-            qualityAnalystId: '' 
-          }
+            qualityAnalystId: undefined // Pode ser undefined
+          } as ClientFormData
     });
   };
 
@@ -69,6 +71,8 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
     setClientSearch: list.setSearch,
     clientStatus: list.statusFilter,
     setClientStatus: list.setStatusFilter,
+    sortKey: list.sortKey, // Exposto
+    setSortKey: list.setSortKey, // Exposto
     isLoadingClients: list.isLoading,
     isLoadingMoreClients: list.isLoadingMore,
     hasMoreClients: list.hasMore,
@@ -84,7 +88,7 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
       setOpen: (open: boolean) => actions.setUserModal(p => ({ ...p, isOpen: open })),
       editing: actions.userModal.editing,
       data: actions.userModal.data,
-      setData: (data: any) => actions.setUserModal(p => ({ ...p, data })),
+      setData: (data: UserFormData) => actions.setUserModal(p => ({ ...p, data })),
       open: openUserModal,
       save: actions.handleSaveUser
     },
@@ -95,7 +99,7 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
       setOpen: (open: boolean) => actions.setClientModal(p => ({ ...p, isOpen: open })),
       editing: actions.clientModal.editing,
       data: actions.clientModal.data,
-      setData: (data: any) => actions.setClientModal(p => ({ ...p, data })),
+      setData: (data: ClientFormData) => actions.setClientModal(p => ({ ...p, data })),
       open: openClientModal,
       save: actions.handleSaveClient
     }

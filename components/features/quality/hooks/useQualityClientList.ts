@@ -1,10 +1,12 @@
 
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../../../context/authContext.tsx';
 import { useToast } from '../../../../context/notificationContext.tsx';
 import { useTranslation } from 'react-i18next';
 import { ClientOrganization } from '../../../../types/index.ts';
 import { adminService } from '../../../../lib/services/index.ts';
+import { AccountStatus } from '../../../../types/auth.ts'; // Importar AccountStatus
 
 const CLIENTS_PER_PAGE = 24;
 
@@ -20,7 +22,8 @@ export const useQualityClientList = (refreshTrigger: number) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | AccountStatus>('ALL'); // Atualizado
+  const [sortKey, setSortKey] = useState<'NAME' | 'PENDING' | 'NEWEST' | 'LAST_ANALYSIS'>('NAME');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -28,7 +31,8 @@ export const useQualityClientList = (refreshTrigger: number) => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await adminService.getClients({ search, status: statusFilter }, 1, CLIENTS_PER_PAGE);
+      const statusParam = statusFilter === 'ALL' ? undefined : statusFilter;
+      const res = await adminService.getClients({ search, status: statusParam }, 1, CLIENTS_PER_PAGE);
       setClients(res.items || []);
       setHasMore(res.hasMore || false);
       setPage(1);
@@ -44,7 +48,8 @@ export const useQualityClientList = (refreshTrigger: number) => {
     setIsLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const res = await adminService.getClients({ search, status: statusFilter }, nextPage, CLIENTS_PER_PAGE);
+      const statusParam = statusFilter === 'ALL' ? undefined : statusFilter;
+      const res = await adminService.getClients({ search, status: statusParam }, nextPage, CLIENTS_PER_PAGE);
       setClients(prev => [...prev, ...(res.items || [])]);
       setHasMore(res.hasMore || false);
       setPage(nextPage);
@@ -63,11 +68,30 @@ export const useQualityClientList = (refreshTrigger: number) => {
   const sortedClients = useMemo(() => {
     if (!clients) return [];
     return [...clients].sort((a, b) => {
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameA.localeCompare(nameB);
+      // Ordenar por nome (padrão)
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+
+      switch (sortKey) {
+        case 'PENDING':
+          // Ordenar por mais pendências (decrescente)
+          return (b.pendingDocs || 0) - (a.pendingDocs || 0);
+        case 'LAST_ANALYSIS':
+          // Ordenar por última análise (mais recente primeiro)
+          const dateA = a.lastAnalysisDate ? new Date(a.lastAnalysisDate).getTime() : 0;
+          const dateB = b.lastAnalysisDate ? new Date(b.lastAnalysisDate).getTime() : 0;
+          return dateB - dateA;
+        case 'NEWEST':
+          // Ordenar por data de contrato (mais recente primeiro)
+          const contractA = new Date(a.contractDate).getTime();
+          const contractB = new Date(b.contractDate).getTime();
+          return contractB - contractA;
+        case 'NAME':
+        default:
+          return nameA.localeCompare(nameB);
+      }
     });
-  }, [clients]);
+  }, [clients, sortKey]); // Adicionar sortKey como dependência
 
   return {
     clients: sortedClients,
@@ -75,6 +99,8 @@ export const useQualityClientList = (refreshTrigger: number) => {
     setSearch,
     statusFilter,
     setStatusFilter,
+    sortKey, // Expor sortKey
+    setSortKey, // Expor setSortKey
     isLoading,
     isLoadingMore,
     hasMore,

@@ -8,7 +8,7 @@ import { UserRole, SystemStatus, normalizeRole } from '../../../../types/index.t
 import { AdminStatsData } from '../../../../lib/services/interfaces.ts';
 
 export const useAdminPage = () => {
-  const { user } = useAuth();
+  const { user, systemStatus: globalSystemStatus } = useAuth(); // Consumir systemStatus do AuthContext
   const { showToast } = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ export const useAdminPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [adminStats, setAdminStats] = useState<AdminStatsData | null>(null);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  // Removido: [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
 
   const loadInitialData = useCallback(async () => {
     if (!user) return;
@@ -30,13 +30,9 @@ export const useAdminPage = () => {
 
     setIsLoading(true);
     try {
-      const [stats, status] = await Promise.all([
-        adminService.getAdminStats(),
-        adminService.getSystemStatus(),
-      ]);
-
+      const stats = await adminService.getAdminStats(); // Não precisa mais do status aqui
       setAdminStats(stats);
-      setSystemStatus(status);
+      // setSystemStatus(status); // Removido
     } catch (err: unknown) {
       console.error("[useAdminPage] Data Sync Failure:", err);
       showToast("Falha crítica ao sincronizar painel de controle.", 'error');
@@ -60,8 +56,8 @@ export const useAdminPage = () => {
     isSaving,
     setIsSaving,
     adminStats,
-    systemStatus,
-    setSystemStatus,
+    systemStatus: globalSystemStatus, // Expor systemStatus do AuthContext
+    // Removido: setSystemStatus,
     changeTab,
     refreshData: loadInitialData
   };

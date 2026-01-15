@@ -9,7 +9,7 @@ import { adminService } from '../../../../lib/services/index.ts';
 interface SystemManagementProps {
   setIsSaving: (state: boolean) => void;
   initialSystemStatus: SystemStatus | null;
-  setPageSystemStatus: React.Dispatch<React.SetStateAction<SystemStatus | null>>;
+  // Removido: setSystemStatusGlobal: React.Dispatch<React.SetStateAction<SystemStatus | null>>;
 }
 
 /**
@@ -18,7 +18,7 @@ interface SystemManagementProps {
 export const useAdminSystemManagement = ({ 
   setIsSaving, 
   initialSystemStatus, 
-  setPageSystemStatus 
+  // Removido: setSystemStatusGlobal
 }: SystemManagementProps) => {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -28,6 +28,7 @@ export const useAdminSystemManagement = ({
     initialSystemStatus || { mode: 'ONLINE' }
   );
   const [isScheduleMaintenanceModalOpen, setIsScheduleMaintenanceModalOpen] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false); // Novo estado local para o modal de agendamento
 
   useEffect(() => {
     if (initialSystemStatus) setSystemStatus(initialSystemStatus);
@@ -40,19 +41,20 @@ export const useAdminSystemManagement = ({
     try {
       const updated = await adminService.updateSystemStatus(user, { mode });
       setSystemStatus(updated);
-      setPageSystemStatus(updated);
+      // Não precisa mais de setSystemStatusGlobal, o AuthContext irá capturar a mudança via subscrição
       showToast(`Gateway alterado para: ${mode}`, 'success');
     } catch {
       showToast("Falha ao comunicar com o Gateway.", 'error');
     } finally {
       setIsSaving(false);
     }
-  }, [user, showToast, setIsSaving, setPageSystemStatus]);
+  }, [user, showToast, setIsSaving]);
 
   const handleScheduleMaintenance = useCallback(async (eventData: Partial<MaintenanceEvent> & { scheduledTime: string }) => {
     if (!user) return;
     
-    setIsSaving(true);
+    setIsScheduling(true); // Usa o estado local de isScheduling
+    setIsSaving(true); // Indica salvamento globalmente
     try {
       // Cálculo de janela de tempo
       const start = new Date(`${eventData.scheduledDate}T${eventData.scheduledTime}`);
@@ -76,22 +78,24 @@ export const useAdminSystemManagement = ({
       });
 
       setSystemStatus(statusUpdate);
-      setPageSystemStatus(statusUpdate);
+      // Não precisa mais de setSystemStatusGlobal, o AuthContext irá capturar a mudança via subscrição
       showToast(t('maintenanceSchedule.scheduledSuccess', { title: eventData.title }), 'success');
       setIsScheduleMaintenanceModalOpen(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro interno';
       showToast(t('maintenanceSchedule.scheduledError', { message: msg }), 'error');
     } finally {
-      setIsSaving(false);
+      setIsScheduling(false); // Finaliza o estado local de isScheduling
+      setIsSaving(false); // Finaliza o estado de salvamento global
     }
-  }, [user, showToast, setIsSaving, t, setPageSystemStatus]);
+  }, [user, showToast, setIsSaving, t]);
 
   return {
     systemStatus,
     handleUpdateMaintenance,
     isScheduleMaintenanceModalOpen,
     setIsScheduleMaintenanceModalOpen,
+    isScheduling, // Expor o novo estado de isScheduling
     handleScheduleMaintenance,
   };
 };

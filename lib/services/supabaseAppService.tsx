@@ -2,7 +2,7 @@
 import { supabase } from '../supabaseClient';
 import { normalizeRole } from '../mappers/roleMapper';
 
-export const supabaseAppService = {
+export const SupabaseAppService = {
   getInitialData: async () => {
     try {
       // Chama a função SQL que criámos
