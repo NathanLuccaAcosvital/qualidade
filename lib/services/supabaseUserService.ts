@@ -8,7 +8,7 @@ import { withTimeout } from '../utils/apiUtils.ts'; // Import withTimeout
 import { AuthError, Session, UserResponse, PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js';
 
 
-const API_TIMEOUT = 30000; // Definido localmente (Aumentado para 30 segundos)
+const API_TIMEOUT = 8000; // Definido localmente (Reduzido para 8 segundos)
 
 /**
  * Mapper: Database Row (Profiles) -> Domain User (App)

@@ -5,7 +5,7 @@ import { User, UserRole, normalizeRole, SystemStatus } from '../types/index.ts';
 import { withTimeout } from '../lib/utils/apiUtils.ts';
 import { AuthError, Session } from '@supabase/supabase-js';
 
-const API_TIMEOUT = 30000;
+const API_TIMEOUT = 8000; // Reduzido para 8 segundos para carregamento inicial mais rápido
 
 interface AuthState {
   user: User | null;

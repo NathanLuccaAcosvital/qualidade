@@ -1,4 +1,5 @@
 
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertOctagon, RefreshCw } from 'lucide-react';
 
@@ -22,13 +23,11 @@ export class ErrorBoundary extends Component<Props, State> {
     hasError: false
   };
 
-  // Removed constructor as state is now initialized as a class property
-  // constructor(props: Props) {
-  //   super(props);
-  //   this.state = {
-  //     hasError: false
-  //   };
-  // }
+  // Fix: Reinstated constructor to ensure `super(props)` is called,
+  // which is essential for `this.props` and other inherited `Component` features.
+  constructor(props: Props) {
+    super(props);
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
