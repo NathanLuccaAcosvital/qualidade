@@ -41,9 +41,10 @@ export interface SteelBatchMetadata {
   physicalStatus?: QualityStatus;
   physicalFlags?: string[];
   physicalObservations?: string;
+  // physicalEvidenceUrl?: string; // Removido
+  physicalEvidenceUrls?: string[]; // Adicionado para suportar múltiplas URLs
   physicalInspectedAt?: ISO8601Date;
   physicalInspectedBy?: string;
-  physicalEvidenceUrl?: string;
 
   clientObservations?: string; 
   clientFlags?: string[];      

@@ -9,7 +9,7 @@ import {
   Hand, ChevronLeft, ChevronRight as ChevronRightIcon,
   Type, Highlighter, Stamp, Layers, Maximize2, MoreHorizontal,
   ChevronUp, Camera, Clock, ClipboardCheck, Tag, Info, Send, ShieldAlert,
-  FileCheck
+  FileCheck,
 } from 'lucide-react';
 import { FileNode, UserRole, QualityStatus, SteelBatchMetadata } from '../../../types/index.ts';
 import { fileService, qualityService } from '../../../lib/services/index.ts';
@@ -22,11 +22,11 @@ if (typeof window !== 'undefined' && (window as any).pdfjsLib) {
   (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 }
 
-type AnnotationType = 'pencil' | 'rect' | 'circle' | 'arrow' | 'hand' | 'text' | 'highlight' | 'stamp_ok' | 'stamp_no';
+type AnnotationType = 'pencil' | 'highlight' | 'hand' | 'eraser'; // Removidos 'rect', 'circle', 'arrow', 'text', 'stamp_ok', 'stamp_no' para simplificar o MVP
 interface Point { x: number; y: number; }
 interface Annotation {
   id: string;
-  type: Exclude<AnnotationType, 'hand'>;
+  type: Exclude<AnnotationType, 'hand' | 'eraser'>; // Eraser not a type of annotation
   color: string;
   normalizedPoints?: Point[];
   normalizedStart?: Point;
@@ -34,6 +34,21 @@ interface Annotation {
   text?: string;
   page: number;
 }
+
+// Helpers para normalizar/desnormalizar coordenadas (movidos para fora para evitar recriação)
+const normalize = (value: number, max: number) => value / max;
+const denormalize = (value: number, max: number) => value * max;
+
+// Helper para cálculo de distância para borracha (movido para fora)
+const dist2 = (p1: Point, p2: Point) => (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
+const distToSegmentSquared = (p: Point, p1: Point, p2: Point) => {
+  const l2 = dist2(p1, p2);
+  if (l2 === 0) return dist2(p, p1);
+  let t = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return dist2(p, { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) });
+};
+
 
 export const FilePreviewModal: React.FC<{ 
   initialFile: FileNode | null; 
@@ -57,20 +72,25 @@ export const FilePreviewModal: React.FC<{
   const [zoom, setZoom] = useState(1.2);
   const [isActioning, setIsActioning] = useState(false);
   
+  // Estados de Anotação e Desenho
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [drawingTool, setDrawingTool] = useState<AnnotationType | 'eraser'>('hand');
+  const [drawingTool, setDrawingTool] = useState<AnnotationType>('hand');
   const [tempAnnotation, setTempAnnotation] = useState<Annotation | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [annotationColor, setAnnotationColor] = useState('#EF4444'); // Cor padrão: vermelho
+  const [annotationHistory, setAnnotationHistory] = useState<Annotation[][]>([[]]); // Histórico para Undo/Redo
+  const [historyPointer, setHistoryPointer] = useState(0);
+
 
   // Estados do Fluxo de Auditoria
   const [rejectMode, setRejectMode] = useState<'NONE' | 'DOCUMENTAL' | 'PHYSICAL'>('NONE');
   const [observations, setObservations] = useState('');
   const [selectedFlags, setSelectedFlags] = useState<string[]>([]);
   const [currentFlagInput, setCurrentFlagInput] = useState('');
+  const [physicalPhotos, setPhysicalPhotos] = useState<File[]>([]); // Novo estado para fotos físicas
 
   const SUGGESTED_DOCUMENTAL = ['Divergência de Lote', 'Norma Incorreta', 'Erro de Composição', 'Dados Ilegíveis'];
   const SUGGESTED_PHYSICAL = ['Avaria de Transporte', 'Sem Identificação', 'Material Oxidado', 'Dimensões Incorretas'];
-
-  const denormalize = (val: number, max: number) => val * max;
 
   useEffect(() => {
     if (isOpen && initialFile) {
@@ -83,6 +103,11 @@ export const FilePreviewModal: React.FC<{
       setObservations('');
       setSelectedFlags([]);
       setCurrentFlagInput('');
+      setPhysicalPhotos([]); // Limpa as fotos ao abrir o modal
+
+      // Reseta o histórico de anotações
+      setAnnotationHistory([[]]);
+      setHistoryPointer(0);
     }
   }, [isOpen, initialFile]);
 
@@ -102,24 +127,42 @@ export const FilePreviewModal: React.FC<{
     }
   }, [currentFile, user, isOpen]);
 
-  const renderPdfPage = useCallback(async () => {
-    if (!isOpen || !pdfDoc || !canvasRef.current) return;
+  // Define a lógica principal de renderização do PDF
+  const _renderPdfPageInternal = async () => {
+    if (!isOpen || !pdfDoc || !canvasRef.current || !annotationCanvasRef.current) return;
+
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale: zoom });
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    if (annotationCanvasRef.current) {
-        annotationCanvasRef.current.width = viewport.width;
-        annotationCanvasRef.current.height = viewport.height;
-    }
-    await page.render({ canvasContext: ctx, viewport }).promise;
-  }, [pdfDoc, pageNum, zoom, isOpen]);
 
+    const annCanvas = annotationCanvasRef.current;
+    annCanvas.width = viewport.width;
+    annCanvas.height = viewport.height; // Corrigido de viewport.current.height
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  };
+
+  // Memoiza a função de renderização
+  const renderPdfPage = useCallback(_renderPdfPageInternal, [
+    pdfDoc,
+    pageNum,
+    zoom,
+    isOpen,
+    canvasRef, // Adicionado para completude, refs são estáveis
+    annotationCanvasRef, // Adicionado para completude, refs são estáveis
+  ]);
+
+  // Efeito para acionar a renderização quando as dependências mudam
   useEffect(() => {
-    if (pdfDoc) renderPdfPage();
+    if (pdfDoc) {
+      renderPdfPage();
+    }
   }, [pdfDoc, pageNum, zoom, renderPdfPage]);
+
 
   const drawAnnotations = useCallback(() => {
     const annCanvas = annotationCanvasRef.current;
@@ -128,10 +171,8 @@ export const FilePreviewModal: React.FC<{
     const { width, height } = annCanvas;
     ctx.clearRect(0, 0, width, height);
     
-    const pageAnns = annotations.filter(a => a.page === pageNum);
-    const allToDraw = tempAnnotation ? [...pageAnns, tempAnnotation] : pageAnns;
-
-    allToDraw.forEach(ann => {
+    // Desenha anotações salvas na página atual
+    annotations.filter(a => a.page === pageNum).forEach(ann => {
         ctx.strokeStyle = ann.color;
         ctx.lineWidth = ann.type === 'highlight' ? 20 : 3;
         ctx.lineCap = 'round';
@@ -148,10 +189,170 @@ export const FilePreviewModal: React.FC<{
             }
         }
     });
-    ctx.globalAlpha = 1.0;
-  }, [annotations, tempAnnotation, pageNum, zoom, isOpen]);
 
-  useEffect(() => { drawAnnotations(); }, [annotations, tempAnnotation, drawAnnotations]);
+    // Desenha anotação temporária (em andamento)
+    if (tempAnnotation && tempAnnotation.page === pageNum) {
+      ctx.strokeStyle = tempAnnotation.color;
+      ctx.lineWidth = tempAnnotation.type === 'highlight' ? 20 : 3;
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = tempAnnotation.type === 'highlight' ? 0.35 : 1.0;
+
+      if (tempAnnotation.normalizedPoints) {
+          ctx.beginPath();
+          tempAnnotation.normalizedPoints.forEach((p, i) => {
+              const x = denormalize(p.x, width), y = denormalize(p.y, height);
+              i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1.0; // Reseta alpha
+  }, [annotations, tempAnnotation, pageNum, isOpen]);
+
+  useEffect(() => { 
+    drawAnnotations(); 
+  }, [annotations, tempAnnotation, drawAnnotations, pageNum, zoom]); // Adicionado pageNum e zoom para redesenhar corretamente
+
+
+  // Gerenciamento de histórico para Undo/Redo
+  const pushToHistory = useCallback((currentAnns: Annotation[]) => {
+    const newHistory = annotationHistory.slice(0, historyPointer + 1);
+    setAnnotationHistory([...newHistory, currentAnns]);
+    setHistoryPointer(newHistory.length);
+  }, [annotationHistory, historyPointer]);
+
+  const handleUndo = useCallback(() => {
+    if (historyPointer > 0) {
+      const newPointer = historyPointer - 1;
+      setHistoryPointer(newPointer);
+      setAnnotations(annotationHistory[newPointer]);
+    }
+  }, [annotationHistory, historyPointer]);
+
+  const handleRedo = useCallback(() => {
+    if (historyPointer < annotationHistory.length - 1) {
+      const newPointer = historyPointer + 1;
+      setHistoryPointer(newPointer);
+      setAnnotations(annotationHistory[newPointer]);
+    }
+  }, [annotationHistory, historyPointer]);
+
+  // Eventos de mouse para o canvas de anotações
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!annotationCanvasRef.current || drawingTool === 'hand') return;
+
+    const canvas = annotationCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const normalizedX = normalize(x, canvas.width);
+    const normalizedY = normalize(y, canvas.height);
+
+    if (drawingTool === 'eraser') {
+      const threshold = 15 / Math.max(canvas.width, canvas.height); // Limiar normalizado
+      let closestAnnId: string | null = null;
+      let minDistance = Infinity;
+
+      annotations.filter(ann => ann.page === pageNum).forEach(ann => {
+        if (ann.normalizedPoints) {
+          for (let i = 0; i < ann.normalizedPoints.length - 1; i++) {
+            const p1 = ann.normalizedPoints[i];
+            const p2 = ann.normalizedPoints[i+1];
+            const dist = distToSegmentSquared({ x: normalizedX, y: normalizedY }, p1, p2);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestAnnId = ann.id;
+            }
+          }
+        }
+      });
+
+      if (closestAnnId && minDistance < threshold * threshold) {
+        const updatedAnns = annotations.filter(ann => ann.id !== closestAnnId);
+        setAnnotations(updatedAnns);
+        pushToHistory(updatedAnns);
+      }
+      return;
+    }
+
+    setIsDrawing(true);
+    const newAnnotation: Annotation = {
+      id: crypto.randomUUID(),
+      type: drawingTool === 'pencil' ? 'pencil' : 'highlight',
+      color: annotationColor,
+      page: pageNum,
+      normalizedPoints: [{ x: normalizedX, y: normalizedY }],
+    };
+    setTempAnnotation(newAnnotation);
+  }, [annotations, drawingTool, annotationColor, pageNum, pushToHistory]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !annotationCanvasRef.current) return;
+
+    const canvas = annotationCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const normalizedX = normalize(x, canvas.width);
+    const normalizedY = normalize(y, canvas.height);
+
+    setTempAnnotation(prev => {
+      if (!prev || !prev.normalizedPoints) return prev;
+      return {
+        ...prev,
+        normalizedPoints: [...prev.normalizedPoints, { x: normalizedX, y: normalizedY }],
+      };
+    });
+  }, [isDrawing]);
+
+  const handleCanvasMouseUp = useCallback(() => {
+    if (!isDrawing) return;
+
+    setIsDrawing(false);
+    if (tempAnnotation) {
+      const newAnnotations = [...annotations, tempAnnotation];
+      setAnnotations(newAnnotations);
+      pushToHistory(newAnnotations);
+      setTempAnnotation(null);
+    }
+  }, [isDrawing, tempAnnotation, annotations, pushToHistory]);
+
+
+  // Funções de Pan (arrastar o PDF)
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [scrollStart, setScrollStart] = useState({ x: 0, y: 0 });
+
+  const handleViewportMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (drawingTool !== 'hand' || !viewportRef.current) return;
+    setIsPanning(true);
+    setPanStart({ x: e.clientX, y: e.clientY });
+    setScrollStart({ x: viewportRef.current.scrollLeft, y: viewportRef.current.scrollTop });
+    viewportRef.current.style.cursor = 'grabbing';
+  }, [drawingTool]);
+
+  const handleViewportMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPanning || !viewportRef.current) return;
+    const dx = e.clientX - panStart.x;
+    const dy = e.clientY - panStart.y;
+    viewportRef.current.scrollLeft = scrollStart.x - dx;
+    viewportRef.current.scrollTop = scrollStart.y - dy;
+  }, [isPanning, panStart, scrollStart]);
+
+  const handleViewportMouseUp = useCallback(() => {
+    setIsPanning(false);
+    if (viewportRef.current) {
+      viewportRef.current.style.cursor = 'grab';
+    }
+  }, []);
 
   const handleAction = async (status: QualityStatus, type: 'SENT' | 'DOCUMENTAL' | 'PHYSICAL') => {
     if (!currentFile || !user) return;
@@ -177,6 +378,22 @@ export const FilePreviewModal: React.FC<{
         updatedMetadata.physicalObservations = observations;
         updatedMetadata.physicalInspectedAt = timestamp;
         updatedMetadata.physicalInspectedBy = user.name;
+
+        // Lógica de upload de fotos para evidência física
+        if (physicalPhotos.length > 0 && currentFile.ownerId) {
+          const uploadedPhotoUrls: string[] = [];
+          for (const [index, photo] of physicalPhotos.entries()) {
+            const filePath = `${currentFile.ownerId}/physical_evidence/${currentFile.id}/${Date.now()}_${index}_${photo.name}`;
+            const uploadedPath = await fileService.uploadRaw(user, photo, photo.name, filePath);
+            if (uploadedPath) {
+              const { data: publicUrlData } = supabase.storage.from('certificates').getPublicUrl(uploadedPath);
+              if (publicUrlData?.publicUrl) {
+                uploadedPhotoUrls.push(publicUrlData.publicUrl);
+              }
+            }
+          }
+          updatedMetadata.physicalEvidenceUrls = [...(updatedMetadata.physicalEvidenceUrls || []), ...uploadedPhotoUrls];
+        }
       }
 
       const { error } = await supabase.from('files').update({ metadata: updatedMetadata }).eq('id', currentFile.id);
@@ -186,8 +403,10 @@ export const FilePreviewModal: React.FC<{
       setRejectMode('NONE');
       setObservations('');
       setSelectedFlags([]);
+      setPhysicalPhotos([]); // Limpa as fotos após a ação
       showToast("Veredito registrado no fluxo SGQ.", "success");
     } catch (err) {
+      console.error("Erro ao realizar ação:", err);
       showToast("Falha ao sincronizar veredito.", "error");
     } finally {
       setIsActioning(false);
@@ -203,7 +422,20 @@ export const FilePreviewModal: React.FC<{
     }
   };
 
+  const handlePhotoSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setPhysicalPhotos(prev => [...prev, ...Array.from(files)]);
+    }
+  };
+
+  const removePhoto = (indexToRemove: number) => {
+    setPhysicalPhotos(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   if (!isOpen) return null;
+
+  const isDrawingToolActive = drawingTool === 'pencil' || drawingTool === 'highlight';
 
   return (
     <div className="fixed inset-0 z-[250] bg-[#020617] flex flex-col animate-in fade-in duration-300 overflow-hidden font-sans">
@@ -234,31 +466,66 @@ export const FilePreviewModal: React.FC<{
       </header>
 
       <div className="flex-1 flex min-h-0 relative">
-        <div className="flex-1 flex flex-col bg-[#0f172a] relative overflow-hidden">
-          <div 
-            ref={viewportRef}
-            className="flex-1 overflow-auto custom-scrollbar bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px]"
-          >
-            <div className="inline-flex min-w-full min-h-full items-start justify-center p-12">
-              <div className="relative bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] rounded-sm">
-                {loading && <div className="absolute inset-0 bg-[#081437]/40 flex items-center justify-center z-50 backdrop-blur-sm"><Loader2 className="animate-spin text-blue-500" size={48} /></div>}
-                <canvas ref={canvasRef} className="block pointer-events-none" />
-                <canvas ref={annotationCanvasRef} className="absolute top-0 left-0 z-10 pointer-events-none" />
-              </div>
+        <div 
+          ref={viewportRef}
+          className="flex-1 flex flex-col bg-[#0f172a] relative overflow-auto custom-scrollbar bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px]"
+          onMouseDown={handleViewportMouseDown}
+          onMouseMove={handleViewportMouseMove}
+          onMouseUp={handleViewportMouseUp}
+          onMouseLeave={handleViewportMouseUp} // Stop panning if mouse leaves
+          style={{ cursor: drawingTool === 'hand' && !isPanning ? 'grab' : drawingTool === 'hand' && isPanning ? 'grabbing' : 'default' }}
+        >
+          <div className="inline-flex min-w-full min-h-full items-start justify-center p-12">
+            <div className="relative bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] rounded-sm">
+              {loading && <div className="absolute inset-0 bg-[#081437]/40 flex items-center justify-center z-50 backdrop-blur-sm"><Loader2 className="animate-spin text-blue-500" size={48} /></div>}
+              <canvas ref={canvasRef} className="block pointer-events-none" />
+              <canvas 
+                ref={annotationCanvasRef} 
+                className={`absolute top-0 left-0 z-10 ${drawingTool !== 'hand' ? 'pointer-events-auto' : 'pointer-events-none'}`} 
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                onMouseLeave={handleCanvasMouseUp} // Finaliza o desenho se o mouse sair do canvas
+                style={{ cursor: isDrawingToolActive ? 'crosshair' : drawingTool === 'eraser' ? 'cell' : 'default' }}
+              />
             </div>
           </div>
+        </div>
           
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#081437]/90 backdrop-blur-2xl border border-white/10 p-3 rounded-full shadow-2xl z-[100]">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
-                <button onClick={() => setPageNum(p => Math.max(1, p - 1))} className="text-slate-400 hover:text-white"><ChevronLeft size={16}/></button>
-                <span className="text-[10px] font-black text-white min-w-[40px] text-center">{pageNum} / {numPages}</span>
-                <button onClick={() => setPageNum(p => Math.min(numPages, p + 1))} className="text-slate-400 hover:text-white"><ChevronRightIcon size={16}/></button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full"><ZoomOut size={16}/></button>
-                <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full"><ZoomIn size={16}/></button>
-              </div>
-          </div>
+        {/* Barra de Ferramentas do Visualizador */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#081437]/90 backdrop-blur-2xl border border-white/10 p-3 rounded-full shadow-2xl z-[100]">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
+              <button onClick={() => setPageNum(p => Math.max(1, p - 1))} className="text-slate-400 hover:text-white" aria-label="Página anterior"><ChevronLeft size={16}/></button>
+              <span className="text-[10px] font-black text-white min-w-[40px] text-center">{pageNum} / {numPages}</span>
+              <button onClick={() => setPageNum(p => Math.min(numPages, p + 1))} className="text-slate-400 hover:text-white" aria-label="Próxima página"><ChevronRightIcon size={16}/></button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full" aria-label="Reduzir zoom"><ZoomOut size={16}/></button>
+              <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full" aria-label="Aumentar zoom"><ZoomIn size={16}/></button>
+            </div>
+            
+            {/* Divisor */}
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
+            {/* Ferramentas de Desenho */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDrawingTool('hand')} className={`p-2 rounded-full transition-all ${drawingTool === 'hand' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Ferramenta Mão (Arrastar)" aria-label="Ferramenta Mão"><Hand size={16}/></button>
+              <button onClick={() => setDrawingTool('pencil')} className={`p-2 rounded-full transition-all ${drawingTool === 'pencil' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Lápis" aria-label="Ferramenta Lápis"><Pencil size={16}/></button>
+              <button onClick={() => setDrawingTool('highlight')} className={`p-2 rounded-full transition-all ${drawingTool === 'highlight' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Marcador" aria-label="Ferramenta Marcador"><Highlighter size={16}/></button>
+              <button onClick={() => setDrawingTool('eraser')} className={`p-2 rounded-full transition-all ${drawingTool === 'eraser' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Borracha" aria-label="Ferramenta Borracha"><Eraser size={16}/></button>
+              
+              {/* Seleção de Cor */}
+              <input type="color" value={annotationColor} onChange={e => setAnnotationColor(e.target.value)} className="w-8 h-8 rounded-full border border-white/20 overflow-hidden cursor-pointer" title="Selecionar Cor" aria-label="Selecionar Cor" />
+            </div>
+
+            {/* Divisor */}
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
+            {/* Undo / Redo */}
+            <div className="flex items-center gap-2">
+              <button onClick={handleUndo} disabled={historyPointer === 0} className={`p-2 rounded-full transition-all ${historyPointer === 0 ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Desfazer" aria-label="Desfazer"><Undo2 size={16}/></button>
+              <button onClick={handleRedo} disabled={historyPointer === annotationHistory.length - 1} className={`p-2 rounded-full transition-all ${historyPointer === annotationHistory.length - 1 ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Refazer" aria-label="Refazer"><Redo2 size={16}/></button>
+            </div>
         </div>
 
         {/* SIDEBAR DE AUDITORIA */}
@@ -360,7 +627,7 @@ export const FilePreviewModal: React.FC<{
                            <span className="text-[10px] font-black text-slate-400 uppercase">Status do Passo</span>
                            <FileStatusBadge status={currentFile?.metadata?.status} />
                         </div>
-                        {user?.role === UserRole.CLIENT && currentFile?.metadata?.status === QualityStatus.SENT && (
+                        {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && (
                           <div className="grid grid-cols-2 gap-3">
                              <button onClick={() => handleAction(QualityStatus.APPROVED, 'DOCUMENTAL')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><CheckCircle2 size={16}/> Aprovar</button>
                              <button onClick={() => setRejectMode('DOCUMENTAL')} className="py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-black text-[10px] uppercase hover:bg-red-50 transition-all flex items-center justify-center gap-2"><XCircle size={16}/> Rejeitar</button>
@@ -414,6 +681,56 @@ export const FilePreviewModal: React.FC<{
                            <span className="text-[10px] font-black text-slate-400 uppercase">Status do Passo</span>
                            <FileStatusBadge status={currentFile?.metadata?.physicalStatus} />
                         </div>
+                        {/* INPUT DE FOTOS */}
+                        {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && (
+                          <div className="space-y-2 py-2">
+                              <p className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">Anexar Evidências Visuais (Opcional):</p>
+                              <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  multiple 
+                                  onChange={handlePhotoSelection}
+                                  className="block w-full text-xs text-slate-500
+                                           file:mr-4 file:py-2 file:px-4
+                                           file:rounded-full file:border-0
+                                           file:text-sm file:font-semibold
+                                           file:bg-blue-50 file:text-blue-700
+                                           hover:file:bg-blue-100"
+                              />
+                              {physicalPhotos.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-3">
+                                      {physicalPhotos.map((file, index) => (
+                                          <div key={index} className="relative">
+                                              <img src={URL.createObjectURL(file)} alt={`Evidência ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                                              <button 
+                                                  type="button"
+                                                  onClick={() => removePhoto(index)}
+                                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
+                                              >
+                                                  <X size={12} />
+                                              </button>
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+                          </div>
+                        )}
+                        
+                        {/* EXIBIR FOTOS JÁ EXISTENTES */}
+                        {currentFile?.metadata?.physicalEvidenceUrls && currentFile.metadata.physicalEvidenceUrls.length > 0 && (
+                           <div className="space-y-2 py-2">
+                              <p className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">Evidências Visuais Existentes:</p>
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {currentFile.metadata.physicalEvidenceUrls.map((url, index) => (
+                                  <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="relative block">
+                                    <img src={url} alt={`Evidência Salva ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-blue-200" />
+                                    <span className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-tl-lg px-1 text-[8px] font-bold">Ver</span>
+                                  </a>
+                                ))}
+                              </div>
+                           </div>
+                        )}
+
                         {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && !currentFile?.metadata?.physicalStatus && (
                           <div className="grid grid-cols-2 gap-3">
                              <button onClick={() => handleAction(QualityStatus.APPROVED, 'PHYSICAL')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><CheckCircle2 size={16}/> Aprovar</button>
