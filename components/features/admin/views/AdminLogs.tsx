@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, Loader2, Search, X, Activity } from 'lucide-react';
@@ -33,10 +32,11 @@ export const AdminLogs: React.FC = () => {
       {logsContext.isLoadingLogs ? (
         <LoadingLogsState t={t} />
       ) : (
+        // Fix: Wrapped state setter in arrow function and cast value to satisfy union type requirements from AuditLogsTable
         <AuditLogsTable 
           logs={logsContext.filteredLogs} 
           severityFilter={logsContext.severityFilter} 
-          onSeverityChange={logsContext.setSeverityFilter} 
+          onSeverityChange={(sev) => logsContext.setSeverityFilter(sev as any)} 
           onInvestigate={logsContext.handleOpenInvestigation} 
         />
       )}

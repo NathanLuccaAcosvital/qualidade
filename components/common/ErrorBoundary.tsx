@@ -1,5 +1,3 @@
-
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertOctagon, RefreshCw } from 'lucide-react';
 
@@ -14,37 +12,38 @@ interface State {
 
 /**
  * Boundary de Erros do Sistema
- * Refatorado para maior estabilidade em ambientes de desenvolvimento (HMR).
+ * Refatorado para maior estabilidade e compatibilidade com TypeScript.
  */
+// Fix: Extending Component directly to ensure proper property resolution and inheritance by TypeScript
 export class ErrorBoundary extends Component<Props, State> {
-  // Fix: Initialize state as a class property for better type inference
-  // Fix: Removed 'public' keyword to resolve TypeScript errors with 'this.setState' and 'this.props'
-  state: State = {
-    hasError: false
-  };
-
-  // Fix: Reinstated constructor to ensure `super(props)` is called,
-  // which is essential for `this.props` and other inherited `Component` features.
+  
+  // Fix: Explicitly initialize state property using constructor and super(props) to ensure members like setState and props are available
   constructor(props: Props) {
     super(props);
+    this.state = {
+      hasError: false
+    };
   }
 
+  // Mandatory static method for error boundaries to update state
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
+  // Catching errors for logging and analytics
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[Critical System Error]', error, errorInfo);
   }
 
+  // Handler to reset error state and reload the application
   private handleReset = () => {
-    // Fix: `this.setState` exists on Component, no need to suppress TS error.
-    this.setState({ hasError: false });
+    // Fix: Accessing setState inherited from Component base class
+    this.setState({ hasError: false, error: undefined });
     window.location.reload();
   };
 
   public render(): ReactNode {
-    // Fix: `this.props` exists on Component, no need to suppress TS error.
+    // Fix: Accessing state and props members inherited from Component base class
     if (!this.state.hasError) return this.props.children;
 
     return (

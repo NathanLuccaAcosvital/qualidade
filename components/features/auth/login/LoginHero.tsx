@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { CheckCircle2, ShieldCheck, Cpu } from 'lucide-react';
 
 const BACKGROUND_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/header_login.webp";
-// Fix: Added missing LOGO_URL definition
 const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
 
 export const LoginHero: React.FC = () => {
@@ -42,15 +41,15 @@ export const LoginHero: React.FC = () => {
           <div className="space-y-2 lg:space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-[2px] w-8 bg-[var(--color-accent-orange)] shadow-[0_0_12px_rgba(255,107,43,0.4)]" aria-hidden="true"></div>
-              <span className="text-[var(--color-accent-orange)] text-xs lg:text-sm xl:text-base font-black uppercase tracking-[3px]">
+              <span className="text-[var(--color-accent-orange)] text-xs lg:text-sm xl:text-base font-bold uppercase tracking-[3px]">
                 {t('login.subtitle')}
               </span>
             </div>
             
-            <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-7xl font-black leading-[1.1] tracking-tighter uppercase max-w-lg lg:max-w-2xl">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-7xl font-bold leading-[1.1] tracking-tight uppercase max-w-lg lg:max-w-2xl">
               ESTRUTURAS<br/>
               <span className="text-white/70">DE CONFIANÇA.</span><br/>
-              <span className="text-white/40">DADOS DE PRECISÃO.</span>
+              <span className="text-white/50">DADOS DE PRECISÃO.</span>
             </h1>
           </div>
           
@@ -64,14 +63,14 @@ export const LoginHero: React.FC = () => {
              <StatusTag icon={ShieldCheck} label={t('login.secureData')} />
              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-white/70 group cursor-default transition-all hover:bg-white/10" role="listitem">
                 <Cpu size={10} className="text-[var(--color-detail-blue)] opacity-70" aria-hidden="true" />
-                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px]">Real-Time Monitoring</span>
+                <span className="text-[9px] lg:text-[10px] font-bold uppercase tracking-[1.5px]">Real-Time Monitoring</span>
              </div>
           </div>
         </div>
       </div>
 
       {/* Footer Industrial Slim - Posição final da tela */}
-      <footer className="relative z-10 shrink-0 flex items-center justify-between border-t border-white/5 pt-6 text-[9px] lg:text-[10px] xl:text-xs font-black uppercase tracking-[2px] text-white/30">
+      <footer className="relative z-10 shrink-0 flex items-center justify-between border-t border-white/5 pt-6 text-[9px] lg:text-[10px] xl:text-xs font-bold uppercase tracking-[2px] text-white/30">
           <div className="flex items-center gap-3">
             <div className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
@@ -96,7 +95,7 @@ export const LoginHero: React.FC = () => {
 };
 
 const StatusTag = ({ icon: Icon, label }: { icon: any, label: string }) => (
-  <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 transition-all hover:border-white/20" role="listitem">
+  <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-bold uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 transition-all hover:border-white/20" role="listitem">
     <Icon size={10} className="text-[var(--color-detail-blue)] opacity-70" aria-hidden="true" /> 
     {label}
   </div>

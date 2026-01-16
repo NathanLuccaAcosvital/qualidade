@@ -8,13 +8,14 @@ import { ClientFormData } from '../components/AdminModals.tsx';
 
 interface UseAdminClientProps {
   setIsSaving: (state: boolean) => void;
+  isSavingGlobal: boolean;
   qualityAnalysts: User[];
 }
 
 /**
  * Hook de Gestão de Clientes (Clean Code)
  */
-export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAdminClientProps) => {
+export const useAdminClientManagement = ({ setIsSaving, isSavingGlobal, qualityAnalysts }: UseAdminClientProps) => {
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -24,7 +25,6 @@ export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAd
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientOrganization | null>(null);
   
-  // Fix: Initialize status with enum value instead of string literal
   const [clientFormData, setClientFormData] = useState<ClientFormData>({
     name: '',
     cnpj: '',
@@ -61,13 +61,12 @@ export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAd
 
   const handleSaveClient = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || isSavingGlobal) return;
 
     setIsSaving(true);
     try {
       const analyst = qualityAnalysts.find(qa => qa.id === clientFormData.qualityAnalystId);
       
-      // Fix: Ensured payload status is compatible with ClientOrganization.status
       const payload: Partial<ClientOrganization> = {
         ...clientFormData,
         id: editingClient?.id,
@@ -84,7 +83,7 @@ export const useAdminClientManagement = ({ setIsSaving, qualityAnalysts }: UseAd
     } finally {
       setIsSaving(false);
     }
-  }, [user, clientFormData, editingClient, qualityAnalysts, showToast, setIsSaving, loadClients]);
+  }, [user, clientFormData, editingClient, qualityAnalysts, showToast, setIsSaving, loadClients, isSavingGlobal]);
 
   const openClientModal = useCallback((client?: ClientOrganization) => {
     if (client) {

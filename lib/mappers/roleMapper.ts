@@ -1,5 +1,6 @@
 
-import { UserRole } from '../../types/auth.ts';
+// Fix: Import UserRole from enums where it is defined and exported
+import { UserRole } from '../../types/enums.ts';
 
 /**
  * Role Mapper Utility (Resilient)

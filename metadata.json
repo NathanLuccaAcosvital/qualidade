@@ -1,7 +1,7 @@
 {
-  "name": "AV-PORTALDAQUALIDADE14012025-V3",
+  "name": "AV-PORTALDAQUALIDADE14012025-V4",
   "displayName": "Portal da Qualidade - Aços Vital",
-  "version": "1.0.0",
+  "version": "6.0.0",
   "description": "Sistema Integrado de Gestão da Qualidade (SGQ) para Aços Vital. Plataforma completa para conformidade industrial, rastreabilidade e gestão de certificados. Inclui módulos de Administração, Portal do Cliente, Inspeção Metalúrgica e Auditoria de Logs.",
   "author": "Nathan Lucca / Aços Vital",
   "license": "Private",

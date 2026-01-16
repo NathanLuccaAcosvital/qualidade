@@ -7,6 +7,7 @@ import { useAdminClientManagement } from '../hooks/useAdminClientManagement.ts';
 import { User, ClientOrganization } from '../../../../types/index.ts';
 
 interface AdminClientsProps {
+  isSaving: boolean;
   setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
   qualityAnalysts: User[];
 }
@@ -14,9 +15,9 @@ interface AdminClientsProps {
 /**
  * AdminClients View (Orchestrator)
  */
-export const AdminClients: React.FC<AdminClientsProps> = ({ setIsSaving, qualityAnalysts }) => {
+export const AdminClients: React.FC<AdminClientsProps> = ({ isSaving, setIsSaving, qualityAnalysts }) => {
   const { t } = useTranslation();
-  const management = useAdminClientManagement({ setIsSaving, qualityAnalysts });
+  const management = useAdminClientManagement({ setIsSaving, isSavingGlobal: isSaving, qualityAnalysts });
 
   return (
     <div className="space-y-6">
@@ -28,6 +29,7 @@ export const AdminClients: React.FC<AdminClientsProps> = ({ setIsSaving, quality
         clientFormData={management.clientFormData}
         setClientFormData={management.setClientFormData}
         qualityAnalysts={qualityAnalysts}
+        isSaving={isSaving}
       />
 
       <ClientsToolbar 

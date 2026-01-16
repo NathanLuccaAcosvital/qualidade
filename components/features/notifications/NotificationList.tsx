@@ -2,10 +2,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, CheckCircle2, XCircle, Info, Loader2, AlertTriangle, Mail } from 'lucide-react';
-import { AppNotification } from '../../../../types/index.ts';
-import { useAuth } from '../../../../context/authContext.tsx';
-import { notificationService } from '../../../../lib/services/index.ts';
-import { useToast } from '../../../../context/notificationContext.tsx';
+import { AppNotification } from '../../../types/index.ts';
+import { useAuth } from '../../../context/authContext.tsx';
+import { notificationService } from '../../../lib/services/index.ts';
+import { useToast } from '../../../context/notificationContext.tsx';
 
 // Hook para gerenciar a lógica de notificações
 const useNotificationsList = () => {

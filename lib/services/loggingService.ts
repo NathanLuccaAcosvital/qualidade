@@ -2,17 +2,37 @@
 import { supabase } from '../supabaseClient.ts';
 import { User, AuditLog } from '../../types/index';
 
-const _getSimulatedIp = () => {
-    const segments = Array.from({ length: 4 }, () => Math.floor(Math.random() * 256));
-    return segments.join('.');
+/**
+ * Tenta obter o IP público do cliente. 
+ * Nota: Em produção, isso geralmente é feito via Headers no Backend (Edge Functions),
+ * mas para um MVP frontend-only, usamos um lookup externo.
+ */
+const getClientIp = async (): Promise<string> => {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (e) {
+        return '0.0.0.0 (Local/Proxy)';
+    }
 };
 
-const _getDeviceAndLocation = () => {
+const getDeviceAndLocation = () => {
     const userAgent = navigator.userAgent;
     let device = 'Desktop';
     if (/Mobi|Android/i.test(userAgent)) device = 'Mobile';
     if (/Tablet|iPad/i.test(userAgent)) device = 'Tablet';
-    return { userAgent, device, location: 'Brasil / Inferred' };
+    
+    // Simplificação para o MVP
+    const platform = navigator.platform;
+    const language = navigator.language;
+
+    return { 
+        userAgent, 
+        device, 
+        location: `Inferred (${language}/${platform})`,
+        details: { platform, language }
+    };
 };
 
 export const logAction = async (
@@ -25,8 +45,8 @@ export const logAction = async (
     metadata: Record<string, any> = {}
 ) => {
     try {
-        const { userAgent, device, location } = _getDeviceAndLocation();
-        const ip = _getSimulatedIp();
+        const { userAgent, device, location, details } = getDeviceAndLocation();
+        const ip = await getClientIp();
         const requestId = crypto.randomUUID();
 
         await supabase.from('audit_logs').insert({
@@ -41,8 +61,9 @@ export const logAction = async (
             user_agent: userAgent,
             device,
             metadata: { 
-                userName: user?.name || 'Sistema', 
+                userName: user?.name || 'Sistema/Anônimo', 
                 userRole: user?.role || 'SYSTEM', 
+                browserDetails: details,
                 ...metadata 
             },
             request_id: requestId,

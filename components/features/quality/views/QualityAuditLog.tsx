@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuditLogsTable } from '../../admin/components/AuditLogsTable.tsx';
@@ -42,10 +41,11 @@ export const QualityAuditLog: React.FC = () => {
         <QualityEmptyState message={t('quality.noQualityLogsFound')} />
       ) : (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Fix: Wrapped state setter in arrow function and cast value to satisfy union type requirements from AuditLogsTable */}
             <AuditLogsTable
                 logs={qualityAuditLogs}
                 severityFilter={auditLogSeverityFilter}
-                onSeverityChange={setAuditLogSeverityFilter}
+                onSeverityChange={(sev) => setAuditLogSeverityFilter(sev as any)}
                 onInvestigate={handleOpenQualityAuditLogInvestigation}
             />
         </div>

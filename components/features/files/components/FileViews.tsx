@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Folder, FileText, ChevronRight, CheckSquare, Square, Download, Trash2, Edit2, MoreVertical } from 'lucide-react';
-import { FileNode, FileType, UserRole } from '../../../../types/index.ts';
+import { Folder, FileText, ChevronRight, CheckSquare, Square, Download, Trash2, Edit2, MoreVertical, Eye, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import { FileNode, FileType, UserRole, QualityStatus } from '../../../../types/index.ts';
 import { FileStatusBadge } from './FileStatusBadge.tsx';
 import { useTranslation } from 'react-i18next';
 
@@ -14,68 +14,75 @@ interface FileViewProps {
   onDownload: (file: FileNode) => void;
   onRename: (file: FileNode) => void;
   onDelete: (fileId: string) => void;
-  userRole: UserRole; // Adicionada a prop userRole
+  userRole: UserRole;
 }
 
 export const FileListView: React.FC<FileViewProps> = ({ 
-  files, 
-  onNavigate, 
-  onSelectFileForPreview, 
-  selectedFileIds, 
-  onToggleFileSelection,
-  onDownload,
-  onRename,
-  onDelete,
-  userRole // Recebe userRole
+  files, onNavigate, onSelectFileForPreview, selectedFileIds, onToggleFileSelection, onDownload, onRename, onDelete, userRole 
 }) => {
   const { t } = useTranslation();
+  const isClient = userRole === UserRole.CLIENT;
+
   return (
-    <div className="space-y-0"> {/* Remove space-y para controlar o espaçamento com bordas */}
+    <div className="space-y-1">
       {files.map((file) => {
         const isSelected = selectedFileIds.includes(file.id);
-        const IconComponent = isSelected ? CheckSquare : Square;
+        const isToDelete = file.metadata?.status === QualityStatus.TO_DELETE;
+        const isFolder = file.type === FileType.FOLDER;
+        const isRootItem = file.parentId === null;
+        
+        // Regra Vital: Apenas Staff pode gerenciar. Pastas Raiz não podem ser apagadas.
+        const canDelete = !isClient && !(isFolder && isRootItem);
+        const canRename = !isClient;
+
         return (
           <div 
             key={file.id} 
-            className={`group flex items-center h-16 p-3 border-b border-slate-100 last:border-b-0 cursor-pointer transition-all 
-                        ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white hover:bg-slate-50 hover:border-slate-200'}`}
-            role="button"
-            tabIndex={0}
-            onDoubleClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
+            className={`group flex items-center h-14 p-2 rounded-xl transition-all 
+                        ${isSelected ? 'bg-blue-50 ring-1 ring-blue-100' : 'hover:bg-slate-50'}`}
           >
-            <button 
-              className="p-1 mr-2 text-slate-400 hover:text-[var(--color-detail-blue)] transition-colors shrink-0"
-              onClick={(e) => { e.stopPropagation(); onToggleFileSelection(file.id); }}
-              aria-label={t('files.selectItem', { name: file.name })}
-            >
-              <IconComponent size={18} className={isSelected ? 'text-[var(--color-detail-blue)]' : 'text-slate-400'} />
-            </button>
-
             <div 
-              className="flex-1 flex items-center gap-3 min-w-0"
-              onClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
+              className="flex-1 flex items-center gap-4 min-w-0 cursor-pointer px-2"
+              onClick={() => isFolder ? onNavigate(file.id) : onSelectFileForPreview(file)}
             >
-              <div className={`w-9 h-9 rounded-md shrink-0 flex items-center justify-center shadow-sm ${file.type === FileType.FOLDER ? 'bg-blue-50 text-[var(--color-detail-blue)]' : 'bg-red-50 text-red-500'}`}>
-                {file.type === FileType.FOLDER ? <Folder size={18} /> : <FileText size={18} />}
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border
+                ${isFolder ? 'bg-blue-50 border-blue-100 text-blue-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                {isFolder ? <Folder size={20} fill="currentColor" className="opacity-20" /> : <FileText size={20} />}
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-700 group-hover:text-[var(--color-detail-blue)] transition-colors truncate">{file.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-slate-400 font-mono">{file.size || '--'}</span>
-                  {file.type !== FileType.FOLDER && <FileStatusBadge status={file.metadata?.status} />}
+              <div className="min-w-0 flex-1">
+                <p className={`text-xs font-bold truncate ${isToDelete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                  {file.name}
+                </p>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-[10px] text-slate-400 font-mono">{file.size || (isFolder ? '--' : 'PDF')}</span>
+                  {!isFolder && <FileStatusBadge status={file.metadata?.status} />}
                 </div>
               </div>
             </div>
             
-            <FileContextMenuTrigger 
-              file={file} 
-              onDownload={onDownload} 
-              onRename={onRename} 
-              onDelete={onDelete} 
-              t={t} 
-              className="opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0" // Adiciona ml-4 para espaçamento e shrink-0 para não espremer
-              userRole={userRole} // Passa userRole para o ContextMenu
-            />
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+               {!isClient && (
+                 <>
+                   <button 
+                    onClick={(e) => { e.stopPropagation(); onRename(file); }}
+                    className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                    title={t('files.rename.title')}
+                   >
+                      <Edit2 size={14} />
+                   </button>
+                   {canDelete && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onDelete(file.id); }}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title={t('files.delete.button')}
+                      >
+                          <Trash2 size={14} />
+                      </button>
+                   )}
+                 </>
+               )}
+               {isFolder ? <ChevronRight size={16} className="text-slate-300" /> : <ArrowUpRight size={16} className="text-blue-500" />}
+            </div>
           </div>
         );
       })}
@@ -84,159 +91,81 @@ export const FileListView: React.FC<FileViewProps> = ({
 };
 
 export const FileGridView: React.FC<FileViewProps> = ({ 
-  files, 
-  onNavigate, 
-  onSelectFileForPreview, 
-  selectedFileIds, 
-  onToggleFileSelection,
-  onDownload,
-  onRename,
-  onDelete,
-  userRole // Recebe userRole
+  files, onNavigate, onSelectFileForPreview, selectedFileIds, onToggleFileSelection, onDownload, onRename, onDelete, userRole 
 }) => {
   const { t } = useTranslation();
+  const isClient = userRole === UserRole.CLIENT;
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
       {files.map((file) => {
         const isSelected = selectedFileIds.includes(file.id);
-        const IconComponent = isSelected ? CheckSquare : Square;
+        const isToDelete = file.metadata?.status === QualityStatus.TO_DELETE;
+        const isFolder = file.type === FileType.FOLDER;
+        const isRootItem = file.parentId === null;
+
+        const canDelete = !isClient && !(isFolder && isRootItem);
+
         return (
           <div 
             key={file.id}
-            className={`relative flex flex-col items-center p-4 rounded-2xl cursor-pointer border text-center group transition-all ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-200'}`}
-            role="button"
-            tabIndex={0}
-            onDoubleClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
+            className={`relative flex flex-col group p-4 rounded-[2rem] cursor-pointer border-2 transition-all 
+                        ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-transparent hover:border-slate-100 hover:shadow-xl hover:-translate-y-1'}`}
           >
-            <button 
-              className="absolute top-2 left-2 p-1 text-slate-400 hover:text-[var(--color-detail-blue)] z-10 transition-colors"
-              onClick={(e) => { e.stopPropagation(); onToggleFileSelection(file.id); }}
-              aria-label={t('files.selectItem', { name: file.name })}
-            >
-              <IconComponent size={20} className={isSelected ? 'text-[var(--color-detail-blue)]' : 'text-slate-400'} />
-            </button>
-
             <div 
-              className="flex flex-col items-center flex-1 w-full pt-4" // Added pt-4 to account for checkbox
-              onClick={() => file.type === FileType.FOLDER ? onNavigate(file.id) : onSelectFileForPreview(file)}
+              className="flex flex-col items-center text-center w-full pt-2"
+              onClick={() => isFolder ? onNavigate(file.id) : onSelectFileForPreview(file)}
             >
-              <div className={`w-16 h-16 mb-3 flex items-center justify-center rounded-2xl shadow-sm transition-all group-hover:scale-110 ${file.type === FileType.FOLDER ? 'bg-blue-50 text-[var(--color-detail-blue)]' : 'bg-red-50 text-red-500'}`}>
-                {file.type === FileType.FOLDER ? <Folder size={32} /> : <FileText size={32} />}
+              <div className={`w-16 h-16 mb-4 flex items-center justify-center rounded-[1.5rem] shadow-sm transition-transform group-hover:scale-110 
+                               ${isFolder ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+                {isFolder ? <Folder size={32} fill="currentColor" className="opacity-10" /> : <FileText size={32} />}
               </div>
-              <p className="text-sm font-semibold text-slate-700 line-clamp-2 leading-tight group-hover:text-[var(--color-detail-blue)]">{file.name}</p>
-              {file.type !== FileType.FOLDER && (
-                <div className="mt-2 scale-75">
+              <p className={`text-[11px] font-black uppercase tracking-tight line-clamp-2 leading-tight px-1 mb-2 ${isToDelete ? 'text-slate-300 line-through' : 'text-slate-700'}`}>
+                {file.name}
+              </p>
+              {!isFolder && (
+                <div className="mt-auto pt-2 border-t border-slate-50 w-full flex justify-center scale-90">
                   <FileStatusBadge status={file.metadata?.status} />
                 </div>
               )}
+              {isFolder && (
+                <div className="mt-auto text-[9px] font-black text-slate-300 uppercase tracking-widest">Acessar Pasta</div>
+              )}
             </div>
             
-            <FileContextMenuTrigger 
-              file={file} 
-              onDownload={onDownload} 
-              onRename={onRename} 
-              onDelete={onDelete} 
-              t={t} 
-              className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              userRole={userRole} // Passa userRole para o ContextMenu
-            />
+            <div className="absolute top-4 left-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!isClient && (
+                  <>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onRename(file); }}
+                      className="p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-blue-500 rounded-lg transition-all"
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                    {canDelete && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onDelete(file.id); }}
+                        className="p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-red-500 rounded-lg transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </>
+                )}
+            </div>
+
+            {/* Impede a seleção de pastas raiz para exclusão em massa */}
+            {canDelete && (
+              <button 
+                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-blue-600 transition-colors"
+                onClick={(e) => { e.stopPropagation(); onToggleFileSelection(file.id); }}
+              >
+                {isSelected ? <CheckSquare size={16} className="text-blue-500" /> : <Square size={16} />}
+              </button>
+            )}
           </div>
         );
       })}
     </div>
   );
 };
-
-interface FileContextMenuTriggerProps {
-  file: FileNode;
-  onDownload: (file: FileNode) => void;
-  onRename: (file: FileNode) => void;
-  onDelete: (fileId: string) => void;
-  t: any;
-  className?: string;
-  userRole: UserRole; // Adicionada a prop userRole
-}
-
-const FileContextMenuTrigger: React.FC<FileContextMenuTriggerProps> = ({ file, onDownload, onRename, onDelete, t, className, userRole }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const isClient = userRole === UserRole.CLIENT;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(prev => !prev);
-  };
-
-  const handleAction = (action: () => void, e: React.MouseEvent) => {
-    e.stopPropagation();
-    action();
-    setIsOpen(false);
-  };
-
-  return (
-    <div className={`relative ${className}`}>
-      <button 
-        ref={buttonRef}
-        onClick={handleToggle}
-        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-all"
-        title={t('common.moreOptions')}
-        aria-expanded={isOpen}
-        aria-haspopup="true"
-      >
-        <MoreVertical size={16} />
-      </button>
-
-      {isOpen && (
-        <div 
-          ref={dropdownRef} 
-          className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1 animate-in zoom-in-95 duration-150 origin-top-right"
-        >
-          {file.type !== FileType.FOLDER && (
-            <ContextMenuItem 
-              icon={Download} 
-              label={t('files.downloadButton')} 
-              onClick={(e) => handleAction(() => onDownload(file), e)} 
-            />
-          )}
-          {/* Renomear e Excluir são visíveis apenas para não-clientes */}
-          {!isClient && (
-            <>
-              <ContextMenuItem 
-                icon={Edit2} 
-                label={t('files.rename.title')} 
-                onClick={(e) => handleAction(() => onRename(file), e)} 
-              />
-              <ContextMenuItem 
-                icon={Trash2} 
-                label={t('common.delete')} 
-                onClick={(e) => handleAction(() => onDelete(file.id), e)} 
-                colorClass="text-red-500 hover:bg-red-50"
-              />
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ContextMenuItem: React.FC<{ icon: React.ElementType; label: string; onClick: (e: React.MouseEvent) => void; colorClass?: string }> = ({ icon: Icon, label, onClick, colorClass = "text-slate-700 hover:bg-slate-50" }) => (
-  <button 
-    onClick={onClick} 
-    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${colorClass}`}
-  >
-    <Icon size={14} className="shrink-0" /> {label}
-  </button>
-);

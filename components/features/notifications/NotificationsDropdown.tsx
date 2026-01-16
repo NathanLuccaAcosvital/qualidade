@@ -2,10 +2,10 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, CheckCircle2, XCircle, Info, Loader2, AlertTriangle, Mail, X } from 'lucide-react';
-import { AppNotification } from '../../../../types/index.ts';
-import { useAuth } from '../../../../context/authContext.tsx';
-import { notificationService } from '../../../../lib/services/index.ts';
-import { useToast } from '../../../../context/notificationContext.tsx';
+import { AppNotification } from '../../../types/index.ts';
+import { useAuth } from '../../../context/authContext.tsx';
+import { notificationService } from '../../../lib/services/index.ts';
+import { useToast } from '../../../context/notificationContext.tsx';
 
 // Hook para gerenciar a lógica de notificações
 const useNotificationsList = () => {
@@ -98,7 +98,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ is
   return (
     <div 
       ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300" // Adicionadas classes de animação
+      className="absolute right-0 top-full mt-2 w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300"
       role="menu"
       aria-orientation="vertical"
       aria-labelledby="notifications-menu-button"

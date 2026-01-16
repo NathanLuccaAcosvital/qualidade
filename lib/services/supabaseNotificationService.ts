@@ -1,5 +1,4 @@
 
-
 import { AppNotification, User } from '../../types/index.ts';
 import { INotificationService } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
@@ -26,10 +25,10 @@ export const SupabaseNotificationService: INotificationService = {
         if (error) throw error;
         return (data || []).map(n => ({
             id: n.id,
-            userId: n.user_id || null, // Mapeia explicitamente para null se user_id for null
+            userId: n.user_id || null, 
             title: n.title,
             message: n.message,
-            type: n.type as AppNotification['type'], // Cast explícito para o tipo correto
+            type: n.type as AppNotification['type'], 
             isRead: n.is_read,
             timestamp: n.created_at,
             link: n.link
@@ -60,7 +59,7 @@ export const SupabaseNotificationService: INotificationService = {
 
     addNotification: async (userId: string | null, title, message, type, link) => {
         await supabase.from('notifications').insert({
-            user_id: userId, // Passa userId diretamente, pode ser null
+            user_id: userId,
             title,
             message,
             type,

@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react'; // Adicionado useState
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, ArrowLeft } from 'lucide-react'; 
+import { Bell, ArrowLeft, Settings } from 'lucide-react'; 
 import { User, UserRole } from '../../types/index.ts';
 import { LanguageSelector } from '../features/auth/login/LanguageSelector.tsx'; 
-import { NotificationsDropdown } from '../features/notifications/NotificationsDropdown.tsx'; // Importa o novo componente
+import { NotificationsDropdown } from '../features/notifications/NotificationsDropdown.tsx';
 
 const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
 
@@ -18,18 +18,16 @@ interface HeaderProps {
   onOpenMobileMenu: () => void; 
   onNavigateBack: () => void; 
   variant?: 'white' | 'blue';
-  // onOpenNotificationsModal: () => void; // Prop removida
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   title, user, role, unreadCount, onLogout, onOpenMobileMenu, 
-  onNavigateBack, variant = 'white' // onOpenNotificationsModal removida
+  onNavigateBack, variant = 'white'
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  const navigate = useNavigate();
   
-  const [isNotificationsDropdownOpen, setIsNotificationsDropdownOpen] = useState(false); // Estado para o dropdown
+  const [isNotificationsDropdownOpen, setIsNotificationsDropdownOpen] = useState(false);
   const toggleNotificationsDropdown = () => setIsNotificationsDropdownOpen(prev => !prev);
 
   const isDashboard = ['/admin/dashboard', '/quality/dashboard', '/client/dashboard'].includes(location.pathname.split('?')[0]);
@@ -37,10 +35,10 @@ export const Header: React.FC<HeaderProps> = ({
   const desktopHeaderBgClass = variant === 'blue' ? 'bg-[var(--color-primary-dark-blue)] text-white' : 'bg-white';
   const desktopTitleClass = variant === 'blue' ? 'text-white' : 'text-slate-800';
   const desktopSubtitleClass = variant === 'blue' ? 'text-slate-400' : 'text-slate-400';
-  const desktopRoleClass = variant === 'blue' ? 'text-[var(--color-detail-blue)]' : 'text-blue-600';
+  const desktopRoleClass = variant === 'blue' ? 'text-[#b23c0e]' : 'text-[#b23c0e]';
   const desktopPipeClass = variant === 'blue' ? 'opacity-30' : 'opacity-30';
   const desktopOrgClass = variant === 'blue' ? 'text-slate-300' : 'text-slate-400';
-  const desktopNotificationClass = variant === 'blue' ? 'text-slate-300 hover:text-[var(--color-detail-blue)]' : 'text-slate-400 hover:text-blue-600';
+  const desktopNotificationClass = variant === 'blue' ? 'text-slate-300 hover:text-[#b23c0e]' : 'text-slate-400 hover:text-[#b23c0e]';
 
   return (
     <>
@@ -57,12 +55,12 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-6 relative"> {/* Adicionado relative aqui para posicionamento do dropdown */}
+        <div className="flex items-center gap-6 relative">
           <LanguageSelector inHeader={true} /> 
           <NotificationTrigger 
             count={unreadCount} 
             className={desktopNotificationClass} 
-            onClick={toggleNotificationsDropdown} // Usa o handler local
+            onClick={toggleNotificationsDropdown}
             aria-expanded={isNotificationsDropdownOpen}
           />
           <NotificationsDropdown 
@@ -86,11 +84,11 @@ export const Header: React.FC<HeaderProps> = ({
           <img src={LOGO_URL} alt="Aços Vital" className="h-10" />
         )}
 
-        <div className="flex items-center gap-2 relative"> {/* Adicionado relative aqui para posicionamento do dropdown */}
+        <div className="flex items-center gap-2 relative">
             <NotificationTrigger 
               count={unreadCount} 
               className="text-slate-300 hover:text-white" 
-              onClick={toggleNotificationsDropdown} // Usa o handler local
+              onClick={toggleNotificationsDropdown}
               aria-expanded={isNotificationsDropdownOpen}
             />
             <NotificationsDropdown 
@@ -111,8 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-import { Settings } from 'lucide-react'; 
-
 const NotificationTrigger = ({ count, className, onClick, "aria-expanded": ariaExpanded }: { count: number, className: string, onClick: () => void, "aria-expanded"?: boolean }) => (
   <button 
     onClick={onClick} 
@@ -124,7 +120,7 @@ const NotificationTrigger = ({ count, className, onClick, "aria-expanded": ariaE
   >
     <Bell size={20} />
     {count > 0 && (
-      <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center animate-in zoom-in">
+      <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b23c0e] text-white text-[8px] font-black rounded-full border-2 border-[var(--color-primary-dark-blue)] flex items-center justify-center animate-in zoom-in">
         {count > 9 ? '9+' : count}
       </span>
     )}

@@ -20,12 +20,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
     <div className="w-full space-y-6">
       <header className="space-y-3">
         {/* Gateway Seguro Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-accent-orange)]/10 rounded-xl border border-[var(--color-accent-orange)]/20 text-[var(--color-accent-orange)] shadow-lg shadow-[var(--color-accent-orange)]/10">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-accent-orange)]/10 rounded-xl border border-[var(--color-accent-orange)]/20 text-[var(--color-accent-orange)] shadow-lg shadow-[var(--color-accent-orange)]/5">
            <ShieldCheck size={12} className="text-[var(--color-accent-orange)]" />
-           <span className="text-[9px] font-black uppercase tracking-[1.5px]">Gateway Seguro Ativo</span>
+           <span className="text-[9px] font-bold uppercase tracking-[1.5px]">Gateway Seguro Ativo</span>
         </div>
         <div>
-          <h2 className="text-2xl md:text-3xl font-black text-[var(--color-primary-dark-blue)] tracking-tighter leading-none mb-1">
+          <h2 className="text-2xl md:text-3xl font-bold text-[var(--color-primary-dark-blue)] tracking-tight leading-none mb-1">
             {t('login.restrictedAccess')}
           </h2>
           <p className="text-sm md:text-base text-slate-500 font-medium tracking-tight">
@@ -38,7 +38,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
         <div className="space-y-4">
           {/* Email Input */}
           <div className="space-y-2 group">
-            <label htmlFor="login-email" className="text-[10px] md:text-xs font-black uppercase tracking-[2px] text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors ml-1">
+            <label htmlFor="login-email" className="text-[10px] md:text-xs font-semibold uppercase tracking-[1.5px] text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors ml-1">
               {t('login.corpEmail')}
             </label>
             <div className={`flex items-center bg-slate-50 border-2 rounded-2xl overflow-hidden transition-all duration-300 ${focusedInput === 'email' ? 'border-[var(--color-detail-blue)] bg-white shadow-lg shadow-[var(--color-detail-blue)]/5' : 'border-slate-100'}`}>
@@ -48,7 +48,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
               <input 
                 id="login-email"
                 type="email" required 
-                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm md:text-base font-semibold text-[var(--color-primary-dark-blue)] placeholder-slate-400"
+                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm md:text-base font-medium text-[var(--color-primary-dark-blue)] placeholder-slate-400"
                 placeholder="tecnico@acosvital.com"
                 onFocus={() => setFocusedInput('email')}
                 onBlur={() => setFocusedInput(null)}
@@ -61,13 +61,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
           {/* Password Input */}
           <div className="space-y-2 group">
             <div className="flex justify-between items-end px-1">
-              <label htmlFor="login-password" className="text-[10px] md:text-xs font-black uppercase tracking-[2px] text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors">
+              <label htmlFor="login-password" className="text-[10px] md:text-xs font-semibold uppercase tracking-[1.5px] text-slate-400 group-focus-within:text-[var(--color-detail-blue)] transition-colors">
                 {t('login.accessPassword')}
               </label>
               <button 
                 type="button" 
-                onClick={() => { /* TODO: Implement password reset flow */ }}
-                className="text-[10px] md:text-xs font-black text-[var(--color-accent-orange)] hover:text-[var(--color-accent-orange-hover)] uppercase tracking-widest transition-colors underline-offset-4 hover:underline"
+                className="text-[10px] md:text-xs font-bold text-[var(--color-accent-orange)] hover:text-[var(--color-accent-orange-hover)] uppercase tracking-wider transition-colors underline-offset-4 hover:underline"
               >
                 {t('login.forgotPassword')}
               </button>
@@ -79,7 +78,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
               <input 
                 id="login-password"
                 type={showPassword ? "text" : "password"} required 
-                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm md:text-base font-semibold text-[var(--color-primary-dark-blue)] placeholder-slate-400 tracking-widest"
+                className="flex-1 px-4 py-3 bg-transparent outline-none text-sm md:text-base font-medium text-[var(--color-primary-dark-blue)] placeholder-slate-400 tracking-widest"
                 placeholder="••••••••"
                 onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput(null)}
@@ -99,7 +98,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 text-red-800 text-sm md:text-base font-bold rounded-xl border border-red-200 flex items-center gap-3 animate-shake" role="alert">
+          <div className="p-4 bg-red-50 text-red-800 text-xs font-semibold rounded-xl border border-red-200 flex items-center gap-3 animate-shake" role="alert">
             <AlertOctagon size={16} className="text-red-700 shrink-0" />
             <span className="leading-tight">{error}</span>
           </div>
@@ -107,12 +106,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error
 
         <button 
           type="submit" disabled={isLoading}
-          className="w-full bg-[var(--color-primary-dark-blue)] hover:bg-slate-800 text-white font-black h-14 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-2xl shadow-[var(--color-primary-dark-blue)]/10 active:scale-[0.98] disabled:opacity-70 group overflow-hidden relative"
+          className="w-full bg-[var(--color-primary-dark-blue)] hover:bg-slate-800 text-white font-bold h-14 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-[var(--color-primary-dark-blue)]/10 active:scale-[0.98] disabled:opacity-70 group overflow-hidden relative"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           {isLoading ? <Loader2 size={20} className="animate-spin" /> : (
             <>
-              <span className="uppercase tracking-[4px] text-[8px] md:text-xs">{t('login.authenticate')}</span> {/* Adjusted font size */}
+              <span className="uppercase tracking-[2px] text-[10px] md:text-xs">{t('login.authenticate')}</span>
               <ArrowRight size={18} className="text-[var(--color-detail-blue)] group-hover:translate-x-1.5 transition-transform" />
             </>
           )}

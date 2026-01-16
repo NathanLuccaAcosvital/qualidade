@@ -70,9 +70,9 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
     clientStatus: list.statusFilter,
     setClientStatus: list.setStatusFilter,
     isLoadingClients: list.isLoading,
-    isLoadingMoreClients: list.isLoadingMore,
+    isLoadingMoreClients: list.isLoadingMore, 
     hasMoreClients: list.hasMore,
-    handleLoadMoreClients: list.loadMore,
+    handleLoadMoreClients: list.loadMore, 
     
     // Estados Globais de Processamento
     isProcessing: actions.isProcessing,

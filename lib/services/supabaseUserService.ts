@@ -1,263 +1,219 @@
-import { User, UserRole, AccountStatus } from '../../types/auth.ts';
-import { IUserService, RawProfile } from './interfaces.ts';
+
+import { User } from '../../types/auth.ts';
+import { UserRole, AccountStatus } from '../../types/enums.ts';
+import { IUserService } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
 import { logAction } from './loggingService.ts';
 import { normalizeRole } from '../mappers/roleMapper.ts';
-import { withTimeout } from '../utils/apiUtils.ts'; // Import withTimeout
-// import { config } from '../config.ts'; // Removido
-import { AuthError, Session, UserResponse, PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js';
+import { AuthError } from '@supabase/supabase-js';
 
-
-const API_TIMEOUT = 8000; // Definido localmente (Reduzido para 8 segundos)
+const normalizeAuthError = (error: AuthError): string => {
+  const msg = error.message.toLowerCase();
+  if (msg.includes("invalid login credentials")) return "auth.errors.invalidCredentials";
+  if (msg.includes("too many requests")) return "auth.errors.tooManyRequests";
+  if (msg.includes("user already registered")) return "auth.errors.alreadyRegistered";
+  return "auth.errors.unexpected";
+};
 
 /**
- * Mapper: Database Row (Profiles) -> Domain User (App)
+ * Converte dados brutos do banco para o modelo de domínio User.
  */
-const toDomainUser = (row: RawProfile | null, sessionEmail?: string): User | null => { // Fix: Use RawProfile for input row and allow null return
+const toDomainUser = (row: any, sessionUser?: any): User | null => {
+  if (!row && sessionUser) {
+    return {
+      id: sessionUser.id,
+      name: sessionUser.user_metadata?.full_name || 'Usuário Vital',
+      email: sessionUser.email || '',
+      role: normalizeRole(sessionUser.user_metadata?.role),
+      organizationId: sessionUser.user_metadata?.organization_id,
+      organizationName: 'Aços Vital (Sincronizando...)',
+      status: AccountStatus.ACTIVE,
+      department: sessionUser.user_metadata?.user_type || 'CLIENT_INTERNAL',
+      isPendingDeletion: false
+    };
+  }
+
   if (!row) return null;
-  
-  // Trata organizações vindo como objeto ou array (comum no Supabase)
+
   const orgData = Array.isArray(row.organizations) ? row.organizations[0] : row.organizations;
+  const isPendingDeletion = sessionUser?.user_metadata?.is_pending_deletion === true || row.department === 'PENDING_DELETION';
 
   return {
     id: row.id,
-    name: row.full_name || 'Usuário Sem Nome',
-    email: row.email || sessionEmail || '',
+    name: row.full_name || sessionUser?.user_metadata?.full_name || 'Usuário Sem Nome',
+    email: row.email || sessionUser?.email || '',
     role: normalizeRole(row.role),
-    organizationId: row.organization_id || undefined, // Fix: Ensure undefined if null
+    organizationId: row.organization_id || undefined,
     organizationName: orgData?.name || 'Aços Vital (Interno)',
     status: (row.status as AccountStatus) || AccountStatus.ACTIVE,
-    department: row.department || undefined, // Fix: Ensure undefined if null
-    lastLogin: row.last_login || undefined // Fix: Ensure undefined if null
+    department: row.department || 'CLIENT_INTERNAL',
+    lastLogin: row.last_login || undefined,
+    isPendingDeletion
   };
 };
 
 export const SupabaseUserService: IUserService = {
   authenticate: async (email, password) => {
-    try {
-      const authPromise = supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password
-      });
-
-      // Fix: Explicitly destructure result to correctly infer types from withTimeout
-      const result: { data: { session: Session | null }; error: AuthError | null } = await withTimeout(
-        authPromise,
-        API_TIMEOUT,
-        "Tempo esgotado ao autenticar. Verifique sua conexão."
-      );
-      const { data, error } = result;
-
-      if (error) {
-        return { 
-          success: false, 
-          error: error.message === "Invalid login credentials" 
-            ? "E-mail ou senha incorretos." 
-            : "Falha na autenticação."
-        };
-      }
-      
-      return { success: true };
-    } catch (e: any) {
-      return { success: false, error: e.message || "Erro de conexão." };
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password
+    });
+    if (error) return { success: false, error: normalizeAuthError(error) };
+    return { success: true };
   },
 
-  signUp: async (email, password, fullName, organizationId, department, role = UserRole.QUALITY) => {
-    // 1. Auth SignUp (Supabase Auth)
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const authPromise = supabase.auth.signUp({ 
-        email: email.trim().toLowerCase(), 
-        password 
-      });
-    const authResult: { data: { user: UserResponse['user'] | null }; error: AuthError | null } = await withTimeout( 
-      authPromise,
-      API_TIMEOUT,
-      "Tempo esgotado ao registrar usuário."
-    );
-    const { data, error: authError } = authResult;
+  signUp: async (email, password, fullName, organizationId, userType, role = UserRole.CLIENT) => {
+    const emailClean = email.trim().toLowerCase();
     
-    if (authError) throw authError;
+    // Normalização rigorosa do ID da Organização (UUID ou null)
+    const validOrgId = (organizationId && organizationId.trim() !== "" && organizationId !== "null") 
+      ? organizationId 
+      : null;
 
-    // 2. Profile Creation (Public Profiles Table)
-    if (data.user) {
-      // Fix: Explicitly destructure result to correctly infer types from withTimeout
-      const profilePromise: Promise<PostgrestResponse<null>> = supabase.from('profiles').upsert({ // Fix: PostgrestResponse for upsert without select
-          id: data.user.id,
-          full_name: fullName.trim(),
-          email: email.trim().toLowerCase(),
-          organization_id: organizationId || null,
-          department: department || null,
-          role: role,
-          status: 'ACTIVE'
-        });
-      const profileResult = await withTimeout( 
-        profilePromise,
-        API_TIMEOUT,
-        "Tempo esgotado ao criar perfil."
-      );
-      const { error: profileError } = profileResult; // Fix: Destructure error property
-
-      if (profileError) {
-        console.error("Erro ao criar perfil:", profileError);
-        throw new Error("Usuário criado, mas houve um erro ao configurar o perfil.");
-      }
+    // 1. Verificação preventiva para evitar erro de duplicidade no meio do processo
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', emailClean)
+      .maybeSingle();
+    
+    if (existingProfile) {
+      throw new Error(`O e-mail ${emailClean} já possui um perfil técnico no sistema.`);
     }
+
+    // 2. Criar credenciais no Auth
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: emailClean,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          user_type: userType,
+          role: role,
+          organization_id: validOrgId,
+          is_pending_deletion: false
+        }
+      }
+    });
+
+    if (authError) throw new Error(authError.message);
+    if (!data.user) throw new Error("O provedor de segurança não retornou um identificador válido.");
+
+    // 3. Criar Perfil Técnico (A sincronização que estava falhando)
+    // Usamos .insert() em vez de .upsert() para garantir que não estamos sobrescrevendo nada indevidamente
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: data.user.id,
+      full_name: fullName,
+      email: emailClean,
+      role: role,
+      organization_id: validOrgId,
+      department: userType,
+      status: 'ACTIVE',
+      updated_at: new Date().toISOString()
+    });
+
+    if (profileError) {
+      console.error("[CRITICAL] Profile Sync Error:", profileError);
+      
+      // Lógica de Rollback: Se o perfil falhou, as credenciais auth ficam inúteis.
+      // Em um ambiente ideal, isso seria uma Edge Function, mas aqui tentamos remediar.
+      // Nota: O Admin pode precisar deletar o usuário manualmente no Dashboard do Supabase se o rollback falhar.
+      
+      const detailedError = profileError.code === '23503' 
+        ? "Vínculo organizacional inválido. Verifique se a empresa selecionada ainda existe."
+        : "Erro interno de permissão ao gravar dados técnicos.";
+
+      throw new Error(`Falha na sincronização: ${detailedError}`);
+    }
+
+    await logAction(null, 'USER_CREATED', emailClean, 'AUTH', 'INFO', 'SUCCESS', { userType, role, organizationId: validOrgId });
   },
 
   getCurrentUser: async () => {
-    try {
-      // Fix: Explicitly destructure result to correctly infer types from withTimeout
-      const sessionResult: { data: { session: Session | null }; error: AuthError | null } = await withTimeout( 
-        supabase.auth.getSession(),
-        API_TIMEOUT, // Usar API_TIMEOUT completo aqui
-        "Tempo esgotado ao buscar sessão de usuário."
-      );
-      const { data: { session } } = sessionResult;
-      if (!session?.user) return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return null;
 
-      const profileQuery = supabase
-        .from('profiles')
-        .select('*, organizations!organization_id(name)')
-        .eq('id', session.user.id)
-        .maybeSingle();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*, organizations!organization_id(name)')
+      .eq('id', session.user.id)
+      .maybeSingle();
 
-      // Fix: Explicitly destructure result to correctly infer types from withTimeout
-      const profileFetchResult: PostgrestSingleResponse<RawProfile> = await withTimeout( 
-        profileQuery,
-        API_TIMEOUT,
-        "Tempo esgotado ao buscar perfil do usuário."
-      );
-      const { data: profile, error } = profileFetchResult;
-
-      // Se houver erro na query ou o perfil não for encontrado, retornar null.
-      // Removida a lógica de fallback para buscar perfil básico, simplificando o fluxo.
-      if (error || !profile) {
-        if (error) console.error("[getCurrentUser] Erro ao buscar perfil com organização:", error.message);
-        return null; 
-      }
-
-      return toDomainUser(profile, session.user.email);
-    } catch (e: any) {
-      console.error("[getCurrentUser] Erro geral ao buscar usuário:", e.message);
-      return null;
-    }
-  },
-
-  logout: async () => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const result: { error: AuthError | null } = await withTimeout( 
-      supabase.auth.signOut(),
-      API_TIMEOUT,
-      "Tempo esgotado ao fazer logout."
-    );
-    const { error } = result;
-    if (error) throw error; // Re-throw error if sign-out fails
-    localStorage.clear();
+    return toDomainUser(profile, session.user);
   },
 
   getUsers: async () => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const usersPromise: Promise<PostgrestResponse<RawProfile>> = supabase // Fix: RawProfile for joined data
-        .from('profiles')
-        .select('*, organizations!organization_id(name)')
-        .order('full_name');
-    const result = await withTimeout( 
-      usersPromise,
-      API_TIMEOUT,
-      "Tempo esgotado ao buscar usuários."
-    );
-    const { data, error } = result; // Fix: Destructure data and error
-    if (error) throw error;
-    return (data || []).map(p => toDomainUser(p) as User); // Fix: Cast to User[] after mapping
-  },
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*, organizations!organization_id(name)')
+      .order('full_name');
 
-  getUsersByRole: async (role) => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const usersByRolePromise: Promise<PostgrestResponse<RawProfile>> = supabase // Fix: RawProfile for joined data
-        .from('profiles')
-        .select('*, organizations!organization_id(name)')
-        .eq('role', role);
-    const result = await withTimeout( 
-      usersByRolePromise,
-      API_TIMEOUT,
-      `Tempo esgotado ao buscar usuários por role (${role}).`
-    );
-    const { data, error } = result; // Fix: Destructure data and error
     if (error) throw error;
-    return (data || []).map(p => toDomainUser(p) as User); // Fix: Cast to User[] after mapping
+    return (data || []).map(p => toDomainUser(p));
   },
 
   saveUser: async (u) => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const saveUserPromise: Promise<PostgrestResponse<null>> = supabase.from('profiles').update({
-        full_name: u.name,
-        role: u.role,
-        organization_id: u.organizationId || null, // Fix: handle undefined
-        status: u.status,
-        department: u.department || null, // Fix: handle undefined
-        updated_at: new Date().toISOString()
-      }).eq('id', u.id);
-    const result = await withTimeout( 
-      saveUserPromise,
-      API_TIMEOUT,
-      "Tempo esgotado ao salvar usuário."
-    );
-    const { error } = result; // Fix: Destructure error
+    const validOrgId = (u.organizationId && String(u.organizationId).trim() !== "") ? u.organizationId : null;
+
+    const { error } = await supabase.from('profiles').update({
+      full_name: u.name,
+      role: u.role,
+      organization_id: validOrgId,
+      department: u.department, 
+      status: u.status,
+      updated_at: new Date().toISOString()
+    }).eq('id', u.id);
+
     if (error) throw error;
+    
+    // Sincroniza metadados do Auth para garantir que o token JWT reflita as mudanças no próximo refresh
+    await supabase.auth.updateUser({
+      data: { 
+        full_name: u.name, 
+        role: u.role, 
+        organization_id: validOrgId 
+      }
+    });
+
+    await logAction(null, 'USER_UPDATED', u.email, 'DATA', 'INFO', 'SUCCESS', { id: u.id });
+  },
+
+  flagUserForDeletion: async (userId: string, adminUser: User) => {
+    const { error } = await supabase.from('profiles').update({
+      status: 'INACTIVE', 
+      department: 'PENDING_DELETION' 
+    }).eq('id', userId);
+
+    if (error) throw error;
+    await logAction(adminUser, 'USER_FLAGGED_DELETION', userId, 'SECURITY', 'WARNING', 'SUCCESS');
+  },
+
+  logout: async () => {
+    await supabase.auth.signOut();
+    localStorage.clear();
+  },
+
+  getUsersByRole: async (role) => {
+    const { data, error } = await supabase.from('profiles').select('*, organizations!organization_id(name)').eq('role', role);
+    if (error) throw error;
+    return (data || []).map(p => toDomainUser(p));
   },
 
   changePassword: async (userId, current, newPass) => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const updatePasswordPromise: Promise<{ data: UserResponse | null; error: AuthError | null }> = supabase.auth.updateUser({ password: newPass });
-    const result = await withTimeout( 
-      updatePasswordPromise,
-      API_TIMEOUT,
-      "Tempo esgotado ao alterar senha."
-    );
-    const { error } = result;
+    const { error } = await supabase.auth.updateUser({ password: newPass });
     if (error) throw error;
     return true;
   },
 
-  deleteUser: async (id) => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const deleteUserPromise: Promise<PostgrestResponse<null>> = supabase.from('profiles').delete().eq('id', id);
-    const result = await withTimeout( 
-      deleteUserPromise,
-      API_TIMEOUT,
-      "Tempo esgotado ao deletar usuário."
-    );
-    const { error } = result; // Fix: Destructure error
-    if (error) throw error;
-  },
-
-  blockUserById: async (admin, target, reason) => {
-    // Fix: Explicitly destructure result to correctly infer types from withTimeout
-    const blockUserPromise: Promise<PostgrestResponse<null>> = supabase.from('profiles').update({ status: 'BLOCKED' }).eq('id', target);
-    const result = await withTimeout( 
-      blockUserPromise,
-      API_TIMEOUT,
-      "Tempo esgotado ao bloquear usuário."
-    );
-    const { error } = result; // Fix: Destructure error
-    if (error) throw error;
-    await logAction(admin, 'SEC_USER_BLOCKED', target, 'SECURITY', 'CRITICAL', 'SUCCESS', { reason });
+  deleteUser: async (_userId: string) => {
+    throw new Error("A exclusão direta foi desativada por política de segurança da Aços Vital. Use 'Sinalizar para Exclusão'.");
   },
 
   getUserStats: async () => {
-    // Fix: Explicitly destructure results of Promise.all to correctly infer types from withTimeout
-    const [totalResult, activeResult]: [PostgrestResponse<null>, PostgrestResponse<null>] = await withTimeout( 
-      Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE')
-      ]),
-      API_TIMEOUT,
-      "Tempo esgotado ao buscar estatísticas de usuário."
-    );
-    // No error handling for Promise.all, assuming individual Supabase calls handle their errors if they resolve within timeout
-    return { total: totalResult.count || 0, active: activeResult.count || 0, clients: 0 };
-  },
-
-  generateRandomPassword: () => Math.random().toString(36).slice(-10)
+    const [total, active] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE')
+    ]);
+    return { total: total.count || 0, active: active.count || 0, clients: 0 };
+  }
 };

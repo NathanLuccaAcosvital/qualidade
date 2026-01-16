@@ -4,6 +4,7 @@ import { AuthProvider } from './context/authContext.tsx';
 import { AppRoutes } from './routes.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { NotificationProvider } from './context/notificationContext.tsx';
+import { ScrollToTop } from './components/common/ScrollToTop.tsx';
 import { Loader2 } from 'lucide-react';
 import './lib/i18n.ts';
 
@@ -18,6 +19,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   <ErrorBoundary>
     <Suspense fallback={<GlobalSuspenseFallback />}>
       <HashRouter>
+        <ScrollToTop />
         <NotificationProvider>
           <AuthProvider>
             {children}

@@ -1,24 +1,25 @@
-
 import { supabase } from '../supabaseClient.ts';
-import { FileNode, FileType, BreadcrumbItem, normalizeRole, UserRole } from '../../types/index.ts';
-import { QualityStatus } from '../../types/metallurgy.ts';
+import { FileNode, FileType, BreadcrumbItem, AuditLog, User, UserRole } from '../../types/index.ts';
 import { logAction as internalLogAction } from './loggingService.ts';
 import { IFileService, PaginatedResponse, DashboardStatsData } from './interfaces.ts';
 
 const STORAGE_BUCKET = 'certificates';
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
-/**
- * Mapper: DB Row -> Domain FileNode
- */
+const sanitizeFilePathSegment = (segment: string): string => {
+  return segment
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") 
+    .replace(/\s+/g, '_')           
+    .replace(/[^a-zA-Z0-9.\-_]/g, '') 
+    .replace(/_{2,}/g, '_');        
+};
+
 const toDomainFile = (row: any): FileNode => ({
   id: row.id,
   parentId: row.parent_id,
   name: row.name,
   type: row.type as FileType,
   size: row.size,
-  mimeType: row.mime_type,
   updatedAt: row.updated_at,
   ownerId: row.owner_id,
   storagePath: row.storage_path,
@@ -27,33 +28,18 @@ const toDomainFile = (row: any): FileNode => ({
 });
 
 export const SupabaseFileService: IFileService = {
-  getFiles: async (user, folderId, page = 1, pageSize = 50, searchTerm = ''): Promise<PaginatedResponse<FileNode>> => {
-    // RLS (Row Level Security) no Supabase já filtra por organização automaticamente.
+  getRawFiles: async (folderId, page = 1, pageSize = 50, searchTerm = ''): Promise<PaginatedResponse<FileNode>> => {
     let query = supabase.from('files').select('*', { count: 'exact' });
 
-    const role = normalizeRole(user.role);
+    if (folderId) query = query.eq('parent_id', folderId);
+    else query = query.is('parent_id', null);
 
-    // Regra de Negócio: Clientes só devem ver arquivos APROVADOS (além de serem da sua org, garantido pelo RLS)
-    // Pastas (FOLDER) são estruturais e permitidas.
-    if (role === UserRole.CLIENT) {
-       query = query.or(`type.eq.FOLDER,metadata->>status.eq.${QualityStatus.APPROVED}`);
-    }
-
-    // Filtros de Navegação
-    if (folderId) {
-      query = query.eq('parent_id', folderId);
-    } else {
-      query = query.is('parent_id', null);
-    }
-
-    if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
-    }
+    if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
 
     const from = (page - 1) * pageSize;
     const { data, count, error } = await query
       .range(from, from + pageSize - 1)
-      .order('type', { ascending: false }) // Pastas primeiro
+      .order('type', { ascending: false }) 
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -65,69 +51,36 @@ export const SupabaseFileService: IFileService = {
     };
   },
 
-  getFilesByOwner: async (ownerId) => {
-    // Apenas busca, o RLS impedirá acesso se o user não tiver permissão sobre esse ownerId
-    const { data, error } = await supabase.from('files').select('*').eq('owner_id', ownerId);
-    if (error) throw error;
-    return (data || []).map(toDomainFile);
-  },
-
-  getRecentFiles: async (user, limit = 10) => {
-    let query = supabase.from('files').select('*');
-    
-    const role = normalizeRole(user.role);
-    // Regra de Negócio: Clientes só veem aprovados
-    if (role === UserRole.CLIENT) {
-        query = query.eq('metadata->>status', QualityStatus.APPROVED);
+  getFiles: async (user, folderId, page = 1, pageSize = 50, searchTerm = ''): Promise<PaginatedResponse<FileNode>> => {
+    if (user.role === UserRole.CLIENT) {
+        let query = supabase.from('files').select('*', { count: 'exact' }).eq('owner_id', user.organizationId);
+        if (folderId) query = query.eq('parent_id', folderId);
+        else query = query.is('parent_id', null);
+        if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
+        
+        const from = (page - 1) * pageSize;
+        const { data, count, error } = await query.range(from, from + pageSize - 1).order('type', { ascending: false }).order('name', { ascending: true });
+        if (error) throw error;
+        return { items: (data || []).map(toDomainFile), total: count || 0, hasMore: (count || 0) > from + pageSize };
     }
-
-    const { data, error } = await query
-        .limit(limit)
-        .order('updated_at', { ascending: false });
-
-    if (error) throw error;
-    return (data || []).map(toDomainFile);
-  },
-
-  getLibraryFiles: async (user, filters, page = 1, pageSize = 20) => {
-    return SupabaseFileService.getFiles(user, null, page, pageSize);
-  },
-
-  getDashboardStats: async (user): Promise<DashboardStatsData> => {
-    const role = normalizeRole(user.role);
     
-    // Query base limpa - O RLS filtra a Org.
-    const getBaseQuery = () => supabase.from('files').select('*', { count: 'exact', head: true }).neq('type', 'FOLDER');
-
-    const [totalApproved, totalPending] = await Promise.all([
-      getBaseQuery().eq('metadata->>status', QualityStatus.APPROVED),
-      
-      // Para clientes, forçamos 0 pendentes na visualização para não confundir, 
-      // embora o RLS já possa estar ocultando-os se configurado estritamente.
-      role === UserRole.CLIENT 
-        ? { count: 0 } 
-        : getBaseQuery().eq('metadata->>status', QualityStatus.PENDING)
-    ]);
-    
-    return {
-        mainValue: totalApproved.count || 0,
-        subValue: totalApproved.count || 0,
-        pendingValue: totalPending.count || 0,
-        status: (totalPending.count || 0) > 0 ? 'PENDING' : 'REGULAR',
-        mainLabel: role === UserRole.CLIENT ? 'Meus Certificados' : 'Certificados Globais',
-        subLabel: role === UserRole.CLIENT ? 'Validados e Prontos' : 'Docs. Validados'
-    };
+    return SupabaseFileService.getRawFiles(folderId, page, pageSize, searchTerm);
   },
 
   createFolder: async (user, parentId, name, ownerId) => {
+    let resolvedOwnerId = ownerId || null;
+    if (parentId) {
+        const { data: parentFolder } = await supabase.from('files').select('owner_id').eq('id', parentId).single();
+        if (parentFolder?.owner_id) resolvedOwnerId = parentFolder.owner_id;
+    }
+
     const { data, error } = await supabase.from('files').insert({
         name,
         type: 'FOLDER',
         parent_id: parentId,
-        owner_id: ownerId || null,
+        owner_id: resolvedOwnerId,
         storage_path: 'system/folder',
-        updated_at: new Date().toISOString(),
-        mime_type: 'folder'
+        updated_at: new Date().toISOString()
     }).select().single();
     
     if (error) throw error;
@@ -135,201 +88,187 @@ export const SupabaseFileService: IFileService = {
   },
 
   uploadFile: async (user, fileData, ownerId) => {
-    if (!fileData.fileBlob) throw new Error("Blob do arquivo não fornecido.");
+    if (!fileData.fileBlob) throw new Error("Blob não fornecido.");
     
-    if (fileData.fileBlob.size > MAX_FILE_SIZE_BYTES) {
-      throw new Error(`O arquivo é muito grande. Tamanho máximo: ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB.`);
-    }
-    if (!ALLOWED_MIME_TYPES.includes(fileData.fileBlob.type)) {
-        throw new Error(`Tipo de arquivo não permitido. Tipos aceitos: ${ALLOWED_MIME_TYPES.join(', ')}.`);
+    let resolvedOwnerId = ownerId;
+    if (fileData.parentId) {
+        const { data: parentFolder } = await supabase.from('files').select('owner_id').eq('id', fileData.parentId).single();
+        if (parentFolder?.owner_id) resolvedOwnerId = parentFolder.owner_id;
     }
 
-    const filePath = `${ownerId}/${fileData.parentId || 'root'}/${crypto.randomUUID()}-${fileData.name}`;
+    const sanitizedFileName = sanitizeFilePathSegment(fileData.name);
+    const folderPath = fileData.parentId || 'root';
+    const uniqueId = crypto.randomUUID();
+    const filePath = `${resolvedOwnerId}/${folderPath}/${uniqueId}-${sanitizedFileName}`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(filePath, fileData.fileBlob, {
-            contentType: fileData.fileBlob.type,
-            upsert: false
-        });
+      .from(STORAGE_BUCKET)
+      .upload(filePath, fileData.fileBlob, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
     if (uploadError) throw uploadError;
 
     const { data, error } = await supabase.from('files').insert({
-        name: fileData.name,
-        type: fileData.type || (fileData.fileBlob.type.startsWith('image/') ? 'IMAGE' : 'PDF'),
+        name: fileData.name, 
+        type: fileData.type,
         parent_id: fileData.parentId,
-        owner_id: ownerId,
+        owner_id: resolvedOwnerId,
         storage_path: uploadData.path,
         size: `${(fileData.fileBlob.size / 1024 / 1024).toFixed(2)} MB`,
-        mime_type: fileData.fileBlob.type,
-        metadata: fileData.metadata || { status: QualityStatus.PENDING },
+        metadata: fileData.metadata || { status: 'PENDING' },
         uploaded_by: user.id,
         updated_at: new Date().toISOString()
     }).select().single();
 
-    if (error) throw error;
+    if (error) {
+      await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
+      throw error;
+    }
+
     return toDomainFile(data);
   },
 
-  updateFile: async (user, fileId, updates) => {
-    const { error } = await supabase.from('files').update({
-        name: updates.name,
-        metadata: updates.metadata,
-        parent_id: updates.parentId,
-        updated_at: new Date().toISOString()
-    }).eq('id', fileId);
-    if (error) throw error;
+  deleteFile: async (user, fileIds) => {
+    return SupabaseFileService.deleteFiles(fileIds);
+  },
+
+  deleteFiles: async (fileIds) => {
+    if (!fileIds || fileIds.length === 0) return;
+
+    try {
+        // 1. Buscar os caminhos de storage de todos os itens (e filhos se houver cascata manual necessária)
+        // Para simplificar, focamos nos itens selecionados. Se for uma pasta, deletamos apenas o registro (o storage de pastas é virtual no DB)
+        const { data: items, error: fetchError } = await supabase
+            .from('files')
+            .select('storage_path, type')
+            .in('id', fileIds);
+
+        if (fetchError) throw fetchError;
+
+        const pathsToRemove = (items || [])
+            .filter(item => item.type !== 'FOLDER' && item.storage_path && item.storage_path !== 'system/folder')
+            .map(item => item.storage_path);
+
+        // 2. Remover do Storage físico
+        if (pathsToRemove.length > 0) {
+            const { error: storageError } = await supabase.storage
+                .from(STORAGE_BUCKET)
+                .remove(pathsToRemove);
+            
+            if (storageError) {
+                console.warn("[SupabaseFileService] Erro ao remover arquivos físicos, prosseguindo com limpeza do DB:", storageError.message);
+            }
+        }
+
+        // 3. Remover registros do banco de dados
+        const { error: dbError } = await supabase
+            .from('files')
+            .delete()
+            .in('id', fileIds);
+
+        if (dbError) throw dbError;
+
+    } catch (error: any) {
+        console.error("[SupabaseFileService] Falha crítica na exclusão:", error.message);
+        throw new Error("Erro ao processar exclusão de recursos.");
+    }
   },
 
   renameFile: async (user, fileId, newName) => {
-    const { error } = await supabase.from('files').update({
-      name: newName,
-      updated_at: new Date().toISOString()
-    }).eq('id', fileId);
+    const { error } = await supabase.from('files').update({ name: newName, updated_at: new Date().toISOString() }).eq('id', fileId);
     if (error) throw error;
   },
 
-  deleteFile: async (user, fileIds: string[]) => {
-    const { data: filesToDelete, error: fetchError } = await supabase.from('files').select('id, storage_path, type').in('id', fileIds);
-    if (fetchError) throw fetchError;
-
-    const storagePaths: string[] = [];
-    const fileNodeIdsToDelete: string[] = [];
-
-    // Lógica recursiva simples para identificar arquivos a deletar
-    const collectPaths = async (files: any[]) => {
-        for (const file of files) {
-            fileNodeIdsToDelete.push(file.id);
-            if (file.type !== 'FOLDER' && file.storage_path && file.storage_path !== 'system/folder') {
-                storagePaths.push(file.storage_path);
-            }
-            if (file.type === 'FOLDER') {
-                const { data: children } = await supabase.from('files').select('id, storage_path, type').eq('parent_id', file.id);
-                if (children && children.length > 0) {
-                    await collectPaths(children);
-                }
-            }
-        }
-    };
-
-    await collectPaths(filesToDelete || []);
-
-    if (storagePaths.length > 0) {
-        const { error: deleteStorageError } = await supabase.storage.from(STORAGE_BUCKET).remove(storagePaths);
-        if (deleteStorageError) throw deleteStorageError;
-    }
-
-    if (fileNodeIdsToDelete.length > 0) {
-        const { error: deleteDbError } = await supabase.from('files').delete().in('id', fileNodeIdsToDelete);
-        if (deleteDbError) throw deleteDbError;
-    }
-  },
-
-  searchFiles: async (user, queryStr, page = 1, pageSize = 20) => {
-    const from = (page - 1) * pageSize;
-    let baseQuery = supabase.from('files').select('*', { count: 'exact' }).ilike('name', `%${queryStr}%`);
+  getBreadcrumbs: async (user, currentFolderId): Promise<BreadcrumbItem[]> => {
+    const breadcrumbs: BreadcrumbItem[] = [];
+    const isClient = user.role === UserRole.CLIENT;
+    const companyName = user.organizationName || 'Organização';
     
-    const role = normalizeRole(user.role);
-    // Regra de Negócio: Cliente só vê aprovado
-    if (role === UserRole.CLIENT) {
-        baseQuery = baseQuery.or(`type.eq.FOLDER,metadata->>status.eq.${QualityStatus.APPROVED}`);
-    }
-
-    const { data, count, error } = await baseQuery.range(from, from + pageSize - 1);
-    
-    if (error) throw error;
-    return {
-        items: (data || []).map(toDomainFile),
-        total: count || 0,
-        hasMore: (count || 0) > from + pageSize
-    };
-  },
-
-  getBreadcrumbs: async (currentFolderId: string | null): Promise<BreadcrumbItem[]> => {
-    const breadcrumbs: BreadcrumbItem[] = [{ id: null, name: 'Início' }];
     let folderId = currentFolderId;
-
-    // Proteção contra loop infinito e verificação de acesso via RLS a cada passo
     while (folderId) {
-      const { data, error } = await supabase
-        .from('files')
-        .select('id, name, parent_id')
-        .eq('id', folderId)
-        .single();
-
-      if (error || !data) break;
+      const { data, error } = await supabase.from('files').select('id, name, parent_id, owner_id').eq('id', folderId).single();
       
+      if (error || !data) break;
+
+      const isCompanyRoot = isClient && data.owner_id === user.organizationId && data.parent_id === null;
+      
+      if (isCompanyRoot) {
+          breadcrumbs.unshift({ id: data.id, name: 'Início' });
+          breadcrumbs.unshift({ id: null, name: companyName }); 
+          break;
+      }
+
       breadcrumbs.unshift({ id: data.id, name: data.name });
       folderId = data.parent_id;
     }
+
+    if (breadcrumbs.length === 0) {
+        breadcrumbs.unshift({ id: null, name: companyName });
+    }
+
     return breadcrumbs;
   },
 
-  // Removed toggleFavorite: async (user, fileId) => { ... }
-
-  // Removed getFavorites: async (user) => { ... }
-
-  getFileSignedUrl: async (user, fileId): Promise<string> => {
-    // RLS garantirá que só encontramos o arquivo se pertencermos à org correta
-    const { data: file, error } = await supabase.from('files').select('storage_path, metadata').eq('id', fileId).single();
-    
-    if (error || !file) throw new Error("Documento não encontrado ou acesso negado.");
-
-    const role = normalizeRole(user.role);
-    // Regra de Negócio: Cliente só baixa se aprovado
-    if (role === UserRole.CLIENT) {
-      if (file.metadata?.status !== QualityStatus.APPROVED) {
-        throw new Error("Acesso negado: Este documento ainda não foi aprovado pela Qualidade.");
-      }
-    }
-
-    const { data, error: storageError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(file.storage_path, 3600);
-
-    if (storageError) throw storageError;
+  getSignedUrl: async (path): Promise<string> => {
+    if (!path || path === 'system/folder') throw new Error("Recurso inválido para visualização.");
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(path, 3600);
+    if (error) throw error;
     return data.signedUrl;
   },
 
-  logAction: async (user, action, target, category, severity, status, metadata) => {
-    await internalLogAction(user, action, target, category, severity, status, metadata);
+  getFileSignedUrl: async (user, fileId) => {
+    const { data, error } = await supabase.from('files').select('storage_path').eq('id', fileId).single();
+    if (error || !data) throw new Error("Arquivo não encontrado.");
+    return SupabaseFileService.getSignedUrl(data.storage_path);
   },
 
   getAuditLogs: async (user) => {
-    // Logs geralmente precisam de RLS próprio ou serem restritos apenas a ADMIN
     const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
-    return data.map(l => mapLog(l));
+    return (data || []).map(l => ({
+      id: l.id,
+      timestamp: l.created_at,
+      userId: l.user_id,
+      userName: l.metadata?.userName || 'Sistema',
+      userRole: l.metadata?.userRole || 'UNKNOWN',
+      action: l.action,
+      category: l.category,
+      target: l.target,
+      severity: l.severity,
+      status: l.status,
+      ip: l.ip,
+      location: l.location,
+      userAgent: l.user_agent,
+      device: l.device,
+      metadata: l.metadata,
+      requestId: l.request_id
+    }));
   },
 
-  getQualityAuditLogs: async (user, filters) => {
-    let query = supabase.from('audit_logs').select('*').eq('category', 'DATA').order('created_at', { ascending: false });
-    if (filters?.severity && filters.severity !== 'ALL') {
-        query = query.eq('severity', filters.severity);
-    }
-    const { data, error } = await query.limit(100);
+  getDashboardStats: async (user): Promise<DashboardStatsData> => {
+    const { count: totalCount } = await supabase.from('files').select('*', { count: 'exact', head: true }).eq('owner_id', user.organizationId).neq('type', 'FOLDER');
+    const { count: pendingCount } = await supabase.from('files').select('*', { count: 'exact', head: true }).eq('owner_id', user.organizationId).eq('metadata->>status', 'PENDING');
+    
+    return {
+      mainValue: totalCount || 0,
+      subValue: (totalCount || 0) - (pendingCount || 0),
+      pendingValue: pendingCount || 0,
+      status: (pendingCount || 0) > 0 ? 'PENDING' : 'REGULAR',
+      mainLabel: 'Documentos Totais',
+      subLabel: 'Validados'
+    };
+  },
+
+  uploadRaw: async (user, blob, name, path) => {
+    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob);
     if (error) throw error;
-    return (data || []).map(l => mapLog(l));
+    return path;
+  },
+
+  deleteRaw: async (paths) => {
+    const { error } = await supabase.storage.from(STORAGE_BUCKET).remove(paths);
+    if (error) throw error;
   }
 };
-
-// Helper para mapear logs e evitar duplicação de código
-const mapLog = (l: any) => ({
-    id: l.id,
-    timestamp: l.created_at,
-    userId: l.user_id,
-    userName: l.metadata?.userName || 'Sistema',
-    userRole: l.metadata?.userRole || 'SYSTEM',
-    action: l.action,
-    category: l.category,
-    target: l.target,
-    severity: l.severity,
-    status: l.status,
-    ip: l.ip,
-    location: l.location,
-    userAgent: l.user_agent,
-    device: l.device,
-    metadata: l.metadata,
-    requestId: l.request_id
-});

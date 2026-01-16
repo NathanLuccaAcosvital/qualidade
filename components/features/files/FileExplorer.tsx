@@ -46,8 +46,8 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
       clearSelection: () => {} // Implementar lógica de limpeza se necessário
   }));
 
-  if (loading) return <LoadingState />;
-  if (files.length === 0) return <EmptyState />;
+  if (loading) return <LoadingState t={t} />;
+  if (files.length === 0) return <EmptyState t={t} />;
 
   const viewProps = {
     files,
@@ -72,18 +72,18 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
   );
 });
 
-const LoadingState = () => (
+const LoadingState = ({ t }: { t: any }) => (
   <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[300px]">
     <Loader2 size={32} className="animate-spin text-[var(--color-detail-blue)]" />
-    <span className="text-[10px] font-black uppercase tracking-[4px]">Sincronizando Arquivos...</span>
+    <span className="text-[10px] font-black uppercase tracking-[4px]">{t('common.loading')}</span>
   </div>
 );
 
-const EmptyState = () => (
+const EmptyState = ({ t }: { t: any }) => (
   <div className="h-full flex flex-col items-center justify-center text-slate-300 italic py-20 min-h-[300px]">
     <FileText size={48} className="opacity-10 mb-4" />
-    <p className="font-semibold text-sm text-slate-600">Pasta vazia ou sem acesso disponível.</p>
-    <p className="text-xs text-slate-400 mt-2">Use os botões "Upload" ou "Nova Pasta" para começar.</p>
+    <p className="font-semibold text-sm text-slate-600">{t('files.noResultsFound')}</p>
+    <p className="text-xs text-slate-400 mt-2">{t('files.typeToSearch')}</p>
   </div>
 );
 

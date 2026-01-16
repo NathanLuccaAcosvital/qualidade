@@ -6,8 +6,9 @@ import { InspectionSidebar } from '../components/InspectionSidebar.tsx';
 import { ProcessingOverlay, QualityLoadingState } from '../components/ViewStates.tsx';
 import { useFileInspection } from '../hooks/useFileInspection.ts';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
-import { QualityStatus } from '../../../../types/metallurgy.ts';
+import { ArrowLeft, AlertCircle, ExternalLink } from 'lucide-react';
+// Fix: Import QualityStatus from enums where it is defined and exported
+import { QualityStatus } from '../../../../types/enums.ts';
 
 /**
  * FileInspection (Orchestrator View)
@@ -20,8 +21,8 @@ export const FileInspection: React.FC = () => {
   } = useFileInspection();
 
   const onInspectActionWithReason = async (status: QualityStatus, reason?: string) => {
-    const action = status === QualityStatus.APPROVED ? 'APPROVE' : 'REJECT';
-    await handleInspectAction(action, reason);
+    // Fix: Ensured status passed to handleInspectAction is a valid QualityStatus
+    await handleInspectAction(status, reason);
   };
 
   if (loadingFile) {
@@ -44,10 +45,9 @@ export const FileInspection: React.FC = () => {
 
   return (
     <Layout title={inspectorFile.name}>
-      {/* Fix: Changed 'file' prop to 'initialFile' to match FilePreviewModalProps interface */}
       <FilePreviewModal 
         initialFile={previewFile} 
-        allFiles={inspectorFile ? [inspectorFile] : []} // Assuming only the current inspectorFile is relevant for navigation here
+        allFiles={inspectorFile ? [inspectorFile] : []}
         isOpen={!!previewFile} 
         onClose={() => setPreviewFile(null)}
         onDownloadFile={handleDownload}
@@ -71,13 +71,26 @@ export const FileInspection: React.FC = () => {
           <section className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div className="flex-1 bg-slate-900 overflow-hidden relative">
               {mainPreviewUrl ? (
-                <iframe
-                  src={`${mainPreviewUrl}#toolbar=0&navpanes=0`}
-                  className="w-full h-full border-none"
+                <object 
+                  data={mainPreviewUrl} 
+                  type="application/pdf" 
+                  className="w-full h-full"
                   title={inspectorFile.name}
-                  loading="lazy"
-                  allowFullScreen
-                ></iframe>
+                >
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 p-10 text-center gap-6">
+                    <AlertCircle size={48} className="text-orange-500" />
+                    <div className="space-y-2">
+                      <p className="text-lg font-bold text-white">Visualização Bloqueada pelo Chrome</p>
+                      <p className="text-sm">Seu navegador impediu a exibição interna do PDF. Você pode visualizá-lo em uma nova aba com segurança.</p>
+                    </div>
+                    <button 
+                      onClick={() => window.open(mainPreviewUrl, '_blank')}
+                      className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-xl font-bold transition-all border border-white/10"
+                    >
+                      <ExternalLink size={18} /> Abrir Documento em Nova Aba
+                    </button>
+                  </div>
+                </object>
               ) : (
                 <QualityLoadingState message="Renderizando Ledger..." />
               )}

@@ -6,7 +6,7 @@ import { AuditLog } from '../../../../types/index.ts';
 interface AuditLogsTableProps {
     logs: AuditLog[];
     severityFilter: string;
-    onSeverityChange: (sev: any) => void;
+    onSeverityChange: (sev: string) => void;
     onInvestigate: (log: AuditLog) => void;
 }
 
@@ -56,7 +56,13 @@ export const AuditLogsTable: React.FC<AuditLogsTableProps> = ({
 
 /* --- Sub-componentes Especializados (SRP) --- */
 
-const FilterBar = ({ filter, onFilterChange, label }: any) => (
+interface FilterBarProps {
+    filter: string;
+    onFilterChange: (value: string) => void;
+    label: string;
+}
+
+const FilterBar = ({ filter, onFilterChange, label }: FilterBarProps) => (
   <div className="p-3 border-b border-slate-100 flex flex-wrap gap-3 bg-slate-50/50 items-center">
       <div className="flex items-center gap-2">
           <Filter size={14} className="text-slate-400" />
@@ -90,7 +96,6 @@ const TableHeader = ({ t }: { t: any }) => (
   </thead>
 );
 
-// DO: Explicitly typing as React.FC to handle 'key' prop correctly in list iterations
 const AuditLogRow: React.FC<{ log: AuditLog, onInvestigate: () => void }> = ({ log, onInvestigate }) => (
   <tr className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={onInvestigate}>
       <td className="px-6 py-3 text-xs text-slate-500 font-mono whitespace-nowrap">
@@ -106,8 +111,13 @@ const AuditLogRow: React.FC<{ log: AuditLog, onInvestigate: () => void }> = ({ l
       <td className="px-6 py-3 text-xs text-slate-500 font-mono">
           {log.target.substring(0, 30)}{log.target.length > 30 && '...'}
       </td>
+      {/* CORREÇÃO AQUI: Tratamento para IP nulo ou vazio */}
       <td className="px-6 py-3 text-xs text-slate-500 font-mono">
-          {log.ip}
+          {log.ip ? (
+            <span>{log.ip || <span className="text-slate-300 italic">N/A</span>}</span>
+          ) : (
+            <span className="text-slate-300 italic text-[10px]">N/A</span>
+          )}
       </td>
       <td className="px-6 py-3">
           <SeverityBadge severity={log.severity} />

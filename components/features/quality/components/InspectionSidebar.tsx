@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
-import { X, Download, FileText, Tag, ShieldCheck, AlertCircle, Eye, Loader2, History } from 'lucide-react';
-import { FileNode } from '../../../../types/index.ts';
-import { QualityStatus } from '../../../../types/metallurgy.ts';
+import { X, Download, FileText, Tag, ShieldCheck, AlertCircle, Eye, Loader2, History, MessageSquare, Clock } from 'lucide-react';
+import { FileNode, QualityStatus } from '../../../../types/index.ts';
 import { MetallurgicalDataDisplay } from './MetallurgicalDataDisplay.tsx';
 
 interface InspectionSidebarProps {
@@ -14,10 +12,6 @@ interface InspectionSidebarProps {
   onDownload: (file: FileNode) => void;
 }
 
-/**
- * InspectionSidebar (Facade Visual)
- * Agrega sub-componentes de inspeção técnica seguindo o SRP.
- */
 export const InspectionSidebar: React.FC<InspectionSidebarProps> = ({
   file,
   isProcessing,
@@ -42,6 +36,28 @@ export const InspectionSidebar: React.FC<InspectionSidebarProps> = ({
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
         <StatusMonitor status={metadata?.status} />
+
+        {/* ALERTA DE VISUALIZAÇÃO DO CLIENTE (PASSO 1) */}
+        {metadata?.viewedAt && (
+           <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center gap-3">
+              <Clock size={16} className="text-emerald-600" />
+              <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-tight">
+                Visualizado pelo cliente em {new Date(metadata.viewedAt).toLocaleDateString()}
+              </p>
+           </div>
+        )}
+
+        {/* EXIBIÇÃO DE FEEDBACK DO CLIENTE (PASSO 2 E 3) */}
+        {metadata?.clientObservations && (
+          <div className="p-4 bg-orange-50 rounded-2xl border-2 border-orange-200 space-y-3 animate-pulse">
+            <h5 className="text-[10px] font-black text-orange-700 uppercase tracking-widest flex items-center gap-2">
+              <MessageSquare size={14} /> Contestação do Cliente
+            </h5>
+            <p className="text-xs text-orange-900 font-medium italic leading-relaxed">
+              "{metadata.clientObservations}"
+            </p>
+          </div>
+        )}
 
         {!showRejectForm ? (
           <DecisionEngine 
@@ -77,32 +93,28 @@ export const InspectionSidebar: React.FC<InspectionSidebarProps> = ({
   );
 };
 
-/* --- Sub-componentes Especializados --- */
-
 const SidebarHeader: React.FC<{ fileName: string; onClose: () => void }> = ({ fileName, onClose }) => (
   <header className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
     <div className="flex items-center gap-3 overflow-hidden">
       <div className="p-2 bg-blue-100 text-[var(--color-detail-blue)] rounded-lg shrink-0 shadow-sm"><FileText size={18} /></div>
       <p className="text-sm font-black text-slate-800 truncate">{fileName}</p>
     </div>
-    <button 
-        onClick={onClose} 
-        className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-200 rounded-full transition-all"
-        aria-label="Fechar Painel"
-    >
-        <X size={20}/>
-    </button>
+    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-200 rounded-full transition-all"><X size={20}/></button>
   </header>
 );
 
 const StatusMonitor: React.FC<{ status?: string }> = ({ status }) => {
     const isApproved = status === QualityStatus.APPROVED;
+    const isRejected = status === QualityStatus.REJECTED;
+    const isToDelete = status === QualityStatus.TO_DELETE;
+
     return (
-        <div className="bg-[var(--color-primary-dark-blue)] p-5 rounded-2xl text-white relative overflow-hidden shadow-lg">
+        <div className={`p-5 rounded-2xl text-white relative overflow-hidden shadow-lg ${
+            isApproved ? 'bg-emerald-600' : isRejected ? 'bg-red-600' : isToDelete ? 'bg-slate-700' : 'bg-[var(--color-primary-dark-blue)]'
+        }`}>
             <div className="relative z-10">
-                <span className="text-[9px] font-black uppercase tracking-widest opacity-50 block mb-2">Conformidade Global</span>
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-50 block mb-2">Protocolo de Conformidade</span>
                 <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${isApproved ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                     <span className="text-xs font-black uppercase tracking-wider">{status ?? 'PENDING'}</span>
                 </div>
             </div>
@@ -120,7 +132,7 @@ const DecisionEngine: React.FC<{ isProcessing: boolean; status?: string; onAppro
             <button 
                 disabled={isProcessing || isApproved}
                 onClick={onApprove}
-                className="flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg shadow-emerald-500/10 active:scale-95"
+                className="flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 active:scale-95"
             >
                 {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <><ShieldCheck size={16} /> Aprovar</>}
             </button>
@@ -138,29 +150,18 @@ const DecisionEngine: React.FC<{ isProcessing: boolean; status?: string; onAppro
 const RejectionAuditForm: React.FC<{ value: string; onChange: (v: string) => void; onCancel: () => void; onConfirm: () => void }> = ({ 
     value, onChange, onCancel, onConfirm 
 }) => (
-  <div className="space-y-4 p-4 bg-red-50 rounded-2xl border border-red-100 animate-in zoom-in-95">
-    <label className="text-[10px] font-black text-red-700 uppercase tracking-widest block ml-1">Motivo da Não-Conformidade</label>
+  <div className="space-y-4 p-4 bg-red-50 rounded-2xl border border-red-100">
+    <label className="text-[10px] font-black text-red-700 uppercase tracking-widest block ml-1">Observação de Não-Conformidade</label>
     <textarea 
-      className="w-full p-4 bg-white border border-red-200 rounded-xl text-xs min-h-[120px] outline-none focus:ring-4 focus:ring-red-500/10 transition-all font-medium"
-      placeholder="Descreva detalhadamente o desvio técnico..."
+      className="w-full p-4 bg-white border border-red-200 rounded-xl text-xs min-h-[100px] outline-none focus:ring-4 focus:ring-red-500/10 transition-all font-medium"
+      placeholder="Justifique a rejeição deste certificado..."
       value={value}
       onChange={(e) => onChange(e.target.value)}
       autoFocus
     />
     <div className="flex gap-2">
-      <button 
-        onClick={onCancel} 
-        className="flex-1 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-200/50 rounded-lg py-2 transition-colors"
-      >
-        Cancelar
-      </button>
-      <button 
-        onClick={onConfirm} 
-        disabled={!value.trim()}
-        className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 shadow-md shadow-red-600/20"
-      >
-        Confirmar
-      </button>
+      <button onClick={onCancel} className="flex-1 text-[10px] font-black text-slate-500 uppercase py-2">Cancelar</button>
+      <button onClick={onConfirm} disabled={!value.trim()} className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-md">Confirmar</button>
     </div>
   </div>
 );
@@ -186,18 +187,9 @@ const TraceabilityLog: React.FC<{ metadata: any }> = ({ metadata }) => (
 
 const SidebarFooter: React.FC<{ onPreview: () => void; onDownload: () => void }> = ({ onPreview, onDownload }) => (
   <footer className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2">
-    <button 
-        onClick={onPreview} 
-        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[var(--color-primary-dark-blue)] text-white rounded-xl text-[10px] font-black uppercase tracking-[3px] shadow-xl shadow-[var(--color-primary-dark-blue)]/20 hover:bg-slate-800 transition-all active:scale-95"
-    >
-        <Eye size={16} /> Ver Certificado
+    <button onClick={onPreview} className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[var(--color-primary-dark-blue)] text-white rounded-xl text-[10px] font-black uppercase tracking-[3px] hover:bg-slate-800 transition-all active:scale-95">
+        <Eye size={16} /> Ver PDF
     </button>
-    <button 
-        onClick={onDownload} 
-        className="p-3.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-[var(--color-detail-blue)] hover:border-blue-200 transition-all shadow-sm"
-        title="Download PDF"
-    >
-        <Download size={20}/>
-    </button>
+    <button onClick={onDownload} className="p-3.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-blue-600 transition-all"><Download size={20}/></button>
   </footer>
 );

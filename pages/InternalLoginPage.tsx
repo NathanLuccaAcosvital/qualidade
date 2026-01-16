@@ -11,6 +11,7 @@ const INTERNAL_HERO = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/objec
 
 const InternalLoginPage: React.FC = () => {
   const { login, isLoading, user } = useAuth();
+  const { t } = useTranslation();
   
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -20,7 +21,7 @@ const InternalLoginPage: React.FC = () => {
   if (user) {
     const role = normalizeRole(user.role);
     if (role === UserRole.ADMIN || role === UserRole.QUALITY) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/admin/dashboard" replace />;
     }
   }
 
@@ -29,7 +30,7 @@ const InternalLoginPage: React.FC = () => {
     setError('');
     const result = await login(credentials.email, credentials.password);
     if (!result.success) {
-        setError(result.error || "Falha técnica no portal interno.");
+        setError(result.error ? t(result.error) : t('auth.errors.unexpected'));
     }
   };
 

@@ -1,16 +1,11 @@
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../context/authContext.tsx';
 import { useToast } from '../../../../context/notificationContext.tsx';
 import { useTranslation } from 'react-i18next';
 import { ClientOrganization } from '../../../../types/index.ts';
-import { adminService } from '../../../../lib/services/index.ts';
+import { qualityService } from '../../../../lib/services/index.ts';
 
-const CLIENTS_PER_PAGE = 24;
-
-/**
- * Hook Especializado: Consulta e Listagem de Clientes
- */
 export const useQualityClientList = (refreshTrigger: number) => {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -28,7 +23,7 @@ export const useQualityClientList = (refreshTrigger: number) => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await adminService.getClients({ search, status: statusFilter }, 1, CLIENTS_PER_PAGE);
+      const res = await qualityService.getManagedClients(user.id, { search, status: statusFilter }, 1);
       setClients(res.items || []);
       setHasMore(res.hasMore || false);
       setPage(1);
@@ -40,37 +35,28 @@ export const useQualityClientList = (refreshTrigger: number) => {
   }, [user, search, statusFilter, t, showToast]);
 
   const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (!user || isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const res = await adminService.getClients({ search, status: statusFilter }, nextPage, CLIENTS_PER_PAGE);
+      const res = await qualityService.getManagedClients(user.id, { search, status: statusFilter }, nextPage);
       setClients(prev => [...prev, ...(res.items || [])]);
       setHasMore(res.hasMore || false);
       setPage(nextPage);
     } catch (err: any) {
-      showToast(t('quality.errorLoadingMoreClients', { message: err.message }), 'error');
+      showToast(t('quality.errorLoadingClients', { message: err.message }), 'error');
     } finally {
       setIsLoadingMore(false);
     }
-  }, [page, hasMore, search, statusFilter, t, showToast, isLoadingMore]);
+  }, [user, search, statusFilter, page, isLoadingMore, hasMore, t, showToast]);
 
   useEffect(() => {
     const timer = setTimeout(loadInitial, 300);
     return () => clearTimeout(timer);
   }, [loadInitial, refreshTrigger]);
 
-  const sortedClients = useMemo(() => {
-    if (!clients) return [];
-    return [...clients].sort((a, b) => {
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameA.localeCompare(nameB);
-    });
-  }, [clients]);
-
   return {
-    clients: sortedClients,
+    clients,
     search,
     setSearch,
     statusFilter,

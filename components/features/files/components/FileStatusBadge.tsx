@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, LucideIcon } from 'lucide-react';
-import { QualityStatus } from '../../../../types/metallurgy.ts';
+import { CheckCircle2, Clock, AlertCircle, Trash2, LucideIcon } from 'lucide-react';
+import { QualityStatus } from '../../../../types/enums.ts';
 
 interface StatusConfig {
   icon: LucideIcon;
@@ -11,8 +10,9 @@ interface StatusConfig {
 
 const STATUS_MAP: Record<string, StatusConfig> = {
   [QualityStatus.APPROVED]: { icon: CheckCircle2, color: 'text-emerald-500 bg-emerald-50 border-emerald-100', label: 'Aprovado' },
-  [QualityStatus.REJECTED]: { icon: AlertCircle, color: 'text-red-500 bg-red-50 border-red-100', label: 'Recusado' },
+  [QualityStatus.REJECTED]: { icon: AlertCircle, color: 'text-red-500 bg-red-50 border-red-100', label: 'Rejeitado' },
   [QualityStatus.PENDING]: { icon: Clock, color: 'text-orange-500 bg-orange-50 border-orange-100', label: 'Pendente' },
+  [QualityStatus.TO_DELETE]: { icon: Trash2, color: 'text-slate-500 bg-slate-100 border-slate-200', label: 'Apagar' },
 };
 
 export const FileStatusBadge: React.FC<{ status?: string }> = ({ status }) => {

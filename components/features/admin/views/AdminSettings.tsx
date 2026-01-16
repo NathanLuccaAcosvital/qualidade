@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -86,8 +85,7 @@ const SystemStatusHeader = ({ status, onUpdate }: { status: SystemStatus, onUpda
             variant="danger" 
           />
         </div>
-      {/* Fix: Removed extraneous closing div tag */}
-      </div> 
+      {/* Fix: Removed extraneous closing div tag that was causing a syntax error in JSX parsing */}
     </section>
   );
 };

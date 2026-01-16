@@ -1,22 +1,21 @@
+
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { userService } from '../lib/services';
+import { supabase } from '../lib/supabaseClient.ts';
+import { userService } from '../lib/services/index.ts';
 import { appService } from '../lib/services/appService.tsx';
-import { User, SystemStatus } from '../types';
+import { User, SystemStatus } from '../types/index.ts';
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   systemStatus: SystemStatus | null;
   error: string | null;
-  // Add new state properties for initial sync completion and retry mechanism
   isInitialSyncComplete: boolean;
 }
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  // Add new methods for retry mechanism
   retryInitialSync: () => Promise<void>;
 }
 
@@ -28,47 +27,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
     systemStatus: null,
     error: null,
-    isInitialSyncComplete: false, // Initialize as false
+    isInitialSyncComplete: false,
   });
 
   const mounted = useRef(true);
 
-  // Função Ultra-Rápida de Inicialização
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     try {
-      // 1 Request Único ao Servidor
-      const { user, systemStatus } = await appService.getInitialData();
+      const data = await appService.getInitialData();
       
       if (mounted.current) {
         setState({
-          user,
-          systemStatus,
+          user: data.user,
+          systemStatus: data.systemStatus,
           isLoading: false,
           error: null,
-          isInitialSyncComplete: true, // Mark as true once initial sync is done
+          isInitialSyncComplete: true,
         });
       }
-    } catch (error) {
-      console.error("Erro crítico na inicialização:", error);
-      if (mounted.current) setState(s => ({ ...s, isLoading: false, error: "Erro de conexão", isInitialSyncComplete: true })); // Also mark as true on error to stop initial loader
+    } catch (error: any) {
+      console.error("Critical Auth Sync Error:", error);
+      if (mounted.current) {
+        setState(s => ({ 
+          ...s, 
+          isLoading: false, 
+          error: "Não foi possível validar sua identidade técnica.", 
+          isInitialSyncComplete: true 
+        }));
+      }
     }
-  };
+  }, []);
 
-  // Function to retry the initial sync
   const retryInitialSync = useCallback(async () => {
     setState(s => ({ ...s, isLoading: true, error: null, isInitialSyncComplete: false }));
     await refreshAuth();
-  }, []);
+  }, [refreshAuth]);
 
   useEffect(() => {
     mounted.current = true;
     refreshAuth();
 
-    // Listener para Login/Logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        // Ensure that onAuthStateChange also triggers a full refresh
-        setState(s => ({ ...s, isLoading: true, isInitialSyncComplete: false }));
+    // Inscrição para eventos de auth globais (login/logout/token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.debug(`[Auth Event] ${event}`);
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         refreshAuth();
       }
     });
@@ -77,26 +79,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted.current = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshAuth]);
 
   const login = async (email: string, password: string) => {
-    setState(s => ({ ...s, isLoading: true }));
-    // O login continua normal via Supabase Auth
+    setState(s => ({ ...s, isLoading: true, error: null }));
     const result = await userService.authenticate(email, password);
-    
     if (!result.success) {
-      setState(s => ({ ...s, isLoading: false, error: result.error || 'Erro' }));
+      setState(s => ({ ...s, isLoading: false, error: result.error || 'Autenticação recusada' }));
     }
-    // Se sucesso, o onAuthStateChange dispara o refreshAuth automaticamente
+    // O onAuthStateChange cuidará do refreshAuth se o login for bem sucedido
     return result;
   };
 
   const logout = async () => {
     await userService.logout();
-    window.location.href = '/'; // Redirecionamento forçado para limpar memória
+    setState({
+        user: null,
+        systemStatus: null,
+        isLoading: false,
+        error: null,
+        isInitialSyncComplete: true
+    });
+    window.location.href = '/'; 
   };
 
-  const value = useMemo(() => ({ ...state, login, logout, retryInitialSync }), [state, retryInitialSync]);
+  const value = useMemo(() => ({ 
+    ...state, 
+    login, 
+    logout, 
+    retryInitialSync 
+  }), [state, retryInitialSync]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

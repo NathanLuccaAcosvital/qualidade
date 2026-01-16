@@ -1,31 +1,25 @@
-
 import { 
-  Home, 
-  Library, 
-  Star, 
-  History, 
-  ShieldCheck, 
   Users, 
-  Activity, 
-  LogOut,
-  Lock,
-  FileText,
+  ShieldCheck, 
   LayoutDashboard,
-  ShieldAlert,
-  Clock,
-  Settings, // Import Settings icon
-  BarChart3, // New icon for reports
-  Bell // New icon for notifications
+  Building2,
+  History,
+  UserCheck,
+  Library,
+  FolderTree,
+  Settings,
+  LogOut,
+  Database,
+  ScanEye
 } from 'lucide-react';
-import { User, UserRole, normalizeRole } from '../types/index.ts';
+import { UserRole } from '../types/index.ts';
 
 export interface NavItem {
   label: string;
   path: string;
   icon: any;
   exact?: boolean;
-  subItems?: NavItem[]; // Adicionado para suportar sub-menus
-  onClick?: () => void; // Para itens de menu que não são links (ex: logout)
+  subItems?: NavItem[]; 
 }
 
 export interface NavSection {
@@ -33,101 +27,99 @@ export interface NavSection {
   items: NavItem[];
 }
 
-const getAdminNavigation = (t: any): NavSection[] => [
+/**
+ * Menu exclusivo para o perfil ADMINISTRADOR
+ */
+export const getAdminMenuConfig = (t: any): NavSection[] => [
   {
-    title: "OPERACIONAL",
+    title: "Governança Master",
     items: [
-      { label: "Command Center", path: '/admin/dashboard', icon: LayoutDashboard, exact: true },
-      { label: "Base de Usuários", path: '/admin?tab=users', icon: Users },
-    ]
-  },
-  {
-    title: "GOVERNANÇA",
-    items: [
-      { label: "Logs de Auditoria", path: '/admin?tab=logs', icon: ShieldAlert },
-      { label: "Painel de Segurança", path: '/admin?tab=settings', icon: ShieldCheck },
-    ]
-  }
-];
-
-const getQualityNavigation = (t: any): NavSection[] => [
-  {
-    title: "OPERACIONAL",
-    items: [
-      { label: t('quality.overview'), path: '/quality/dashboard', icon: Activity, exact: true },
-    ]
-  },
-  {
-    title: "GOVERNANÇA",
-    items: [
-      { label: t('quality.myAuditLog'), path: '/quality?view=audit-log', icon: FileText }
+      { label: "Painel de Controle", path: '/admin/dashboard', icon: LayoutDashboard, exact: true },
+      { label: "Monitor de Carteira", path: '/quality/portfolio', icon: Building2 },
+      { label: "Base de Usuários", path: '/admin/users', icon: Users },
+      { label: "Cofre de Backup", path: '/admin?tab=backup', icon: Database },
+      { label: "Status do Sistema", path: '/admin/system', icon: ShieldCheck },
     ]
   }
 ];
 
-// Nova função para a navegação da Sidebar do Cliente
-export const getClientSidebarMenuConfig = (t: any): NavSection[] => [
+/**
+ * Menu exclusivo para o perfil QUALIDADE
+ */
+export const getQualityMenuConfig = (t: any): NavSection[] => [
   {
-    title: "PRINCIPAL",
+    title: "Operação Técnica",
+    items: [
+      { label: "Visão Geral", path: '/quality/dashboard', icon: LayoutDashboard, exact: true },
+      { label: "Monitor de Carteira", path: '/quality/portfolio', icon: Building2 },
+    ]
+  },
+  {
+    title: "Documentação",
+    items: [
+      { label: "Explorador de Arquivos", path: '/quality/explorer', icon: FolderTree },
+      { label: "Gestão de Usuários", path: '/quality/users', icon: UserCheck },
+      { label: "Log de Vereditos", path: '/quality/audit', icon: History }
+    ]
+  }
+];
+
+/**
+ * Menu exclusivo para o perfil CLIENTE
+ */
+export const getClientMenuConfig = (t: any): NavSection[] => [
+  {
+    title: t('menu.sections.main'),
     items: [
       { label: t('menu.dashboard'), path: '/client/dashboard', icon: LayoutDashboard, exact: true },
+      { label: t('menu.library'), path: '/client/dashboard?view=library', icon: Library },
     ]
-  },
-  {
-    title: "DOCUMENTOS",
-    items: [
-      {
-        label: "Certificados", // Main label for expandable section
-        icon: Library,
-        path: '/client/dashboard?view=files', // This path will be active if any sub-item is active
-        subItems: [
-          { label: t('menu.library'), path: '/client/dashboard?view=files', icon: Library, exact: false },
-        ],
-      },
-    ]
-  },
-  // Configurações e Logout serão adicionados diretamente na SidebarClient, não neste array
+  }
 ];
 
+// Fix: Added getClientSidebarMenuConfig to resolve error in components/layout/SidebarClient.tsx
+export const getClientSidebarMenuConfig = (t: any): NavSection[] => getClientMenuConfig(t);
 
-export const getMenuConfig = (user: User | null, t: any): NavSection[] => {
+/**
+ * Fix: Added getMenuConfig to resolve error in components/layout/Sidebar.tsx
+ * Orchestrates role-based menu selection for the generic Sidebar component.
+ */
+export const getMenuConfig = (user: any, t: any): NavSection[] => {
   if (!user) return [];
-  const role = normalizeRole(user.role);
-  const navigationMap: Record<UserRole, (t: any) => NavSection[]> = {
-    [UserRole.ADMIN]: getAdminNavigation,
-    [UserRole.QUALITY]: getQualityNavigation,
-    [UserRole.CLIENT]: getClientSidebarMenuConfig, // Cliente agora usa a SidebarClient com sua própria config
-  };
-  return navigationMap[role]?.(t) || [];
+  const role = user.role;
+  if (role === UserRole.ADMIN) return getAdminMenuConfig(t);
+  if (role === UserRole.QUALITY) return getQualityMenuConfig(t);
+  if (role === UserRole.CLIENT) return getClientMenuConfig(t);
+  return [];
 };
 
-export const getBottomNavItems = (user: User | null, t: any): NavItem[] => {
+/**
+ * Fix: Added getUserMenuItems to resolve error in components/layout/MobileNavigation.tsx
+ * Returns common actions for user profile management.
+ */
+export const getUserMenuItems = (t: any, callbacks: { onLogout: () => void, onNavigateToSettings: () => void }) => [
+  { label: t('menu.settings'), icon: Settings, onClick: callbacks.onNavigateToSettings },
+  { label: t('common.logout'), icon: LogOut, onClick: callbacks.onLogout }
+];
+
+// Mantidos para compatibilidade com Mobile Navigation
+export const getBottomNavItems = (user: any, t: any): NavItem[] => {
   if (!user) return [];
-  const role = normalizeRole(user.role);
+  const role = user.role;
 
   if (role === UserRole.ADMIN) {
     return [
-      { label: "Dash", path: '/admin/dashboard', icon: LayoutDashboard, exact: true },
-      { label: "Usuários", path: '/admin?tab=users', icon: Users },
-      { label: "Logs", path: '/admin?tab=logs', icon: ShieldAlert },
+      { label: "Home", path: '/admin/dashboard', icon: LayoutDashboard },
+      { label: "Carteira", path: '/quality/portfolio', icon: Building2 },
     ];
   }
 
-  // O ClientDock será agora o principal para o Cliente, então o MobileNavigation
-  // não precisará de itens de navegação inferiores se o role for CLIENT.
-  // Vou remover os itens do cliente daqui, pois a SidebarClient e o ClientDock cuidarão disso.
-  if (role === UserRole.CLIENT) {
-    // Retorna vazio ou apenas um item essencial se a barra lateral é a principal
-    return []; 
+  if (role === UserRole.QUALITY) {
+    return [
+      { label: "Dash", path: '/quality/dashboard', icon: LayoutDashboard },
+      { label: "Carteira", path: '/quality/portfolio', icon: Building2 },
+    ];
   }
   
-  return [
-      { label: "Resumo", path: '/quality/dashboard', icon: Activity, exact: true },
-      { label: "Auditoria", path: '/quality?view=audit-log', icon: FileText },
-  ];
+  return [];
 };
-
-export const getUserMenuItems = (t: any, hooks: { onLogout: () => void, onNavigateToSettings: () => void }) => [
-  { label: t('menu.settings'), icon: Settings, onClick: hooks.onNavigateToSettings },
-  { label: t('common.logout'), icon: LogOut, onClick: hooks.onLogout },
-];

@@ -10,7 +10,7 @@ export interface AuditLog {
   target: string; 
   severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
   status: 'SUCCESS' | 'FAILURE';
-  ip: string;
+  ip: string | null;
   location: string;
   userAgent: string;
   device: string;
