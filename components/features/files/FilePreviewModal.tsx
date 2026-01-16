@@ -2,14 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   X, Download, Loader2, FileText, 
   ZoomIn, ZoomOut, CheckCircle2, XCircle, 
-  Pencil, Square, Circle, Eraser, 
-  User, Calendar, ShieldCheck, 
-  ChevronRight, Undo2, Redo2, 
-  ImageDown, ArrowUpRight, Trash2, MessageSquare, Plus,
+  Pencil, Eraser, MessageSquare, Plus,
   Hand, ChevronLeft, ChevronRight as ChevronRightIcon,
-  Type, Highlighter, Stamp, Layers, Maximize2, MoreHorizontal,
-  ChevronUp, Camera, Clock, ClipboardCheck, Tag, Info, Send, ShieldAlert,
-  FileCheck,
+  Highlighter, Undo2, Redo2, 
+  ImageDown, Clock, Info, Send, ShieldCheck, FileCheck,
 } from 'lucide-react';
 import { FileNode, UserRole, QualityStatus, SteelBatchMetadata } from '../../../types/index.ts';
 import { fileService, qualityService } from '../../../lib/services/index.ts';
@@ -18,15 +14,26 @@ import { FileStatusBadge } from './components/FileStatusBadge.tsx';
 import { useToast } from '../../../context/notificationContext.tsx';
 import { supabase } from '../../../lib/supabaseClient.ts';
 
+// Re-importar tipos atualizados localmente para garantir o uso da definição correta
+type ConversationParty = UserRole.QUALITY | UserRole.CLIENT;
+
+interface ConversationMessage {
+  id: string;
+  senderRole: ConversationParty;
+  senderName: string;
+  timestamp: string;
+  message: string;
+}
+
 if (typeof window !== 'undefined' && (window as any).pdfjsLib) {
   (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 }
 
-type AnnotationType = 'pencil' | 'highlight' | 'hand' | 'eraser'; // Removidos 'rect', 'circle', 'arrow', 'text', 'stamp_ok', 'stamp_no' para simplificar o MVP
+type AnnotationType = 'pencil' | 'highlight' | 'hand' | 'eraser'; 
 interface Point { x: number; y: number; }
 interface Annotation {
   id: string;
-  type: Exclude<AnnotationType, 'hand' | 'eraser'>; // Eraser not a type of annotation
+  type: Exclude<AnnotationType, 'hand' | 'eraser'>; 
   color: string;
   normalizedPoints?: Point[];
   normalizedStart?: Point;
@@ -35,11 +42,9 @@ interface Annotation {
   page: number;
 }
 
-// Helpers para normalizar/desnormalizar coordenadas (movidos para fora para evitar recriação)
 const normalize = (value: number, max: number) => value / max;
 const denormalize = (value: number, max: number) => value * max;
 
-// Helper para cálculo de distância para borracha (movido para fora)
 const dist2 = (p1: Point, p2: Point) => (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
 const distToSegmentSquared = (p: Point, p1: Point, p2: Point) => {
   const l2 = dist2(p1, p2);
@@ -72,22 +77,22 @@ export const FilePreviewModal: React.FC<{
   const [zoom, setZoom] = useState(1.2);
   const [isActioning, setIsActioning] = useState(false);
   
-  // Estados de Anotação e Desenho
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [drawingTool, setDrawingTool] = useState<AnnotationType>('hand');
   const [tempAnnotation, setTempAnnotation] = useState<Annotation | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [annotationColor, setAnnotationColor] = useState('#EF4444'); // Cor padrão: vermelho
-  const [annotationHistory, setAnnotationHistory] = useState<Annotation[][]>([[]]); // Histórico para Undo/Redo
+  const [annotationColor, setAnnotationColor] = useState('#EF4444'); 
+  const [annotationHistory, setAnnotationHistory] = useState<Annotation[][]>([[]]); 
   const [historyPointer, setHistoryPointer] = useState(0);
 
-
-  // Estados do Fluxo de Auditoria
   const [rejectMode, setRejectMode] = useState<'NONE' | 'DOCUMENTAL' | 'PHYSICAL'>('NONE');
   const [observations, setObservations] = useState('');
   const [selectedFlags, setSelectedFlags] = useState<string[]>([]);
   const [currentFlagInput, setCurrentFlagInput] = useState('');
-  const [physicalPhotos, setPhysicalPhotos] = useState<File[]>([]); // Novo estado para fotos físicas
+  const [physicalPhotos, setPhysicalPhotos] = useState<File[]>([]); 
+
+  // Estados do Chat
+  const [chatMessageInput, setChatMessageInput] = useState('');
 
   const SUGGESTED_DOCUMENTAL = ['Divergência de Lote', 'Norma Incorreta', 'Erro de Composição', 'Dados Ilegíveis'];
   const SUGGESTED_PHYSICAL = ['Avaria de Transporte', 'Sem Identificação', 'Material Oxidado', 'Dimensões Incorretas'];
@@ -103,9 +108,9 @@ export const FilePreviewModal: React.FC<{
       setObservations('');
       setSelectedFlags([]);
       setCurrentFlagInput('');
-      setPhysicalPhotos([]); // Limpa as fotos ao abrir o modal
+      setPhysicalPhotos([]); 
+      setChatMessageInput(''); // Limpa o input do chat
 
-      // Reseta o histórico de anotações
       setAnnotationHistory([[]]);
       setHistoryPointer(0);
     }
@@ -127,7 +132,6 @@ export const FilePreviewModal: React.FC<{
     }
   }, [currentFile, user, isOpen]);
 
-  // Define a lógica principal de renderização do PDF
   const _renderPdfPageInternal = async () => {
     if (!isOpen || !pdfDoc || !canvasRef.current || !annotationCanvasRef.current) return;
 
@@ -141,26 +145,17 @@ export const FilePreviewModal: React.FC<{
 
     const annCanvas = annotationCanvasRef.current;
     annCanvas.width = viewport.width;
-    annCanvas.height = viewport.height; // Corrigido de viewport.current.height
+    annCanvas.height = viewport.height; 
 
     await page.render({ canvasContext: ctx, viewport }).promise;
   };
 
-  // Memoiza a função de renderização
   const renderPdfPage = useCallback(_renderPdfPageInternal, [
-    pdfDoc,
-    pageNum,
-    zoom,
-    isOpen,
-    canvasRef, // Adicionado para completude, refs são estáveis
-    annotationCanvasRef, // Adicionado para completude, refs são estáveis
+    pdfDoc, pageNum, zoom, isOpen, canvasRef, annotationCanvasRef,
   ]);
 
-  // Efeito para acionar a renderização quando as dependências mudam
   useEffect(() => {
-    if (pdfDoc) {
-      renderPdfPage();
-    }
+    if (pdfDoc) renderPdfPage();
   }, [pdfDoc, pageNum, zoom, renderPdfPage]);
 
 
@@ -171,7 +166,6 @@ export const FilePreviewModal: React.FC<{
     const { width, height } = annCanvas;
     ctx.clearRect(0, 0, width, height);
     
-    // Desenha anotações salvas na página atual
     annotations.filter(a => a.page === pageNum).forEach(ann => {
         ctx.strokeStyle = ann.color;
         ctx.lineWidth = ann.type === 'highlight' ? 20 : 3;
@@ -190,7 +184,6 @@ export const FilePreviewModal: React.FC<{
         }
     });
 
-    // Desenha anotação temporária (em andamento)
     if (tempAnnotation && tempAnnotation.page === pageNum) {
       ctx.strokeStyle = tempAnnotation.color;
       ctx.lineWidth = tempAnnotation.type === 'highlight' ? 20 : 3;
@@ -206,15 +199,13 @@ export const FilePreviewModal: React.FC<{
           ctx.stroke();
       }
     }
-    ctx.globalAlpha = 1.0; // Reseta alpha
+    ctx.globalAlpha = 1.0; 
   }, [annotations, tempAnnotation, pageNum, isOpen]);
 
   useEffect(() => { 
     drawAnnotations(); 
-  }, [annotations, tempAnnotation, drawAnnotations, pageNum, zoom]); // Adicionado pageNum e zoom para redesenhar corretamente
+  }, [annotations, tempAnnotation, drawAnnotations, pageNum, zoom]); 
 
-
-  // Gerenciamento de histórico para Undo/Redo
   const pushToHistory = useCallback((currentAnns: Annotation[]) => {
     const newHistory = annotationHistory.slice(0, historyPointer + 1);
     setAnnotationHistory([...newHistory, currentAnns]);
@@ -237,7 +228,6 @@ export const FilePreviewModal: React.FC<{
     }
   }, [annotationHistory, historyPointer]);
 
-  // Eventos de mouse para o canvas de anotações
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!annotationCanvasRef.current || drawingTool === 'hand') return;
 
@@ -253,7 +243,7 @@ export const FilePreviewModal: React.FC<{
     const normalizedY = normalize(y, canvas.height);
 
     if (drawingTool === 'eraser') {
-      const threshold = 15 / Math.max(canvas.width, canvas.height); // Limiar normalizado
+      const threshold = 15 / Math.max(canvas.width, canvas.height); 
       let closestAnnId: string | null = null;
       let minDistance = Infinity;
 
@@ -325,8 +315,6 @@ export const FilePreviewModal: React.FC<{
     }
   }, [isDrawing, tempAnnotation, annotations, pushToHistory]);
 
-
-  // Funções de Pan (arrastar o PDF)
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [scrollStart, setScrollStart] = useState({ x: 0, y: 0 });
@@ -354,6 +342,7 @@ export const FilePreviewModal: React.FC<{
     }
   }, []);
 
+  // --- Lógica de Ação e Conversa ---
   const handleAction = async (status: QualityStatus, type: 'SENT' | 'DOCUMENTAL' | 'PHYSICAL') => {
     if (!currentFile || !user) return;
     setIsActioning(true);
@@ -365,37 +354,72 @@ export const FilePreviewModal: React.FC<{
         updatedMetadata.sentAt = timestamp;
         updatedMetadata.sentBy = user.name;
         updatedMetadata.status = QualityStatus.SENT;
+        updatedMetadata.currentConversationTurn = UserRole.CLIENT; 
+        updatedMetadata.conversationTurnCount = 0; 
+        updatedMetadata.conversationLog = [];
       } else if (type === 'DOCUMENTAL') {
         updatedMetadata.status = status;
         updatedMetadata.documentalFlags = status === QualityStatus.REJECTED ? selectedFlags : [];
         updatedMetadata.documentalObservations = observations;
         updatedMetadata.inspectedAt = timestamp;
         updatedMetadata.inspectedBy = user.name;
-      } else {
-        // Physical conference is independent
+
+        if (status === QualityStatus.REJECTED) {
+          updatedMetadata.currentConversationTurn = UserRole.QUALITY;
+          updatedMetadata.conversationTurnCount = 0; // Quality hasn't responded yet
+          updatedMetadata.conversationLog = updatedMetadata.conversationLog || [];
+          updatedMetadata.conversationLog.push({
+            id: crypto.randomUUID(),
+            senderRole: UserRole.CLIENT, 
+            senderName: user.name,
+            timestamp,
+            message: `[REJEIÇÃO - Documental] Motivo: ${selectedFlags.length > 0 ? selectedFlags.join(', ') : 'N/A'}. Obs: ${observations || 'N/A'}`
+          });
+        }
+      } else { // type === 'PHYSICAL'
         updatedMetadata.physicalStatus = status;
         updatedMetadata.physicalFlags = status === QualityStatus.REJECTED ? selectedFlags : [];
         updatedMetadata.physicalObservations = observations;
         updatedMetadata.physicalInspectedAt = timestamp;
         updatedMetadata.physicalInspectedBy = user.name;
 
-        // Lógica de upload de fotos para evidência física
         if (physicalPhotos.length > 0 && currentFile.ownerId) {
-          const uploadedPhotoUrls: string[] = [];
-          for (const [index, photo] of physicalPhotos.entries()) {
-            const filePath = `${currentFile.ownerId}/physical_evidence/${currentFile.id}/${Date.now()}_${index}_${photo.name}`;
-            const uploadedPath = await fileService.uploadRaw(user, photo, photo.name, filePath);
-            if (uploadedPath) {
-              const { data: publicUrlData } = supabase.storage.from('certificates').getPublicUrl(uploadedPath);
-              if (publicUrlData?.publicUrl) {
-                uploadedPhotoUrls.push(publicUrlData.publicUrl);
-              }
+            const uploadedPhotoUrls: string[] = [];
+            for (const [index, photo] of physicalPhotos.entries()) {
+                const filePath = `${currentFile.ownerId}/physical_evidence/${currentFile.id}/${Date.now()}_${index}_${photo.name}`;
+                const uploadedPath = await fileService.uploadRaw(user, photo, photo.name, filePath);
+                if (uploadedPath) {
+                    const { data: publicUrlData } = supabase.storage.from('certificates').getPublicUrl(uploadedPath);
+                    if (publicUrlData?.publicUrl) {
+                        uploadedPhotoUrls.push(publicUrlData.publicUrl);
+                    }
+                }
             }
-          }
-          updatedMetadata.physicalEvidenceUrls = [...(updatedMetadata.physicalEvidenceUrls || []), ...uploadedPhotoUrls];
+            updatedMetadata.physicalEvidenceUrls = [...(updatedMetadata.physicalEvidenceUrls || []), ...uploadedPhotoUrls];
+        }
+
+        if (status === QualityStatus.REJECTED) {
+          updatedMetadata.currentConversationTurn = UserRole.QUALITY;
+          updatedMetadata.conversationTurnCount = 0; // Quality hasn't responded yet
+          updatedMetadata.conversationLog = updatedMetadata.conversationLog || [];
+          updatedMetadata.conversationLog.push({
+            id: crypto.randomUUID(),
+            senderRole: UserRole.CLIENT, 
+            senderName: user.name,
+            timestamp,
+            message: `[REJEIÇÃO - Física] Motivo: ${selectedFlags.length > 0 ? selectedFlags.join(', ') : 'N/A'}. Obs: ${observations || 'N/A'}`
+          });
         }
       }
 
+      const isDocApproved = updatedMetadata.status === QualityStatus.APPROVED;
+      const isPhysicalApproved = updatedMetadata.physicalStatus === QualityStatus.APPROVED;
+      if (isDocApproved && isPhysicalApproved) {
+        updatedMetadata.currentConversationTurn = 'NONE';
+        updatedMetadata.conversationLog = updatedMetadata.conversationLog || [];
+        // No need to add a message for approval, the final screen handles this visual cue.
+      }
+      
       const { error } = await supabase.from('files').update({ metadata: updatedMetadata }).eq('id', currentFile.id);
       if (error) throw error;
 
@@ -403,7 +427,8 @@ export const FilePreviewModal: React.FC<{
       setRejectMode('NONE');
       setObservations('');
       setSelectedFlags([]);
-      setPhysicalPhotos([]); // Limpa as fotos após a ação
+      setPhysicalPhotos([]); 
+      setChatMessageInput(''); 
       showToast("Veredito registrado no fluxo SGQ.", "success");
     } catch (err) {
       console.error("Erro ao realizar ação:", err);
@@ -413,7 +438,79 @@ export const FilePreviewModal: React.FC<{
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!currentFile || !user || !chatMessageInput.trim()) return;
+    setIsActioning(true);
+    try {
+      const timestamp = new Date().toISOString();
+      const updatedMetadata: SteelBatchMetadata = { ...currentFile.metadata! };
+      const currentRole = user.role; 
+
+      const newMessage: ConversationMessage = {
+        id: crypto.randomUUID(),
+        senderRole: currentRole as ConversationParty, 
+        senderName: user.name,
+        timestamp,
+        message: chatMessageInput.trim(),
+      };
+
+      updatedMetadata.conversationLog = [...(updatedMetadata.conversationLog || []), newMessage];
+
+      if (currentRole === UserRole.QUALITY) {
+        updatedMetadata.currentConversationTurn = UserRole.CLIENT;
+        updatedMetadata.conversationTurnCount = (updatedMetadata.conversationTurnCount || 0) + 1; // Quality responded once more.
+      } else if (currentRole === UserRole.CLIENT) {
+        updatedMetadata.currentConversationTurn = UserRole.QUALITY;
+      }
+      
+      const { error } = await supabase.from('files').update({ metadata: updatedMetadata }).eq('id', currentFile.id);
+      if (error) throw error;
+
+      setCurrentFile(prev => prev ? ({ ...prev, metadata: updatedMetadata }) : null);
+      setChatMessageInput('');
+      showToast("Mensagem enviada.", "success");
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      showToast("Falha ao enviar mensagem.", "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleResolveConversation = async () => {
+    if (!currentFile || !user) return;
+    setIsActioning(true);
+    try {
+      const timestamp = new Date().toISOString();
+      const updatedMetadata: SteelBatchMetadata = { ...currentFile.metadata! };
+
+      updatedMetadata.currentConversationTurn = 'NONE'; // End conversation
+      updatedMetadata.conversationLog = updatedMetadata.conversationLog || [];
+      updatedMetadata.conversationLog.push({
+        id: crypto.randomUUID(),
+        senderRole: UserRole.QUALITY,
+        senderName: user.name,
+        timestamp,
+        message: 'Analista de Qualidade marcou a questão como resolvida.'
+      });
+      
+      const { error } = await supabase.from('files').update({ metadata: updatedMetadata }).eq('id', currentFile.id);
+      if (error) throw error;
+
+      setCurrentFile(prev => prev ? ({ ...prev, metadata: updatedMetadata }) : null);
+      showToast("Conversa marcada como resolvida.", "success");
+    } catch (err) {
+      console.error("Erro ao resolver conversa:", err);
+      showToast("Falha ao resolver conversa.", "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
   const isFullApproved = currentFile?.metadata?.status === QualityStatus.APPROVED && currentFile?.metadata?.physicalStatus === QualityStatus.APPROVED;
+  const isDocDecisionMade = currentFile?.metadata?.status === QualityStatus.APPROVED || currentFile?.metadata?.status === QualityStatus.REJECTED;
+  const isPhysicalDecisionMade = currentFile?.metadata?.physicalStatus === QualityStatus.APPROVED || currentFile?.metadata?.physicalStatus === QualityStatus.REJECTED;
+  const isConversationActive = currentFile?.metadata?.currentConversationTurn && currentFile.metadata.currentConversationTurn !== 'NONE';
 
   const handleAddCustomFlag = () => {
     if (currentFlagInput.trim() && !selectedFlags.includes(currentFlagInput.trim())) {
@@ -472,7 +569,7 @@ export const FilePreviewModal: React.FC<{
           onMouseDown={handleViewportMouseDown}
           onMouseMove={handleViewportMouseMove}
           onMouseUp={handleViewportMouseUp}
-          onMouseLeave={handleViewportMouseUp} // Stop panning if mouse leaves
+          onMouseLeave={handleViewportMouseUp} 
           style={{ cursor: drawingTool === 'hand' && !isPanning ? 'grab' : drawingTool === 'hand' && isPanning ? 'grabbing' : 'default' }}
         >
           <div className="inline-flex min-w-full min-h-full items-start justify-center p-12">
@@ -485,14 +582,13 @@ export const FilePreviewModal: React.FC<{
                 onMouseDown={handleCanvasMouseDown}
                 onMouseMove={handleCanvasMouseMove}
                 onMouseUp={handleCanvasMouseUp}
-                onMouseLeave={handleCanvasMouseUp} // Finaliza o desenho se o mouse sair do canvas
+                onMouseLeave={handleCanvasMouseUp} 
                 style={{ cursor: isDrawingToolActive ? 'crosshair' : drawingTool === 'eraser' ? 'cell' : 'default' }}
               />
             </div>
           </div>
         </div>
           
-        {/* Barra de Ferramentas do Visualizador */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#081437]/90 backdrop-blur-2xl border border-white/10 p-3 rounded-full shadow-2xl z-[100]">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
               <button onClick={() => setPageNum(p => Math.max(1, p - 1))} className="text-slate-400 hover:text-white" aria-label="Página anterior"><ChevronLeft size={16}/></button>
@@ -504,31 +600,25 @@ export const FilePreviewModal: React.FC<{
               <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full" aria-label="Aumentar zoom"><ZoomIn size={16}/></button>
             </div>
             
-            {/* Divisor */}
             <div className="w-px h-6 bg-white/10 mx-1" />
 
-            {/* Ferramentas de Desenho */}
             <div className="flex items-center gap-2">
               <button onClick={() => setDrawingTool('hand')} className={`p-2 rounded-full transition-all ${drawingTool === 'hand' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Ferramenta Mão (Arrastar)" aria-label="Ferramenta Mão"><Hand size={16}/></button>
               <button onClick={() => setDrawingTool('pencil')} className={`p-2 rounded-full transition-all ${drawingTool === 'pencil' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Lápis" aria-label="Ferramenta Lápis"><Pencil size={16}/></button>
               <button onClick={() => setDrawingTool('highlight')} className={`p-2 rounded-full transition-all ${drawingTool === 'highlight' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Marcador" aria-label="Ferramenta Marcador"><Highlighter size={16}/></button>
               <button onClick={() => setDrawingTool('eraser')} className={`p-2 rounded-full transition-all ${drawingTool === 'eraser' ? 'bg-white text-blue-600' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Borracha" aria-label="Ferramenta Borracha"><Eraser size={16}/></button>
               
-              {/* Seleção de Cor */}
               <input type="color" value={annotationColor} onChange={e => setAnnotationColor(e.target.value)} className="w-8 h-8 rounded-full border border-white/20 overflow-hidden cursor-pointer" title="Selecionar Cor" aria-label="Selecionar Cor" />
             </div>
 
-            {/* Divisor */}
             <div className="w-px h-6 bg-white/10 mx-1" />
 
-            {/* Undo / Redo */}
             <div className="flex items-center gap-2">
               <button onClick={handleUndo} disabled={historyPointer === 0} className={`p-2 rounded-full transition-all ${historyPointer === 0 ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Desfazer" aria-label="Desfazer"><Undo2 size={16}/></button>
               <button onClick={handleRedo} disabled={historyPointer === annotationHistory.length - 1} className={`p-2 rounded-full transition-all ${historyPointer === annotationHistory.length - 1 ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/5'}`} title="Refazer" aria-label="Refazer"><Redo2 size={16}/></button>
             </div>
         </div>
 
-        {/* SIDEBAR DE AUDITORIA */}
         <aside className="w-[420px] shrink-0 bg-white flex flex-col shadow-[-10px_0_50px_rgba(0,0,0,0.1)] z-50">
           <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
             
@@ -564,18 +654,38 @@ export const FilePreviewModal: React.FC<{
               </section>
             ) : (
               <>
-                {/* STEP 1: ENVIO VITAL */}
-                <section className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
-                       <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">1</span>
-                       Validação Analista
-                    </h4>
-                    {currentFile?.metadata?.sentAt && <span className="text-[9px] font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded">Liberado</span>}
-                  </div>
+                {/* STEP 1: ENVIO VITAL (QUALITY only, if not sent yet) */}
+                {!currentFile?.metadata?.sentAt && user?.role === UserRole.QUALITY && (
+                  <section className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                         <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">1</span>
+                         Validação Analista
+                      </h4>
+                    </div>
 
-                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
-                    {currentFile?.metadata?.sentAt ? (
+                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+                      <button 
+                        onClick={() => handleAction(QualityStatus.SENT, 'SENT')}
+                        disabled={isActioning}
+                        className="w-full py-4 bg-[#081437] hover:bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-[3px] shadow-xl shadow-slate-900/10 flex items-center justify-center gap-3 transition-all"
+                      >
+                         <Send size={16} /> Liberar para o Cliente
+                      </button>
+                    </div>
+                  </section>
+                )}
+                {/* Display sent status if already sent */}
+                {currentFile?.metadata?.sentAt && (
+                  <section className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                         <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">1</span>
+                         Validação Analista
+                      </h4>
+                      <span className="text-[9px] font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded">Liberado</span>
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
                       <div className="flex items-start gap-4">
                         <div className="p-3 bg-white rounded-2xl text-blue-600 shadow-sm border border-slate-200"><Clock size={20} /></div>
                         <div>
@@ -584,176 +694,181 @@ export const FilePreviewModal: React.FC<{
                            <p className="text-[9px] text-slate-500 font-medium mt-1">Por: {currentFile.metadata.sentBy}</p>
                         </div>
                       </div>
-                    ) : user?.role !== UserRole.CLIENT ? (
-                      <button 
-                        onClick={() => handleAction(QualityStatus.SENT, 'SENT')}
-                        disabled={isActioning}
-                        className="w-full py-4 bg-[#081437] hover:bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-[3px] shadow-xl shadow-slate-900/10 flex items-center justify-center gap-3 transition-all"
-                      >
-                         <Send size={16} /> Liberar para o Cliente
-                      </button>
-                    ) : (
-                      <div className="text-center py-4 text-slate-400 text-[10px] font-bold uppercase italic tracking-widest">Aguardando liberação técnica...</div>
-                    )}
-                  </div>
-                </section>
+                    </div>
+                  </section>
+                )}
 
-                {/* STEP 2: DOCUMENTAL */}
-                <section className={`space-y-6 ${!currentFile?.metadata?.sentAt ? 'opacity-30 pointer-events-none' : ''}`}>
-                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
-                     <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">2</span>
-                     Conferência Documental
-                  </h4>
+                {/* STEP 2: DOCUMENTAL & STEP 3: FÍSICO */}
+                {currentFile?.metadata?.sentAt && (user?.role === UserRole.CLIENT || user?.role === UserRole.QUALITY) && (
+                  <>
+                    <section className="space-y-6">
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                         <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">2</span>
+                         Conferência Documental
+                      </h4>
 
-                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
-                    {rejectMode === 'DOCUMENTAL' ? (
-                       <AuditForm 
-                          suggestions={SUGGESTED_DOCUMENTAL} 
-                          selectedFlags={selectedFlags} 
-                          onToggleFlag={(f: string) => setSelectedFlags(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])}
-                          onRemoveFlag={(f: string) => setSelectedFlags(prev => prev.filter(x => x !== f))}
-                          onAddCustomFlag={handleAddCustomFlag}
-                          flagInput={currentFlagInput}
-                          onFlagInputChange={setCurrentFlagInput}
-                          observations={observations}
-                          onObsChange={setObservations}
-                          onCancel={() => setRejectMode('NONE')}
-                          onConfirm={() => handleAction(QualityStatus.REJECTED, 'DOCUMENTAL')}
-                          isActioning={isActioning}
-                       />
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                           <span className="text-[10px] font-black text-slate-400 uppercase">Status do Passo</span>
-                           <FileStatusBadge status={currentFile?.metadata?.status} />
-                        </div>
-                        {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && (
-                          <div className="grid grid-cols-2 gap-3">
-                             <button onClick={() => handleAction(QualityStatus.APPROVED, 'DOCUMENTAL')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><CheckCircle2 size={16}/> Aprovar</button>
-                             <button onClick={() => setRejectMode('DOCUMENTAL')} className="py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-black text-[10px] uppercase hover:bg-red-50 transition-all flex items-center justify-center gap-2"><XCircle size={16}/> Rejeitar</button>
-                          </div>
-                        )}
-                        {currentFile?.metadata?.documentalFlags && currentFile.metadata.documentalFlags.length > 0 && (
-                           <div className="flex flex-wrap gap-1.5 px-2">
-                              {currentFile.metadata.documentalFlags.map(f => (
-                                 <span key={f} className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-black uppercase rounded border border-red-200">{f}</span>
-                              ))}
-                           </div>
-                        )}
-                        {currentFile?.metadata?.documentalObservations && (
-                           <div className="p-4 bg-white rounded-2xl border border-slate-200">
-                              <p className="text-[9px] font-black text-red-600 uppercase mb-2">Motivo da Não-Conformidade:</p>
-                              <p className="text-xs text-slate-600 font-medium italic">"{currentFile.metadata.documentalObservations}"</p>
-                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                {/* STEP 3: FÍSICO */}
-                {/* REMOVIDA A OPACIDADE/INABILITAÇÃO CONDICIONAL */}
-                <section className={`space-y-6 ${!currentFile?.metadata?.sentAt ? 'opacity-30 pointer-events-none' : ''}`}>
-                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
-                     <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">3</span>
-                     Conferência Física
-                  </h4>
-
-                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
-                    {rejectMode === 'PHYSICAL' ? (
-                       <AuditForm 
-                          suggestions={SUGGESTED_PHYSICAL} 
-                          selectedFlags={selectedFlags} 
-                          onToggleFlag={(f: string) => setSelectedFlags(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])}
-                          onRemoveFlag={(f: string) => setSelectedFlags(prev => prev.filter(x => x !== f))}
-                          onAddCustomFlag={handleAddCustomFlag}
-                          flagInput={currentFlagInput}
-                          onFlagInputChange={setCurrentFlagInput}
-                          observations={observations}
-                          onObsChange={setObservations}
-                          onCancel={() => setRejectMode('NONE')}
-                          onConfirm={() => handleAction(QualityStatus.REJECTED, 'PHYSICAL')}
-                          isActioning={isActioning}
-                       />
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                           <span className="text-[10px] font-black text-slate-400 uppercase">Status do Passo</span>
-                           <FileStatusBadge status={currentFile?.metadata?.physicalStatus} />
-                        </div>
-                        {/* INPUT DE FOTOS */}
-                        {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && (
-                          <div className="space-y-2 py-2">
-                              <p className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">Anexar Evidências Visuais (Opcional):</p>
-                              <input 
-                                  type="file" 
-                                  accept="image/*" 
-                                  multiple 
-                                  onChange={handlePhotoSelection}
-                                  className="block w-full text-xs text-slate-500
-                                           file:mr-4 file:py-2 file:px-4
-                                           file:rounded-full file:border-0
-                                           file:text-sm file:font-semibold
-                                           file:bg-blue-50 file:text-blue-700
-                                           hover:file:bg-blue-100"
-                              />
-                              {physicalPhotos.length > 0 && (
-                                  <div className="flex flex-wrap gap-2 mt-3">
-                                      {physicalPhotos.map((file, index) => (
-                                          <div key={index} className="relative">
-                                              <img src={URL.createObjectURL(file)} alt={`Evidência ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-                                              <button 
-                                                  type="button"
-                                                  onClick={() => removePhoto(index)}
-                                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
-                                              >
-                                                  <X size={12} />
-                                              </button>
-                                          </div>
-                                      ))}
-                                  </div>
-                              )}
-                          </div>
-                        )}
-                        
-                        {/* EXIBIR FOTOS JÁ EXISTENTES */}
-                        {currentFile?.metadata?.physicalEvidenceUrls && currentFile.metadata.physicalEvidenceUrls.length > 0 && (
-                           <div className="space-y-2 py-2">
-                              <p className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">Evidências Visuais Existentes:</p>
-                              <div className="flex flex-wrap gap-2 mt-3">
-                                {currentFile.metadata.physicalEvidenceUrls.map((url, index) => (
-                                  <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="relative block">
-                                    <img src={url} alt={`Evidência Salva ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-blue-200" />
-                                    <span className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-tl-lg px-1 text-[8px] font-bold">Ver</span>
-                                  </a>
-                                ))}
+                      <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+                        {rejectMode === 'DOCUMENTAL' ? (
+                           <AuditForm 
+                              suggestions={SUGGESTED_DOCUMENTAL} 
+                              selectedFlags={selectedFlags} 
+                              onToggleFlag={(f: string) => setSelectedFlags(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])}
+                              onRemoveFlag={(f: string) => setSelectedFlags(prev => prev.filter(x => x !== f))}
+                              onAddCustomFlag={handleAddCustomFlag}
+                              flagInput={currentFlagInput}
+                              onFlagInputChange={setCurrentFlagInput}
+                              observations={observations}
+                              onObsChange={setObservations}
+                              onCancel={() => setRejectMode('NONE')}
+                              onConfirm={() => handleAction(QualityStatus.REJECTED, 'DOCUMENTAL')}
+                              isActioning={isActioning}
+                           />
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                               <span className="text-[10px] font-black text-slate-400 uppercase">Status do Passo</span>
+                               <FileStatusBadge status={currentFile?.metadata?.status} />
+                            </div>
+                            {user?.role === UserRole.CLIENT && currentFile?.metadata?.status === QualityStatus.SENT && !isConversationActive && (
+                              <div className="grid grid-cols-2 gap-3">
+                                 <button onClick={() => handleAction(QualityStatus.APPROVED, 'DOCUMENTAL')} disabled={isActioning} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><CheckCircle2 size={16}/> Aprovar</button>
+                                 <button onClick={() => setRejectMode('DOCUMENTAL')} disabled={isActioning} className="py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-black text-[10px] uppercase hover:bg-red-50 transition-all flex items-center justify-center gap-2"><XCircle size={16}/> Rejeitar</button>
                               </div>
-                           </div>
-                        )}
-
-                        {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && !currentFile?.metadata?.physicalStatus && (
-                          <div className="grid grid-cols-2 gap-3">
-                             <button onClick={() => handleAction(QualityStatus.APPROVED, 'PHYSICAL')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><CheckCircle2 size={16}/> Aprovar</button>
-                             <button onClick={() => setRejectMode('PHYSICAL')} className="py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-black text-[10px] uppercase hover:bg-red-50 transition-all flex items-center justify-center gap-2"><XCircle size={16}/> Rejeitar</button>
+                            )}
+                            {currentFile?.metadata?.documentalFlags?.length > 0 && (
+                               <div className="flex flex-wrap gap-1.5 px-2">
+                                  {currentFile.metadata.documentalFlags.map(f => (
+                                     <span key={f} className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-black uppercase rounded border border-red-200">{f}</span>
+                                  ))}
+                               </div>
+                            )}
+                            {currentFile?.metadata?.documentalObservations && (
+                               <div className="p-4 bg-white rounded-2xl border border-slate-200">
+                                  <p className="text-[9px] font-black text-red-600 uppercase mb-2">Motivo da Não-Conformidade:</p>
+                                  <p className="text-xs text-slate-600 font-medium italic">"{currentFile.metadata.documentalObservations}"</p>
+                               </div>
+                            )}
                           </div>
                         )}
-                        {currentFile?.metadata?.physicalFlags && currentFile.metadata.physicalFlags.length > 0 && (
-                           <div className="flex flex-wrap gap-1.5 px-2">
-                              {currentFile.metadata.physicalFlags.map(f => (
-                                 <span key={f} className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-black uppercase rounded border border-red-200">{f}</span>
-                              ))}
-                           </div>
-                        )}
-                        {currentFile?.metadata?.physicalObservations && (
-                           <div className="p-4 bg-white rounded-2xl border border-slate-200">
-                              <p className="text-[9px] font-black text-red-600 uppercase mb-2">Avaria Detectada:</p>
-                              <p className="text-xs text-slate-600 font-medium italic">"{currentFile.metadata.physicalObservations}"</p>
-                           </div>
+                      </div>
+                    </section>
+
+                    <section className="space-y-6">
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                         <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] tracking-normal">3</span>
+                         Conferência Física
+                      </h4>
+
+                      <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+                        {rejectMode === 'PHYSICAL' ? (
+                           <AuditForm 
+                              suggestions={SUGGESTED_PHYSICAL} 
+                              selectedFlags={selectedFlags} 
+                              onToggleFlag={(f: string) => setSelectedFlags(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])}
+                              onRemoveFlag={(f: string) => setSelectedFlags(prev => prev.filter(x => x !== f))}
+                              onAddCustomFlag={handleAddCustomFlag}
+                              flagInput={currentFlagInput}
+                              onFlagInputChange={setCurrentFlagInput}
+                              observations={observations}
+                              onObsChange={setObservations}
+                              onCancel={() => setRejectMode('NONE')}
+                              onConfirm={() => handleAction(QualityStatus.REJECTED, 'PHYSICAL')}
+                              isActioning={isActioning}
+                           />
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                               <span className="text-[10px] font-black text-slate-400 uppercase">Status do Passo</span>
+                               <FileStatusBadge status={currentFile?.metadata?.physicalStatus} />
+                            </div>
+                            {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && !isPhysicalDecisionMade && (
+                              <div className="space-y-2 py-2">
+                                  <p className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">Anexar Evidências Visuais (Opcional):</p>
+                                  <input 
+                                      type="file" 
+                                      accept="image/*" 
+                                      multiple 
+                                      onChange={handlePhotoSelection}
+                                      className="block w-full text-xs text-slate-500
+                                               file:mr-4 file:py-2 file:px-4
+                                               file:rounded-full file:border-0
+                                               file:text-sm file:font-semibold
+                                               file:bg-blue-50 file:text-blue-700
+                                               hover:file:bg-blue-100"
+                                  />
+                                  {physicalPhotos.length > 0 && (
+                                      <div className="flex flex-wrap gap-2 mt-3">
+                                          {physicalPhotos.map((file, index) => (
+                                              <div key={index} className="relative">
+                                                  <img src={URL.createObjectURL(file)} alt={`Evidência ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                                                  <button 
+                                                      type="button"
+                                                      onClick={() => removePhoto(index)}
+                                                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
+                                                  >
+                                                      <X size={12} />
+                                                  </button>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  )}
+                              </div>
+                            )}
+                            
+                            {currentFile?.metadata?.physicalEvidenceUrls?.length > 0 && (
+                               <div className="space-y-2 py-2">
+                                  <p className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">Evidências Visuais Existentes:</p>
+                                  <div className="flex flex-wrap gap-2 mt-3">
+                                    {currentFile.metadata.physicalEvidenceUrls.map((url, index) => (
+                                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="relative block">
+                                        <img src={url} alt={`Evidência Salva ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-blue-200" />
+                                        <span className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-tl-lg px-1 text-[8px] font-bold">Ver</span>
+                                      </a>
+                                    ))}
+                                  </div>
+                               </div>
+                            )}
+
+                            {user?.role === UserRole.CLIENT && currentFile?.metadata?.sentAt && !isPhysicalDecisionMade && !isConversationActive && (
+                              <div className="grid grid-cols-2 gap-3">
+                                 <button onClick={() => handleAction(QualityStatus.APPROVED, 'PHYSICAL')} disabled={isActioning} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><CheckCircle2 size={16}/> Aprovar</button>
+                                 <button onClick={() => setRejectMode('PHYSICAL')} disabled={isActioning} className="py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-black text-[10px] uppercase hover:bg-red-50 transition-all flex items-center justify-center gap-2"><XCircle size={16}/> Rejeitar</button>
+                              </div>
+                            )}
+                            {currentFile?.metadata?.physicalFlags?.length > 0 && (
+                               <div className="flex flex-wrap gap-1.5 px-2">
+                                  {currentFile.metadata.physicalFlags.map(f => (
+                                     <span key={f} className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-black uppercase rounded border border-red-200">{f}</span>
+                                  ))}
+                               </div>
+                            )}
+                            {currentFile?.metadata?.physicalObservations && (
+                               <div className="p-4 bg-white rounded-2xl border border-slate-200">
+                                  <p className="text-[9px] font-black text-red-600 uppercase mb-2">Avaria Detectada:</p>
+                                  <p className="text-xs text-slate-600 font-medium italic">"{currentFile.metadata.physicalObservations}"</p>
+                               </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </section>
+                    </section>
+                  </>
+                )}
+
+                {/* Conversation/Chat Section */}
+                {isConversationActive && (
+                  <ConversationSection
+                    conversationLog={currentFile?.metadata?.conversationLog || []}
+                    currentUserRole={user?.role as UserRole}
+                    currentConversationTurn={currentFile?.metadata?.currentConversationTurn || 'NONE'}
+                    chatMessageInput={chatMessageInput}
+                    setChatMessageInput={setChatMessageInput}
+                    handleSendMessage={handleSendMessage}
+                    handleResolveConversation={handleResolveConversation}
+                    isActioning={isActioning}
+                    conversationTurnCount={currentFile?.metadata?.conversationTurnCount || 0}
+                  />
+                )}
               </>
             )}
           </div>
@@ -781,7 +896,6 @@ const AuditForm = ({ suggestions, selectedFlags, onToggleFlag, onRemoveFlag, onA
      <div className="space-y-3">
         <p className="text-[9px] font-black text-red-600 uppercase ml-1 tracking-widest">Descrever Não-Conformidade:</p>
         
-        {/* Sistema de Tags Dinâmicas */}
         <div className="flex flex-col gap-3">
           <div className="flex gap-2">
             <input 
@@ -814,7 +928,6 @@ const AuditForm = ({ suggestions, selectedFlags, onToggleFlag, onRemoveFlag, onA
         </div>
      </div>
 
-     {/* Sugestões Rápidas */}
      <div className="space-y-2">
         <p className="text-[8px] font-black text-slate-400 uppercase ml-1 tracking-widest">Sugestões Rápidas:</p>
         <div className="flex flex-wrap gap-1.5">
@@ -854,3 +967,106 @@ const AuditForm = ({ suggestions, selectedFlags, onToggleFlag, onRemoveFlag, onA
      </div>
   </div>
 );
+
+interface ConversationSectionProps {
+  conversationLog: ConversationMessage[];
+  currentUserRole: UserRole;
+  currentConversationTurn: ConversationParty | 'NONE';
+  chatMessageInput: string;
+  setChatMessageInput: (message: string) => void;
+  handleSendMessage: () => Promise<void>;
+  handleResolveConversation: () => Promise<void>; 
+  isActioning: boolean;
+  conversationTurnCount: number;
+}
+
+const ConversationSection: React.FC<ConversationSectionProps> = ({
+  conversationLog,
+  currentUserRole,
+  currentConversationTurn,
+  chatMessageInput,
+  setChatMessageInput,
+  handleSendMessage,
+  handleResolveConversation,
+  isActioning,
+  conversationTurnCount,
+}) => {
+  const isMyTurn = currentConversationTurn === currentUserRole;
+  const isQuality = currentUserRole === UserRole.QUALITY;
+  const isClient = currentUserRole === UserRole.CLIENT;
+  
+  // Condição para sugerir e-mail: É a vez do Cliente E o Analista já respondeu 2 ou mais vezes
+  const shouldSuggestEmail = isClient && currentConversationTurn === UserRole.CLIENT && conversationTurnCount >= 2;
+  const canReply = isMyTurn && currentConversationTurn !== 'NONE' && !shouldSuggestEmail;
+
+  return (
+    <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+         <MessageSquare size={14} /> Histórico da Conversa
+      </h4>
+
+      <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+        <div className="flex flex-col gap-3 max-h-64 overflow-y-auto custom-scrollbar">
+          {conversationLog.length === 0 ? (
+            <p className="text-sm italic text-slate-400 text-center py-4">Nenhuma mensagem ainda.</p>
+          ) : (
+            conversationLog.map((msg, index) => (
+              <ChatMessage key={msg.id} message={msg} isOwnMessage={msg.senderRole === currentUserRole} />
+            ))
+          )}
+        </div>
+
+        {shouldSuggestEmail ? (
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-3">
+            <Info size={20} className="text-amber-600" />
+            <p className="text-sm text-amber-800">Se o problema persistir, por favor, continue a comunicação via e-mail para resolver o problema.</p>
+          </div>
+        ) : (
+          canReply && (
+            <div className="flex flex-col gap-3">
+              <textarea
+                className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs min-h-[80px] outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-700"
+                placeholder={isQuality ? "Digite sua resposta técnica ao cliente..." : "Digite sua réplica ao analista..."}
+                value={chatMessageInput}
+                onChange={(e) => setChatMessageInput(e.target.value)}
+                disabled={isActioning}
+              />
+              <div className="flex gap-2">
+                {isQuality && currentConversationTurn === UserRole.QUALITY && ( 
+                  <button
+                    onClick={handleResolveConversation}
+                    disabled={isActioning}
+                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  >
+                    Resolver Questão
+                  </button>
+                )}
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isActioning || !chatMessageInput.trim()}
+                  className="flex-1 py-3 bg-[#081437] text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-slate-900/20 disabled:opacity-50"
+                >
+                  {isQuality ? "Enviar Resposta" : "Enviar Réplica"}
+                </button>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </section>
+  );
+};
+
+const ChatMessage: React.FC<{ message: ConversationMessage; isOwnMessage: boolean }> = ({ message, isOwnMessage }) => {
+  return (
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+      <div className={`max-w-[75%] p-3 rounded-xl shadow-sm text-sm ${isOwnMessage ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-800'}`}>
+        <div className={`flex items-center gap-2 text-[9px] font-bold uppercase ${isOwnMessage ? 'text-blue-200' : 'text-slate-500'} mb-1`}>
+          {message.senderName} ({message.senderRole === UserRole.CLIENT ? 'Cliente' : 'Qualidade'})
+          <span className="font-mono text-[8px] opacity-70 ml-auto">{new Date(message.timestamp).toLocaleTimeString()}</span>
+        </div>
+        <p className="leading-relaxed">{message.message}</p>
+      </div>
+    </div>
+  );
+};

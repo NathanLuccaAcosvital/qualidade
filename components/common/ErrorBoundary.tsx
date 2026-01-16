@@ -14,18 +14,16 @@ interface State {
  * Boundary de Erros do Sistema
  * Refatorado para maior estabilidade e compatibilidade com TypeScript.
  */
-// Fix: Extending Component directly to ensure proper property resolution and inheritance by TypeScript
-export class ErrorBoundary extends Component<Props, State> {
-  
-  // Fix: Explicitly initialize state property using constructor and super(props) to ensure members like setState and props are available
-  constructor(props: Props) {
+// Fix: Explicitly extend React.Component to ensure proper property resolution and inheritance by TypeScript
+export class ErrorBoundary extends React.Component<Props, State> {
+  // Fix: Explicitly defining a constructor to ensure `this.props` and `this.state` are
+  // correctly initialized and typed by the TypeScript compiler, addressing the errors.
+  public constructor(props: Props) {
     super(props);
-    this.state = {
-      hasError: false
-    };
+    this.state = { hasError: false };
   }
 
-  // Mandatory static method for error boundaries to update state
+  // O método `getDerivedStateFromError` não precisa do `this` e é estático.
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
@@ -37,16 +35,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   // Handler to reset error state and reload the application
   private handleReset = () => {
-    // Fix: Accessing setState inherited from Component base class
+    // `this.setState` é um método herdado de `React.Component` e deve ser acessível.
     this.setState({ hasError: false, error: undefined });
     window.location.reload();
   };
 
   public render(): ReactNode {
-    // Fix: Accessing state and props members inherited from Component base class
-    if (!this.state.hasError) return this.props.children;
-
-    return (
+    // `this.state` e `this.props` são propriedades herdadas de `React.Component` e devem ser acessíveis.
+    if (this.state.hasError) return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
         <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-red-100 p-10 text-center animate-in zoom-in-95 duration-300">
           <div className="w-20 h-20 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-inner">
@@ -69,5 +65,6 @@ export class ErrorBoundary extends Component<Props, State> {
         </div>
       </div>
     );
+    return this.props.children;
   }
 }

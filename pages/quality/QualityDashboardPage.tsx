@@ -1,15 +1,15 @@
 import React from 'react';
 import { Layout } from '../../components/layout/MainLayout.tsx';
 import { QualityOverview } from '../../components/features/quality/views/QualityOverview.tsx';
-import { QualityPortfolioView } from '../../components/features/quality/views/QualityPortfolioView.tsx';
-import { useSearchParams } from 'react-router-dom';
+// import { QualityPortfolioView } from '../../components/features/quality/views/QualityPortfolioView.tsx'; // Removido
+// import { useSearchParams } from 'react-router-dom'; // Removido
 import { useTranslation } from 'react-i18next';
 import { Zap, ShieldCheck } from 'lucide-react';
 
 const QualityDashboardPage: React.FC = () => {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const activeView = searchParams.get('view') || 'overview';
+  // const [searchParams] = useSearchParams(); // Removido
+  // const activeView = searchParams.get('view') || 'overview'; // Removido
 
   return (
     <Layout title="Dashboard de Qualidade">
@@ -31,7 +31,8 @@ const QualityDashboardPage: React.FC = () => {
             </div>
         </header>
         
-        {activeView === 'overview' ? <QualityOverview /> : <QualityPortfolioView />}
+        {/* Agora renderiza apenas QualityOverview, a navegação para outras views será pelos cards */}
+        <QualityOverview />
       </div>
     </Layout>
   );

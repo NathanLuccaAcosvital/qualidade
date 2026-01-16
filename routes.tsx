@@ -20,6 +20,7 @@ const QualityPortfolioPage = React.lazy(() => import('./pages/quality/QualityPor
 const QualityAuditPage = React.lazy(() => import('./pages/quality/QualityAuditPage.tsx'));
 const QualityUserManagementPage = React.lazy(() => import('./pages/quality/QualityUserManagementPage.tsx'));
 const QualityExplorerPage = React.lazy(() => import('./pages/quality/QualityExplorerPage.tsx'));
+const QualityFlowAuditPage = React.lazy(() => import('./pages/quality/QualityFlowAuditPage.tsx')); // Nova página
 const FileInspection = React.lazy(() => import('./components/features/quality/views/FileInspection.tsx').then(m => ({ default: m.FileInspection })));
 
 const ClientPage = React.lazy(() => import('./pages/ClientPage.tsx'));
@@ -89,6 +90,7 @@ export const AppRoutes: React.FC = () => {
                     <Route path="/quality/users" element={<QualityUserManagementPage />} />
                     <Route path="/quality/explorer" element={<QualityExplorerPage />} />
                     <Route path="/quality/audit" element={<QualityAuditPage />} />
+                    <Route path="/quality/flow-audit" element={<QualityFlowAuditPage />} /> {/* Nova Rota */}
                     <Route path="/quality/inspection/:fileId" element={<FileInspection />} />
                 </Route>
 

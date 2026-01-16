@@ -1,9 +1,21 @@
+
 import { ID, ISO8601Date } from './common.ts';
-import { QualityStatus } from './enums.ts';
+import { QualityStatus, UserRole } from './enums.ts';
 
 /**
  * Domínio Técnico - Metalurgia (Core Business)
  */
+
+// Novos tipos para o sistema de conversação
+type ConversationParty = UserRole.QUALITY | UserRole.CLIENT;
+
+export interface ConversationMessage {
+  id: string;
+  senderRole: ConversationParty;
+  senderName: string;
+  timestamp: string;
+  message: string;
+}
 
 export interface ChemicalComposition {
   carbon: number;      // % C
@@ -34,14 +46,12 @@ export interface SteelBatchMetadata {
   documentalObservations?: string;
   inspectedAt?: ISO8601Date;
   inspectedBy?: string;
-  // Fix: added rejectionReason field to support technical audit logs and timeline display
   rejectionReason?: string;
 
   // Análise Física (Cliente)
   physicalStatus?: QualityStatus;
   physicalFlags?: string[];
   physicalObservations?: string;
-  // physicalEvidenceUrl?: string; // Removido
   physicalEvidenceUrls?: string[]; // Adicionado para suportar múltiplas URLs
   physicalInspectedAt?: ISO8601Date;
   physicalInspectedBy?: string;
@@ -50,10 +60,14 @@ export interface SteelBatchMetadata {
   clientFlags?: string[];      
   viewedAt?: ISO8601Date;      
   viewedBy?: string;
-  // Fix: added client interaction tracking fields
   lastClientInteractionAt?: ISO8601Date;
   lastClientInteractionBy?: string;
 
   chemicalComposition: ChemicalComposition;
   mechanicalProperties: MechanicalProperties;
+
+  // Novos campos para o fluxo de conversação
+  conversationLog?: ConversationMessage[];
+  currentConversationTurn?: ConversationParty | 'NONE'; // 'NONE' se resolvida ou não iniciada
+  conversationTurnCount?: number; // Contador de respostas do QUALITY em um ciclo de conversa
 }

@@ -10,7 +10,8 @@ import {
   Settings,
   LogOut,
   Database,
-  ScanEye
+  ScanEye,
+  MessageSquare
 } from 'lucide-react';
 import { UserRole } from '../types/index.ts';
 
@@ -52,6 +53,7 @@ export const getQualityMenuConfig = (t: any): NavSection[] => [
     items: [
       { label: "Visão Geral", path: '/quality/dashboard', icon: LayoutDashboard, exact: true },
       { label: "Monitor de Carteira", path: '/quality/portfolio', icon: Building2 },
+      { label: "Fluxo de Auditoria", path: '/quality/flow-audit', icon: ScanEye }, // Novo item
     ]
   },
   {
@@ -118,6 +120,7 @@ export const getBottomNavItems = (user: any, t: any): NavItem[] => {
     return [
       { label: "Dash", path: '/quality/dashboard', icon: LayoutDashboard },
       { label: "Carteira", path: '/quality/portfolio', icon: Building2 },
+      { label: "Auditoria", path: '/quality/flow-audit', icon: ScanEye }, // Adiciona ao menu inferior móvel
     ];
   }
   

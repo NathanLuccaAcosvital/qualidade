@@ -4,6 +4,7 @@ import { useAuth } from '../../../../context/authContext.tsx';
 import { useToast } from '../../../../context/notificationContext.tsx';
 import { FileNode, QualityStatus } from '../../../../types/index.ts';
 import { qualityService, fileService } from '../../../../lib/services/index.ts';
+import { supabase } from '../../../../lib/supabaseClient.ts'; // Import supabase directly
 
 export const useFileInspection = () => {
   const { fileId } = useParams<{ fileId: string }>();
@@ -18,23 +19,48 @@ export const useFileInspection = () => {
   const [previewFile, setPreviewFile] = useState<FileNode | null>(null);
 
   const fetchDetails = useCallback(async () => {
-    if (!user || !fileId) return;
+    if (!user || !fileId) {
+      setLoadingFile(false);
+      return;
+    }
     setLoadingFile(true);
     try {
-      // O analista de qualidade usa o explorer de portfólio para achar o arquivo original
-      const result = await qualityService.getPortfolioFileExplorer(user.id, null);
-      const found = result.items.find(f => f.id === fileId);
+      // Directly fetch the file by its ID for inspection
+      const { data, error } = await supabase
+        .from('files')
+        .select('*')
+        .eq('id', fileId)
+        .single();
 
-      if (found) {
-        setInspectorFile(found);
-        const url = await fileService.getSignedUrl(found.storagePath);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data) {
+        // Map raw data to domain FileNode
+        const foundFile: FileNode = {
+          id: data.id,
+          parentId: data.parent_id,
+          name: data.name,
+          type: data.type,
+          size: data.size,
+          updatedAt: data.updated_at,
+          ownerId: data.owner_id,
+          storagePath: data.storage_path,
+          isFavorite: data.is_favorite,
+          metadata: data.metadata 
+        };
+        setInspectorFile(foundFile);
+        const url = await fileService.getSignedUrl(foundFile.storagePath);
         setMainPreviewUrl(url);
       } else {
-        showToast("Arquivo fora da sua área de auditoria.", 'error');
+        showToast("Documento não encontrado.", 'error');
         navigate(-1);
       }
-    } catch (err) {
-      showToast("Falha na sincronização técnica.", 'error');
+    } catch (err: any) {
+      console.error("Falha na sincronização técnica para inspeção:", err);
+      showToast("Falha na sincronização técnica para inspeção: " + err.message, 'error');
+      navigate(-1);
     } finally {
       setLoadingFile(false);
     }

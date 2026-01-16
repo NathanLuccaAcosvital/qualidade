@@ -1,12 +1,12 @@
-
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Building2, FileWarning, ShieldCheck, Activity, ArrowUpRight, LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 interface QualityOverviewCardsProps {
   totalClients: number;
   totalPendingDocs: number;
-  onChangeView: (view: string) => void;
+  // onChangeView: (view: string) => void; // Removido, pois a navegação será direta
 }
 
 interface KpiConfig {
@@ -16,13 +16,14 @@ interface KpiConfig {
     subtext: string;
     icon: LucideIcon;
     color: string;
-    view: string;
+    path: string; // Alterado de 'view' para 'path'
     shadow: string;
     accent: string;
 }
 
-export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ totalClients, totalPendingDocs, onChangeView }) => {
+export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ totalClients, totalPendingDocs }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate(); // Inicializa useNavigate
 
   const cardConfig: KpiConfig[] = useMemo(() => [
     {
@@ -33,7 +34,7 @@ export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ tota
       icon: Building2,
       color: "bg-[#081437]",
       shadow: "shadow-slate-900/5",
-      view: 'clients',
+      path: '/quality/portfolio', // Rota para Monitor de Carteira
       accent: "text-blue-400"
     },
     {
@@ -44,7 +45,7 @@ export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ tota
       icon: FileWarning,
       color: "bg-[#b23c0e]",
       shadow: "shadow-[#b23c0e]/10",
-      view: 'clients',
+      path: '/quality/flow-audit', // Rota para a nova página de auditoria de fluxo
       accent: "text-white"
     },
     {
@@ -55,18 +56,18 @@ export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ tota
       icon: ShieldCheck,
       color: "bg-emerald-600",
       shadow: "shadow-emerald-500/10",
-      view: 'overview',
+      path: '/quality/dashboard', // Permanece no dashboard, não há página específica ainda
       accent: "text-white"
     },
     {
       id: 'alerts',
-      label: "Eventos Auditados",
+      label: "Eventos Auditados", // Renomeado para 'Auditoria de Fluxo' no outro card
       value: 12,
       subtext: "Logs nas últimas 24h",
       icon: Activity,
       color: "bg-slate-600",
       shadow: "shadow-slate-500/5",
-      view: 'audit-log',
+      path: '/quality/audit', // Rota para Logs de Auditoria
       accent: "text-white"
     }
   ], [totalClients, totalPendingDocs, t]);
@@ -77,7 +78,7 @@ export const QualityOverviewCards: React.FC<QualityOverviewCardsProps> = ({ tota
         <KpiCard 
             key={card.id} 
             card={card} 
-            onClick={() => onChangeView(card.view)} 
+            onClick={() => navigate(card.path)} // Usa navigate para ir para a rota
         />
       ))}
     </div>
