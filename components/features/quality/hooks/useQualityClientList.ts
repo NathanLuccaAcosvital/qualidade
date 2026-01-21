@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../../../context/authContext.tsx';
 import { useToast } from '../../../../context/notificationContext.tsx';
 import { useTranslation } from 'react-i18next';
@@ -12,59 +12,58 @@ export const useQualityClientList = (refreshTrigger: number) => {
   const { showToast } = useToast();
 
   const [clients, setClients] = useState<ClientOrganization[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const loadInitial = useCallback(async () => {
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset para primeira página ao buscar
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const loadData = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await qualityService.getManagedClients(user.id, { search, status: statusFilter }, 1);
+      const res = await qualityService.getManagedClients(
+        user.id, 
+        { search: debouncedSearch, status: statusFilter }, 
+        page,
+        // Nota: O serviço precisa ser atualizado para aceitar pageSize se possível, 
+        // caso contrário ele usa o default de 20.
+      );
       setClients(res.items || []);
-      setHasMore(res.hasMore || false);
-      setPage(1);
+      setTotalItems(res.total || 0);
     } catch (err: any) {
       showToast(t('quality.errorLoadingClients', { message: err.message }), 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [user, search, statusFilter, t, showToast]);
-
-  const loadMore = useCallback(async () => {
-    if (!user || isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    try {
-      const nextPage = page + 1;
-      const res = await qualityService.getManagedClients(user.id, { search, status: statusFilter }, nextPage);
-      setClients(prev => [...prev, ...(res.items || [])]);
-      setHasMore(res.hasMore || false);
-      setPage(nextPage);
-    } catch (err: any) {
-      showToast(t('quality.errorLoadingClients', { message: err.message }), 'error');
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [user, search, statusFilter, page, isLoadingMore, hasMore, t, showToast]);
+  }, [user, debouncedSearch, statusFilter, page, t, showToast]);
 
   useEffect(() => {
-    const timer = setTimeout(loadInitial, 300);
-    return () => clearTimeout(timer);
-  }, [loadInitial, refreshTrigger]);
+    loadData();
+  }, [loadData, refreshTrigger, pageSize]);
 
   return {
     clients,
+    totalItems,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
     search,
     setSearch,
     statusFilter,
     setStatusFilter,
     isLoading,
-    isLoadingMore,
-    hasMore,
-    loadMore,
-    refresh: loadInitial
+    refresh: loadData
   };
 };

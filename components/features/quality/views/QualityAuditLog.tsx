@@ -8,6 +8,7 @@ import { useQualityAuditLogs } from '../hooks/useQualityAuditLogs.ts';
 
 /**
  * QualityAuditLog (Orchestrator View)
+ * Refatorado para remover o "efeito caixa" e integrar-se ao grid global.
  */
 export const QualityAuditLog: React.FC = () => {
   const { t } = useTranslation();
@@ -18,8 +19,16 @@ export const QualityAuditLog: React.FC = () => {
     handleOpenQualityAuditLogInvestigation,
   } = useQualityAuditLogs(0);
 
+  if (loadingAuditLogs) {
+    return <QualityLoadingState message="Acessando Registros de Auditoria..." />;
+  }
+
+  if (qualityAuditLogs.length === 0 && !auditLogSearch) {
+    return <QualityEmptyState message={t('quality.noQualityLogsFound')} />;
+  }
+
   return (
-    <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
+    <div className="flex flex-col h-full gap-8 animate-in fade-in duration-500">
       <InvestigationModal 
         isOpen={isAuditLogInvestigationModalOpen}
         onClose={() => setIsAuditLogInvestigationModalOpen(false)}
@@ -27,29 +36,26 @@ export const QualityAuditLog: React.FC = () => {
         t={t}
       />
 
-      <AuditLogToolbar 
-        search={auditLogSearch}
-        onSearchChange={setAuditLogSearch}
-        severity={auditLogSeverityFilter}
-        onSeverityChange={setAuditLogSeverityFilter}
-        t={t}
-      />
+      {/* Toolbar superior agora integrada diretamente ao layout */}
+      <div className="shrink-0 px-1">
+        <AuditLogToolbar 
+          search={auditLogSearch}
+          onSearchChange={setAuditLogSearch}
+          severity={auditLogSeverityFilter}
+          onSeverityChange={setAuditLogSeverityFilter}
+          t={t}
+        />
+      </div>
 
-      {loadingAuditLogs ? (
-        <QualityLoadingState message="Acessando Registros de Auditoria..." />
-      ) : qualityAuditLogs.length === 0 ? (
-        <QualityEmptyState message={t('quality.noQualityLogsFound')} />
-      ) : (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            {/* Fix: Wrapped state setter in arrow function and cast value to satisfy union type requirements from AuditLogsTable */}
-            <AuditLogsTable
-                logs={qualityAuditLogs}
-                severityFilter={auditLogSeverityFilter}
-                onSeverityChange={(sev) => setAuditLogSeverityFilter(sev as any)}
-                onInvestigate={handleOpenQualityAuditLogInvestigation}
-            />
-        </div>
-      )}
+      {/* Tabela de logs integrada ao fundo da página */}
+      <div className="flex-1 min-h-0">
+        <AuditLogsTable
+          logs={qualityAuditLogs}
+          severityFilter={auditLogSeverityFilter}
+          onSeverityChange={(sev) => setAuditLogSeverityFilter(sev as any)}
+          onInvestigate={handleOpenQualityAuditLogInvestigation}
+        />
+      </div>
     </div>
   );
 };

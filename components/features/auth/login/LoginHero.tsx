@@ -24,36 +24,36 @@ export const LoginHero: React.FC = () => {
         aria-hidden="true"
       />
 
-      {/* Header: Logo */}
+      {/* Header: Logo Branca Sem Fundo e Sem Filtro */}
       <div className="relative z-10 shrink-0 -mt-2 md:-mt-4 lg:-mt-6 animate-in fade-in slide-in-from-top-4 duration-1000">
         <img 
           src={LOGO_URL} 
           alt="Aços Vital - Logo Industrial" 
-          className="h-12 lg:h-14 xl:h-16 2xl:h-24 object-contain object-left filter brightness-0 invert drop-shadow-2xl" 
+          className="h-14 lg:h-18 xl:h-22 2xl:h-32 object-contain object-left drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]" 
         />
       </div>
 
-      {/* Main Content: Justificado com margem superior para não encavalar */}
+      {/* Main Content */}
       <div className="relative z-10 flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300 py-8">
         <div className="space-y-4 md:space-y-6 lg:space-y-8">
           
           {/* Subtitle com Detalhe Laranja Vital */}
           <div className="space-y-2 lg:space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-[2px] w-8 bg-[var(--color-accent-orange)] shadow-[0_0_12px_rgba(255,107,43,0.4)]" aria-hidden="true"></div>
-              <span className="text-[var(--color-accent-orange)] text-xs lg:text-sm xl:text-base font-bold uppercase tracking-[3px]">
+              <div className="h-[2px] w-8 bg-[#b23c0e] shadow-[0_0_12px_rgba(178,60,14,0.6)]" aria-hidden="true"></div>
+              <span className="text-[#b23c0e] text-xs lg:text-sm xl:text-base font-black uppercase tracking-[3px]">
                 {t('login.subtitle')}
               </span>
             </div>
             
-            <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-7xl font-bold leading-[1.1] tracking-tight uppercase max-w-lg lg:max-w-2xl">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-7xl font-black leading-[1.1] tracking-tight uppercase max-w-lg lg:max-w-2xl">
               ESTRUTURAS<br/>
               <span className="text-white/70">DE CONFIANÇA.</span><br/>
-              <span className="text-white/50">DADOS DE PRECISÃO.</span>
+              <span className="text-white/40">DADOS DE PRECISÃO.</span>
             </h1>
           </div>
           
-          <p className="text-sm md:text-base xl:text-lg text-slate-300/80 font-medium leading-relaxed max-w-sm lg:max-w-md xl:max-w-lg">
+          <p className="text-sm md:text-base xl:text-lg text-slate-300/90 font-medium leading-relaxed max-w-sm lg:max-w-md xl:max-w-lg">
             {t('login.heroSubtitle')}
           </p>
           
@@ -61,23 +61,24 @@ export const LoginHero: React.FC = () => {
           <div className="flex flex-wrap gap-2 pt-2" role="list">
              <StatusTag icon={CheckCircle2} label={t('login.certification')} />
              <StatusTag icon={ShieldCheck} label={t('login.secureData')} />
-             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-white/70 group cursor-default transition-all hover:bg-white/10" role="listitem">
-                <Cpu size={10} className="text-[var(--color-detail-blue)] opacity-70" aria-hidden="true" />
-                <span className="text-[9px] lg:text-[10px] font-bold uppercase tracking-[1.5px]">Real-Time Monitoring</span>
+             <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-white/70 group cursor-default transition-all hover:bg-white/10" role="listitem">
+                <Cpu size={12} className="text-[#b23c0e]" aria-hidden="true" />
+                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px]">Monitoramento Vital</span>
              </div>
           </div>
         </div>
       </div>
 
-      {/* Footer Industrial Slim - Posição final da tela */}
-      <footer className="relative z-10 shrink-0 flex items-center justify-between border-t border-white/5 pt-6 text-[9px] lg:text-[10px] xl:text-xs font-bold uppercase tracking-[2px] text-white/30">
+      {/* Footer Industrial Slim */}
+      <footer className="relative z-10 shrink-0 flex items-center justify-between border-t border-white/10 pt-6 text-[9px] lg:text-[10px] xl:text-xs font-bold uppercase tracking-[2px] text-white/40">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-1.5 w-1.5">
+            <div className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </div>
-            <span>{t('login.monitoring')}</span>
+            <span className="text-emerald-400/80">{t('login.monitoring')}</span>
           </div>
+          <div className="text-white/20">v4.1.0 Institutional</div>
       </footer>
       
       {/* Background Layer */}
@@ -85,18 +86,18 @@ export const LoginHero: React.FC = () => {
         <img 
           src={BACKGROUND_URL}
           alt=""
-          className="w-full h-full object-cover opacity-60 animate-slow-zoom"
+          className="w-full h-full object-cover opacity-50 animate-slow-zoom"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[var(--color-primary-dark-blue)] via-[var(--color-primary-dark-blue)]/90 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-[var(--color-detail-blue)]/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#081437] via-[#081437]/90 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(178,60,14,0.1))] via-transparent to-transparent" />
       </div>
     </div>
   );
 };
 
 const StatusTag = ({ icon: Icon, label }: { icon: any, label: string }) => (
-  <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-bold uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 transition-all hover:border-white/20" role="listitem">
-    <Icon size={10} className="text-[var(--color-detail-blue)] opacity-70" aria-hidden="true" /> 
+  <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-black uppercase tracking-[1.5px] text-white/70 bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 transition-all hover:border-[#b23c0e]/30" role="listitem">
+    <Icon size={12} className="text-[#2563eb]" aria-hidden="true" /> 
     {label}
   </div>
 );

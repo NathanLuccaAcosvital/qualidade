@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext.tsx';
 import { SidebarQuality } from './SidebarQuality.tsx';
 import { SidebarAdmin } from './SidebarAdmin.tsx';
+import { SidebarClient } from './SidebarClient.tsx';
 import { Header } from './Header.tsx';
 import { MobileNavigation } from './MobileNavigation.tsx';
 import { CookieBanner } from '../common/CookieBanner.tsx';
@@ -19,7 +20,7 @@ interface LayoutProps {
 
 /**
  * MainLayout (Internal Viewport)
- * Orquestra as sidebars especializadas de Admin e Qualidade.
+ * Orquestrador de sidebars e layout mestre focado em clareza visual.
  */
 export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const { user, logout, systemStatus: authSystemStatus } = useAuth();
@@ -48,14 +49,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50/40 overflow-hidden font-sans">
       <CookieBanner />
 
-      {role === UserRole.ADMIN ? (
-        <SidebarAdmin {...commonSidebarProps} />
-      ) : (
-        <SidebarQuality {...commonSidebarProps} />
-      )}
+      {/* Seleção rigorosa de Sidebar por Role - Design Unificado Light */}
+      {role === UserRole.ADMIN && <SidebarAdmin {...commonSidebarProps} />}
+      {role === UserRole.QUALITY && <SidebarQuality {...commonSidebarProps} />}
+      {role === UserRole.CLIENT && <SidebarClient {...commonSidebarProps} />}
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <MaintenanceBanner status={system.status} isAdmin={role === UserRole.ADMIN} />
@@ -70,22 +70,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           onNavigateBack={handleNavigateBack}
         />
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col">
-          <div className="max-w-[1400px] w-full mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1">
+        <main className="flex-1 flex flex-col min-h-0 bg-transparent p-4 md:p-8 relative overflow-y-auto custom-scrollbar">
+          <div className="w-full max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-3 duration-700 flex flex-col">
             {children}
           </div>
-
-          <footer className="max-w-[1400px] w-full mx-auto mt-12 mb-4 px-4 py-10 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-start gap-8 sm:gap-16 opacity-50">
-              <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] text-slate-500">
-                  {t('login.monitoring')}
-                </span>
-              </div>
-              <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-black uppercase tracking-[4px] text-slate-500">
-                © {new Date().getFullYear()} {t('menu.brand').toUpperCase()}
-              </div>
-          </footer>
         </main>
 
         <MobileNavigation 

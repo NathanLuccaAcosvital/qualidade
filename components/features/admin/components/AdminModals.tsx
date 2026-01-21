@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, CalendarClock, Loader2, Info, LucideIcon, ShieldAlert, UserCheck, Save } from 'lucide-react';
+import { X, CalendarClock, Loader2, Info, LucideIcon, ShieldAlert, UserCheck, Save, Trash2 } from 'lucide-react';
 import { User, ClientOrganization, UserRole, MaintenanceEvent, AccountStatus } from '../../../../types/index.ts';
 import { useTranslation } from 'react-i18next';
 
@@ -214,6 +214,7 @@ interface ClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (e: React.FormEvent, confirmEmail?: string, confirmPassword?: string) => Promise<void>;
+  onFlagDeletion?: (clientId: string) => Promise<void>;
   editingClient: ClientOrganization | null;
   clientFormData: ClientFormData;
   setClientFormData: (data: ClientFormData) => void;
@@ -223,7 +224,7 @@ interface ClientModalProps {
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({ 
-  isOpen, onClose, onSave, editingClient, clientFormData, setClientFormData, qualityAnalysts, requiresConfirmation = false, isSaving = false
+  isOpen, onClose, onSave, onFlagDeletion, editingClient, clientFormData, setClientFormData, qualityAnalysts, requiresConfirmation = false, isSaving = false
 }) => {
   const { t } = useTranslation();
   const [confirmEmail, setConfirmEmail] = useState('');
@@ -292,6 +293,25 @@ export const ClientModal: React.FC<ClientModalProps> = ({
             {qualityAnalysts.map(qa => <option key={qa.id} value={qa.id}>{qa.name}</option>)}
           </SelectInput>
         </FormField>
+
+        {editingClient && onFlagDeletion && (
+           <div className="mx-8 mt-6 p-4 bg-red-50 rounded-2xl border border-red-200 space-y-3">
+              <p className="text-[10px] font-black text-red-700 uppercase tracking-widest flex items-center gap-2">
+                <ShieldAlert size={14} /> Zona de Governança
+              </p>
+              <p className="text-xs text-red-800 font-medium leading-relaxed">
+                A exclusão definitiva de uma empresa parceira exige auditoria Master. Sinalizar esta empresa interromperá todos os acessos dos seus usuários técnicos.
+              </p>
+              <button 
+                type="button"
+                disabled={isSaving}
+                onClick={() => onFlagDeletion(editingClient.id)}
+                className="w-full py-2 bg-red-100 hover:bg-red-200 text-red-900 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Trash2 size={14} /> Sinalizar para Exclusão
+              </button>
+           </div>
+        )}
 
         {requiresConfirmation && (
           <div className="mx-8 mt-6 p-5 bg-blue-50 text-blue-700 text-sm rounded-2xl border border-blue-100 space-y-3">

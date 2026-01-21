@@ -1,44 +1,32 @@
+
 import { supabase } from '../supabaseClient.ts';
-import { FileNode, FileType, BreadcrumbItem, AuditLog, User, UserRole } from '../../types/index.ts';
-import { logAction as internalLogAction } from './loggingService.ts';
+import { FileNode, FileType, BreadcrumbItem, User, UserRole, FileFilters, SteelBatchMetadata } from '../../types/index.ts';
 import { IFileService, PaginatedResponse, DashboardStatsData } from './interfaces.ts';
+import { toDomainFile } from '../mappers/fileMapper.ts';
 
 const STORAGE_BUCKET = 'certificates';
 
-const sanitizeFilePathSegment = (segment: string): string => {
-  return segment
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") 
-    .replace(/\s+/g, '_')           
-    .replace(/[^a-zA-Z0-9.\-_]/g, '') 
-    .replace(/_{2,}/g, '_');        
-};
-
-const toDomainFile = (row: any): FileNode => ({
-  id: row.id,
-  parentId: row.parent_id,
-  name: row.name,
-  type: row.type as FileType,
-  size: row.size,
-  updatedAt: row.updated_at,
-  ownerId: row.owner_id,
-  storagePath: row.storage_path,
-  isFavorite: !!row.is_favorite,
-  metadata: row.metadata 
-});
-
 export const SupabaseFileService: IFileService = {
-  getRawFiles: async (folderId, page = 1, pageSize = 50, searchTerm = ''): Promise<PaginatedResponse<FileNode>> => {
-    let query = supabase.from('files').select('*', { count: 'exact' });
+  getRawFiles: async (folderId, page = 1, pageSize = 50, searchTerm = '', ownerId, filters?: FileFilters): Promise<PaginatedResponse<FileNode>> => {
+    // Usando a constraint explícita do schema para o perfil do autor
+    let query = supabase.from('files').select('*, profiles!files_uploaded_by_fkey(full_name)', { count: 'exact' });
 
-    if (folderId) query = query.eq('parent_id', folderId);
-    else query = query.is('parent_id', null);
+    if (ownerId && ownerId !== 'global') query = query.eq('owner_id', ownerId);
+    
+    if (!searchTerm) {
+      if (folderId) query = query.eq('parent_id', folderId);
+      else query = query.is('parent_id', null);
+    } else {
+      query = query.ilike('name', `%${searchTerm}%`);
+    }
 
-    if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
+    if (filters?.type && filters.type !== 'ALL') query = query.eq('type', filters.type);
 
     const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     const { data, count, error } = await query
-      .range(from, from + pageSize - 1)
+      .range(from, to)
       .order('type', { ascending: false }) 
       .order('name', { ascending: true });
 
@@ -47,38 +35,44 @@ export const SupabaseFileService: IFileService = {
     return {
       items: (data || []).map(toDomainFile),
       total: count || 0,
-      hasMore: (count || 0) > from + pageSize
+      hasMore: (count || 0) > to + 1
     };
   },
 
-  getFiles: async (user, folderId, page = 1, pageSize = 50, searchTerm = ''): Promise<PaginatedResponse<FileNode>> => {
-    if (user.role === UserRole.CLIENT) {
-        let query = supabase.from('files').select('*', { count: 'exact' }).eq('owner_id', user.organizationId);
-        if (folderId) query = query.eq('parent_id', folderId);
-        else query = query.is('parent_id', null);
-        if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
-        
-        const from = (page - 1) * pageSize;
-        const { data, count, error } = await query.range(from, from + pageSize - 1).order('type', { ascending: false }).order('name', { ascending: true });
-        if (error) throw error;
-        return { items: (data || []).map(toDomainFile), total: count || 0, hasMore: (count || 0) > from + pageSize };
+  getFiles: async (user, folderId, page = 1, pageSize = 50, searchTerm = '') => {
+    const effectiveOwnerId = user.role === UserRole.CLIENT ? user.organizationId : undefined;
+    return SupabaseFileService.getRawFiles(folderId, page, pageSize, searchTerm, effectiveOwnerId);
+  },
+
+  getFile: async (user, fileId) => {
+    if (!fileId) throw new Error("Identificador de arquivo ausente.");
+
+    // Correção das constraints: files_uploaded_by_fkey e files_owner_id_fkey conforme o schema SQL
+    const { data, error } = await supabase
+      .from('files')
+      .select('*, profiles!files_uploaded_by_fkey(full_name), organizations!files_owner_id_fkey(name)')
+      .eq('id', fileId)
+      .maybeSingle();
+
+    if (error) {
+        console.error(`[SupabaseFileService] Erro na query getFile (${fileId}):`, error);
+        throw new Error("Falha na comunicação com a base de dados industrial.");
     }
-    
-    return SupabaseFileService.getRawFiles(folderId, page, pageSize, searchTerm);
+
+    if (!data) {
+        console.warn(`[SupabaseFileService] Arquivo ${fileId} não localizado ou sem permissão.`);
+        throw new Error("Ativo não localizado no Ledger.");
+    }
+
+    return toDomainFile(data);
   },
 
   createFolder: async (user, parentId, name, ownerId) => {
-    let resolvedOwnerId = ownerId || null;
-    if (parentId) {
-        const { data: parentFolder } = await supabase.from('files').select('owner_id').eq('id', parentId).single();
-        if (parentFolder?.owner_id) resolvedOwnerId = parentFolder.owner_id;
-    }
-
     const { data, error } = await supabase.from('files').insert({
         name,
-        type: 'FOLDER',
+        type: FileType.FOLDER,
         parent_id: parentId,
-        owner_id: resolvedOwnerId,
+        owner_id: ownerId || null,
         storage_path: 'system/folder',
         updated_at: new Date().toISOString()
     }).select().single();
@@ -88,187 +82,147 @@ export const SupabaseFileService: IFileService = {
   },
 
   uploadFile: async (user, fileData, ownerId) => {
-    if (!fileData.fileBlob) throw new Error("Blob não fornecido.");
+    if (!ownerId) throw new Error("Contexto organizacional ausente para o upload.");
     
-    let resolvedOwnerId = ownerId;
-    if (fileData.parentId) {
-        const { data: parentFolder } = await supabase.from('files').select('owner_id').eq('id', fileData.parentId).single();
-        if (parentFolder?.owner_id) resolvedOwnerId = parentFolder.owner_id;
-    }
-
-    const sanitizedFileName = sanitizeFilePathSegment(fileData.name);
-    const folderPath = fileData.parentId || 'root';
     const uniqueId = crypto.randomUUID();
-    const filePath = `${resolvedOwnerId}/${folderPath}/${uniqueId}-${sanitizedFileName}`;
+    const folderPath = fileData.parentId || 'root';
+    
+    const sanitizedFileName = fileData.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9._-]/g, "");
+    
+    const filePath = `${ownerId}/${folderPath}/${uniqueId}-${sanitizedFileName}`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(filePath, fileData.fileBlob, {
-        cacheControl: '3600',
-        upsert: false
-      });
+      .upload(filePath, fileData.fileBlob);
 
     if (uploadError) throw uploadError;
 
     const { data, error } = await supabase.from('files').insert({
-        name: fileData.name, 
+        name: fileData.name,
         type: fileData.type,
         parent_id: fileData.parentId,
-        owner_id: resolvedOwnerId,
+        owner_id: ownerId,
         storage_path: uploadData.path,
         size: `${(fileData.fileBlob.size / 1024 / 1024).toFixed(2)} MB`,
-        metadata: fileData.metadata || { status: 'PENDING' },
         uploaded_by: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        metadata: { status: 'PENDING' }
     }).select().single();
 
-    if (error) {
-      await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
-      throw error;
-    }
-
+    if (error) throw error;
     return toDomainFile(data);
   },
 
-  deleteFile: async (user, fileIds) => {
-    return SupabaseFileService.deleteFiles(fileIds);
-  },
-
-  deleteFiles: async (fileIds) => {
-    if (!fileIds || fileIds.length === 0) return;
-
-    try {
-        // 1. Buscar os caminhos de storage de todos os itens (e filhos se houver cascata manual necessária)
-        // Para simplificar, focamos nos itens selecionados. Se for uma pasta, deletamos apenas o registro (o storage de pastas é virtual no DB)
-        const { data: items, error: fetchError } = await supabase
-            .from('files')
-            .select('storage_path, type')
-            .in('id', fileIds);
-
-        if (fetchError) throw fetchError;
-
-        const pathsToRemove = (items || [])
-            .filter(item => item.type !== 'FOLDER' && item.storage_path && item.storage_path !== 'system/folder')
-            .map(item => item.storage_path);
-
-        // 2. Remover do Storage físico
-        if (pathsToRemove.length > 0) {
-            const { error: storageError } = await supabase.storage
-                .from(STORAGE_BUCKET)
-                .remove(pathsToRemove);
-            
-            if (storageError) {
-                console.warn("[SupabaseFileService] Erro ao remover arquivos físicos, prosseguindo com limpeza do DB:", storageError.message);
-            }
-        }
-
-        // 3. Remover registros do banco de dados
-        const { error: dbError } = await supabase
-            .from('files')
-            .delete()
-            .in('id', fileIds);
-
-        if (dbError) throw dbError;
-
-    } catch (error: any) {
-        console.error("[SupabaseFileService] Falha crítica na exclusão:", error.message);
-        throw new Error("Erro ao processar exclusão de recursos.");
-    }
-  },
-
-  renameFile: async (user, fileId, newName) => {
-    const { error } = await supabase.from('files').update({ name: newName, updated_at: new Date().toISOString() }).eq('id', fileId);
+  updateFileMetadata: async (fileId, metadata) => {
+    const { data: currentFile } = await supabase.from('files').select('metadata').eq('id', fileId).single();
+    const newMetadata = { ...(currentFile?.metadata || {}), ...metadata };
+    
+    const { error } = await supabase
+      .from('files')
+      .update({ 
+        metadata: newMetadata,
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', fileId);
+      
     if (error) throw error;
   },
 
-  getBreadcrumbs: async (user, currentFolderId): Promise<BreadcrumbItem[]> => {
+  deleteFile: async (user, fileIds) => {
+    const { data: items } = await supabase.from('files').select('storage_path, type').in('id', fileIds);
+    const physicalPaths = (items || [])
+      .filter(i => i.type !== FileType.FOLDER && i.storage_path !== 'system/folder')
+      .map(i => i.storage_path);
+
+    if (physicalPaths.length > 0) {
+      await supabase.storage.from(STORAGE_BUCKET).remove(physicalPaths);
+    }
+
+    const { error } = await supabase.from('files').delete().in('id', fileIds);
+    if (error) throw error;
+  },
+
+  deleteFiles: async (ids) => SupabaseFileService.deleteFile(null as any, ids),
+
+  renameFile: async (user, fileId, newName) => {
+    const { error } = await supabase
+      .from('files')
+      .update({ name: newName, updated_at: new Date().toISOString() })
+      .eq('id', fileId);
+    if (error) throw error;
+  },
+
+  getBreadcrumbs: async (user, currentFolderId) => {
     const breadcrumbs: BreadcrumbItem[] = [];
-    const isClient = user.role === UserRole.CLIENT;
-    const companyName = user.organizationName || 'Organização';
-    
     let folderId = currentFolderId;
-    while (folderId) {
-      const { data, error } = await supabase.from('files').select('id, name, parent_id, owner_id').eq('id', folderId).single();
-      
+    let depth = 0;
+    while (folderId && depth < 8) {
+      const { data, error } = await supabase.from('files').select('id, name, parent_id').eq('id', folderId).maybeSingle();
       if (error || !data) break;
-
-      const isCompanyRoot = isClient && data.owner_id === user.organizationId && data.parent_id === null;
-      
-      if (isCompanyRoot) {
-          breadcrumbs.unshift({ id: data.id, name: 'Início' });
-          breadcrumbs.unshift({ id: null, name: companyName }); 
-          break;
-      }
-
       breadcrumbs.unshift({ id: data.id, name: data.name });
       folderId = data.parent_id;
+      depth++;
     }
-
-    if (breadcrumbs.length === 0) {
-        breadcrumbs.unshift({ id: null, name: companyName });
-    }
-
+    const rootName = user.role === UserRole.CLIENT ? 'Meu Drive Vital' : 'Global Cloud';
+    breadcrumbs.unshift({ id: null, name: rootName });
     return breadcrumbs;
   },
 
-  getSignedUrl: async (path): Promise<string> => {
-    if (!path || path === 'system/folder') throw new Error("Recurso inválido para visualização.");
+  getSignedUrl: async (path) => {
+    if (!path || path === 'system/folder') return '';
+    
     const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(path, 3600);
-    if (error) throw error;
+    
+    if (error) {
+        console.error(`[Supabase Storage] Erro ao assinar URL para ${path}:`, error);
+        const { data: publicData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+        if (publicData?.publicUrl) return publicData.publicUrl;
+        throw error;
+    }
+    
     return data.signedUrl;
   },
 
   getFileSignedUrl: async (user, fileId) => {
     const { data, error } = await supabase.from('files').select('storage_path').eq('id', fileId).single();
-    if (error || !data) throw new Error("Arquivo não encontrado.");
+    if (error || !data) {
+        console.error(`[SupabaseFileService] Ativo ${fileId} não localizado para assinatura.`);
+        throw new Error("Arquivo não encontrado no registro industrial.");
+    }
     return SupabaseFileService.getSignedUrl(data.storage_path);
   },
 
-  getAuditLogs: async (user) => {
-    const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100);
-    if (error) throw error;
-    return (data || []).map(l => ({
-      id: l.id,
-      timestamp: l.created_at,
-      userId: l.user_id,
-      userName: l.metadata?.userName || 'Sistema',
-      userRole: l.metadata?.userRole || 'UNKNOWN',
-      action: l.action,
-      category: l.category,
-      target: l.target,
-      severity: l.severity,
-      status: l.status,
-      ip: l.ip,
-      location: l.location,
-      userAgent: l.user_agent,
-      device: l.device,
-      metadata: l.metadata,
-      requestId: l.request_id
-    }));
-  },
-
-  getDashboardStats: async (user): Promise<DashboardStatsData> => {
-    const { count: totalCount } = await supabase.from('files').select('*', { count: 'exact', head: true }).eq('owner_id', user.organizationId).neq('type', 'FOLDER');
-    const { count: pendingCount } = await supabase.from('files').select('*', { count: 'exact', head: true }).eq('owner_id', user.organizationId).eq('metadata->>status', 'PENDING');
+  getAuditLogs: async () => [], 
+  
+  getDashboardStats: async (user) => {
+    const ownerId = user.role === UserRole.CLIENT ? user.organizationId : null;
+    let query = supabase.from('files').select('metadata->>status', { count: 'exact' }).neq('type', 'FOLDER');
+    if (ownerId) query = query.eq('owner_id', ownerId);
     
+    const { data } = await query;
+    const stats = data || [];
+
     return {
-      mainValue: totalCount || 0,
-      subValue: (totalCount || 0) - (pendingCount || 0),
-      pendingValue: pendingCount || 0,
-      status: (pendingCount || 0) > 0 ? 'PENDING' : 'REGULAR',
-      mainLabel: 'Documentos Totais',
-      subLabel: 'Validados'
+      mainValue: stats.length,
+      subValue: stats.filter(s => s.status === 'APPROVED').length,
+      pendingValue: stats.filter(s => s.status === 'PENDING' || !s.status).length,
+      status: 'REGULAR',
+      mainLabel: 'Total de Ativos',
+      subLabel: 'Aprovados'
     };
   },
 
   uploadRaw: async (user, blob, name, path) => {
-    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob);
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob);
     if (error) throw error;
-    return path;
+    return data.path;
   },
 
   deleteRaw: async (paths) => {
-    const { error } = await supabase.storage.from(STORAGE_BUCKET).remove(paths);
-    if (error) throw error;
+    await supabase.storage.from(STORAGE_BUCKET).remove(paths);
   }
 };

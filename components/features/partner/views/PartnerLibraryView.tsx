@@ -1,33 +1,37 @@
-
-import React, { useState, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/authContext.tsx';
-import { usePartnerCertificates } from '../hooks/usePartnerCertificates.ts';
+import { useFileCollection } from '../../files/hooks/useFileCollection.ts';
 import { FileExplorer } from '../../files/FileExplorer.tsx';
 import { ExplorerToolbar } from '../../files/components/ExplorerToolbar.tsx';
-import { FilePreviewModal } from '../../files/FilePreviewModal.tsx';
-import { FileNode, UserRole, FileType, QualityStatus } from '../../../../types/index.ts';
-import { fileService } from '../../../../lib/services/index.ts';
-import { supabase } from '../../../../lib/supabaseClient.ts';
-import { Info, ShieldCheck, HelpCircle, ArrowRight, FileCheck, Loader2 } from 'lucide-react';
+import { FileNode, UserRole, FileType } from '../../../../types/index.ts';
+import { fileService, partnerService } from '../../../../lib/services/index.ts';
+import { PaginationControls } from '../../../common/PaginationControls.tsx';
+import { QualityLoadingState } from '../../quality/components/ViewStates.tsx';
+import { Layers, FileCheck } from 'lucide-react';
 
 export const PartnerLibraryView: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const currentFolderId = searchParams.get('folderId');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => 
+    (localStorage.getItem('explorer_view_mode') as 'grid' | 'list') || 'grid'
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
-  const [isAutoNavigating, setIsAutoNavigating] = useState(false);
-  
-  const { files, isLoading, breadcrumbs, refresh } = usePartnerCertificates(currentFolderId, searchTerm);
-  
-  const [previewFile, setPreviewFile] = useState<FileNode | null>(null);
+
+  // Utilizamos o useFileCollection diretamente para ter controle total de paginação, 
+  // passando o organizationId do usuário logado.
+  const collection = useFileCollection({ 
+    currentFolderId, 
+    searchTerm, 
+    ownerId: user?.organizationId 
+  });
 
   const handleNavigate = useCallback((id: string | null) => {
+    setSelectedFileIds([]);
     setSearchParams(prev => {
         if (id) prev.set('folderId', id);
         else prev.delete('folderId');
@@ -35,118 +39,108 @@ export const PartnerLibraryView: React.FC = () => {
     }, { replace: true });
   }, [setSearchParams]);
 
-  // Regra Vital: Redirecionamento Automático para a Pasta Raiz da Empresa
-  useEffect(() => {
-    if (!currentFolderId && user?.organizationId && !searchTerm) {
-      setIsAutoNavigating(true);
-      supabase.from('files')
-        .select('id')
-        .eq('owner_id', user.organizationId)
-        .is('parent_id', null)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) handleNavigate(data.id);
-        })
-        .finally(() => setIsAutoNavigating(false));
+  const handleFileClick = async (file: FileNode) => {
+    if (file.type === FileType.FOLDER) {
+        handleNavigate(file.id);
+    } else {
+        if (user) await partnerService.logFileView(user, file);
+        navigate(`/preview/${file.id}`);
     }
-  }, [currentFolderId, user?.organizationId, searchTerm, handleNavigate]);
+  };
 
   const handleDownload = async (file: FileNode) => {
-    const url = await fileService.getSignedUrl(file.storagePath);
-    window.open(url, '_blank');
+    try {
+        const url = await fileService.getFileSignedUrl(user!, file.id);
+        window.open(url, '_blank');
+    } catch (e) {
+        console.error("Falha ao baixar arquivo:", e);
+    }
   };
 
-  const handlePreviewClose = () => {
-    setPreviewFile(null);
-    refresh();
-  };
-
-  if (isAutoNavigating) {
-    return (
-      <div className="flex flex-col items-center justify-center py-40">
-        <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
-        <p className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">Acessando Diretório {user?.organizationName}...</p>
-      </div>
-    );
+  if (collection.loading && collection.files.length === 0) {
+      return <QualityLoadingState message="Sincronizando Biblioteca..." />;
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-      
-      {/* Seção de Contexto Industrial */}
-      {!searchTerm && (
-        <section className="bg-[#081437] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl border border-white/5">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="w-20 h-20 bg-white/10 rounded-[2rem] flex items-center justify-center border border-white/10 shrink-0">
-               <FileCheck size={40} className="text-blue-400" />
-            </div>
-            <div className="flex-1 space-y-2 text-center md:text-left">
-              <h2 className="text-2xl font-black tracking-tight">Biblioteca Técnica {user?.organizationName}</h2>
-              <p className="text-slate-400 text-sm max-w-2xl leading-relaxed font-medium">
-                Arquivos verificados e liberados para uso industrial. 
-                Utilize os filtros para localizar corridas ou lotes específicos.
-              </p>
-            </div>
+    <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-700 font-sans">
+      {/* Sub-Header Industrial Solto */}
+      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 px-1">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[#081437] rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+             <Layers size={24} className="text-blue-400" />
           </div>
-        </section>
-      )}
-
-      {/* Container da Biblioteca */}
-      <div className="flex flex-col bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden min-h-[600px]">
-        <FilePreviewModal 
-          initialFile={previewFile}
-          allFiles={files.filter(f => f.type !== FileType.FOLDER)}
-          isOpen={!!previewFile} 
-          onClose={handlePreviewClose} 
-          onDownloadFile={handleDownload} 
-        />
-
-        <ExplorerToolbar
-          breadcrumbs={breadcrumbs}
-          onNavigate={handleNavigate}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onUploadClick={() => {}} 
-          onCreateFolderClick={() => {}}
-          selectedCount={selectedFileIds.length}
-          onDeleteSelected={() => {}} 
-          onRenameSelected={() => {}}
-          onDownloadSelected={() => {
-              const selected = files.find(f => f.id === selectedFileIds[0]);
-              if (selected) handleDownload(selected);
-          }}
-          viewMode={viewMode}
-          onViewChange={setViewMode}
-          selectedFilesData={files.filter(f => selectedFileIds.includes(f.id))}
-          userRole={UserRole.CLIENT}
-        />
-
-        <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dica:</span>
-              <p className="text-[10px] text-slate-500 font-bold flex items-center gap-1.5 uppercase tracking-tight">
-                 <HelpCircle size={12} className="text-blue-500" /> Clique em um arquivo para abrir o painel de auditoria documental e física.
-              </p>
-           </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight uppercase">Biblioteca de Ativos</h2>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[3px]">Arquivos técnicos e certificados</p>
+          </div>
         </div>
 
-        <FileExplorer 
-          files={files} 
-          loading={isLoading}
-          currentFolderId={currentFolderId}
-          searchTerm={searchTerm}
-          breadcrumbs={breadcrumbs}
-          selectedFileIds={selectedFileIds}
-          onToggleFileSelection={(id) => setSelectedFileIds(prev => prev.includes(id) ? [] : [id])}
-          onNavigate={handleNavigate}
-          onFileSelectForPreview={(f) => f && f.type !== FileType.FOLDER && setPreviewFile(f)}
-          onDownloadFile={handleDownload}
-          onRenameFile={() => {}}
-          onDeleteFile={() => {}}
-          viewMode={viewMode}
-          userRole={UserRole.CLIENT}
-        />
+        <div className="flex items-center gap-3 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-sm">
+             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total: <span className="text-slate-900 ml-1">{collection.totalItems}</span></p>
+             <div className="w-px h-3 bg-slate-200" />
+             <div className="flex items-center gap-1.5 text-emerald-500">
+                <FileCheck size={14} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Vault Seguro</span>
+             </div>
+        </div>
+      </section>
+
+      {/* Toolbar e Área de Arquivos sem a caixa pesada */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="mb-4">
+          <ExplorerToolbar
+              viewMode={viewMode}
+              onViewChange={(mode) => {
+                setViewMode(mode);
+                localStorage.setItem('explorer_view_mode', mode);
+              }}
+              onNavigate={handleNavigate}
+              breadcrumbs={collection.breadcrumbs}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onUploadClick={() => {}} 
+              onCreateFolderClick={() => {}}
+              selectedCount={selectedFileIds.length}
+              onDeleteSelected={() => {}} 
+              onRenameSelected={() => {}}
+              onDownloadSelected={() => {
+                  const selected = collection.files.find(f => f.id === selectedFileIds[0]);
+                  if (selected) handleDownload(selected);
+              }}
+              userRole={UserRole.CLIENT}
+              selectedFilesData={collection.files.filter(f => selectedFileIds.includes(f.id))}
+          />
+        </div>
+
+        <div className="flex-1 relative min-h-0">
+            <FileExplorer 
+                files={collection.files} 
+                loading={collection.loading}
+                currentFolderId={currentFolderId}
+                searchTerm={searchTerm}
+                breadcrumbs={collection.breadcrumbs}
+                selectedFileIds={selectedFileIds}
+                onToggleFileSelection={(id) => setSelectedFileIds(prev => prev.includes(id) ? [] : [id])}
+                onNavigate={handleNavigate}
+                onFileSelectForPreview={handleFileClick}
+                onDownloadFile={handleDownload}
+                onRenameFile={() => {}}
+                onDeleteFile={() => {}}
+                viewMode={viewMode}
+                userRole={UserRole.CLIENT}
+            />
+        </div>
+
+        <div className="mt-4">
+          <PaginationControls 
+            currentPage={collection.page}
+            pageSize={collection.pageSize}
+            totalItems={collection.totalItems}
+            onPageChange={collection.setPage}
+            onPageSizeChange={collection.setPageSize}
+            isLoading={collection.loading}
+          />
+        </div>
       </div>
     </div>
   );

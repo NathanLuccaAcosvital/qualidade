@@ -38,8 +38,8 @@ export const useAdminClientManagement = ({ setIsSaving, isSavingGlobal, qualityA
     try {
       const response = await adminService.getClients();
       setClientsList(response.items);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao carregar portfólio';
+    } catch (err: any) {
+      const msg = err?.message || err?.details || 'Erro ao carregar portfólio';
       showToast(msg, 'error');
     } finally {
       setIsLoadingClients(false);
@@ -77,8 +77,9 @@ export const useAdminClientManagement = ({ setIsSaving, isSavingGlobal, qualityA
       showToast(`Empresa ${editingClient ? 'atualizada' : 'registrada'} com sucesso!`, 'success');
       setIsClientModalOpen(false);
       await loadClients();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Falha na persistência';
+    } catch (err: any) {
+      // FIX: Extração inteligente de mensagem de erro de objetos do Supabase
+      const msg = err?.message || err?.details || 'Falha na persistência de dados técnicos.';
       showToast(msg, 'error');
     } finally {
       setIsSaving(false);

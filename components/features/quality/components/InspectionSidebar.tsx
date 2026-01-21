@@ -48,13 +48,14 @@ export const InspectionSidebar: React.FC<InspectionSidebarProps> = ({
         )}
 
         {/* EXIBIÇÃO DE FEEDBACK DO CLIENTE (PASSO 2 E 3) */}
+        {/* Fix: Ensured clientObservations is available on SteelBatchMetadata type and added safety check */}
         {metadata?.clientObservations && (
           <div className="p-4 bg-orange-50 rounded-2xl border-2 border-orange-200 space-y-3 animate-pulse">
             <h5 className="text-[10px] font-black text-orange-700 uppercase tracking-widest flex items-center gap-2">
               <MessageSquare size={14} /> Contestação do Cliente
             </h5>
             <p className="text-xs text-orange-900 font-medium italic leading-relaxed">
-              "{metadata.clientObservations}"
+              "{metadata?.clientObservations}"
             </p>
           </div>
         )}

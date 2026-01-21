@@ -6,13 +6,11 @@ import { ClientOrganization, User, UserRole, AccountStatus } from '../../../../t
 /**
  * useQualityClientManagement (Facade)
  * Encapsula a complexidade de listagem, paginação, filtros e modais de gestão.
- * Garante que a View receba apenas propriedades prontas para renderização.
  */
 export const useQualityClientManagement = (refreshTrigger: number) => {
   const list = useQualityClientList(refreshTrigger);
   const actions = useQualityClientActions(list.refresh);
 
-  // Mapeador de dados para o Modal de Usuário (DIP)
   const openUserModal = (c?: ClientOrganization, u?: User) => {
     actions.setUserModal({
       isOpen: true,
@@ -39,7 +37,6 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
     });
   };
 
-  // Mapeador de dados para o Modal de Empresa (DIP)
   const openClientModal = (c?: ClientOrganization) => {
     actions.setClientModal({
       isOpen: true,
@@ -63,22 +60,23 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
   };
 
   return {
-    // Listagem e Paginação
     sortedClients: list.clients,
     clientSearch: list.search,
     setClientSearch: list.setSearch,
     clientStatus: list.statusFilter,
     setClientStatus: list.setStatusFilter,
     isLoadingClients: list.isLoading,
-    isLoadingMoreClients: list.isLoadingMore, 
-    hasMoreClients: list.hasMore,
-    handleLoadMoreClients: list.loadMore, 
     
-    // Estados Globais de Processamento
+    // Paginação
+    page: list.page,
+    setPage: list.setPage,
+    pageSize: list.pageSize,
+    setPageSize: list.setPageSize,
+    totalItems: list.totalItems,
+    
     isProcessing: actions.isProcessing,
     qualityAnalysts: actions.qualityAnalysts,
 
-    // Gestão de Usuários
     userModal: {
       isOpen: actions.userModal.isOpen,
       setOpen: (open: boolean) => actions.setUserModal(p => ({ ...p, isOpen: open })),
@@ -89,7 +87,6 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
       save: actions.handleSaveUser
     },
 
-    // Gestão de Empresas
     clientModal: {
       isOpen: actions.clientModal.isOpen,
       setOpen: (open: boolean) => actions.setClientModal(p => ({ ...p, isOpen: open })),
@@ -97,7 +94,8 @@ export const useQualityClientManagement = (refreshTrigger: number) => {
       data: actions.clientModal.data,
       setData: (data: any) => actions.setClientModal(p => ({ ...p, data })),
       open: openClientModal,
-      save: actions.handleSaveClient
+      save: actions.handleSaveClient,
+      flagDeletion: actions.handleFlagClientDeletion
     }
   };
 };

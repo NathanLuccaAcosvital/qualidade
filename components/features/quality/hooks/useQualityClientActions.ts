@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../../../../context/authContext.tsx';
 import { useToast } from '../../../../context/notificationContext.tsx';
@@ -82,6 +83,21 @@ export const useQualityClientActions = (onSuccess: () => void) => {
     }
   };
 
+  const handleFlagClientDeletion = async (clientId: string) => {
+    if (!currentUser) return;
+    setIsProcessing(true);
+    try {
+        await adminService.flagClientForDeletion(currentUser, clientId);
+        showToast("Empresa sinalizada para auditoria de exclusão.", 'info');
+        setClientModal(prev => ({ ...prev, isOpen: false }));
+        onSuccess();
+    } catch (err: any) {
+        showToast(err.message, 'error');
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
   return {
     isProcessing,
     qualityAnalysts,
@@ -90,6 +106,7 @@ export const useQualityClientActions = (onSuccess: () => void) => {
     clientModal,
     setClientModal,
     handleSaveUser,
-    handleSaveClient
+    handleSaveClient,
+    handleFlagClientDeletion
   };
 };

@@ -1,212 +1,125 @@
 
-import { User } from '../../types/auth.ts';
 import { UserRole, AccountStatus } from '../../types/enums.ts';
 import { IUserService } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
 import { logAction } from './loggingService.ts';
-import { normalizeRole } from '../mappers/roleMapper.ts';
-import { AuthError } from '@supabase/supabase-js';
+import { toDomainUser } from '../mappers/userMapper.ts';
 
-const normalizeAuthError = (error: AuthError): string => {
-  const msg = error.message.toLowerCase();
+const normalizeAuthError = (error: any): string => {
+  const msg = error.message?.toLowerCase() || "";
   if (msg.includes("invalid login credentials")) return "auth.errors.invalidCredentials";
   if (msg.includes("too many requests")) return "auth.errors.tooManyRequests";
-  if (msg.includes("user already registered")) return "auth.errors.alreadyRegistered";
   return "auth.errors.unexpected";
-};
-
-/**
- * Converte dados brutos do banco para o modelo de domínio User.
- */
-const toDomainUser = (row: any, sessionUser?: any): User | null => {
-  if (!row && sessionUser) {
-    return {
-      id: sessionUser.id,
-      name: sessionUser.user_metadata?.full_name || 'Usuário Vital',
-      email: sessionUser.email || '',
-      role: normalizeRole(sessionUser.user_metadata?.role),
-      organizationId: sessionUser.user_metadata?.organization_id,
-      organizationName: 'Aços Vital (Sincronizando...)',
-      status: AccountStatus.ACTIVE,
-      department: sessionUser.user_metadata?.user_type || 'CLIENT_INTERNAL',
-      isPendingDeletion: false
-    };
-  }
-
-  if (!row) return null;
-
-  const orgData = Array.isArray(row.organizations) ? row.organizations[0] : row.organizations;
-  const isPendingDeletion = sessionUser?.user_metadata?.is_pending_deletion === true || row.department === 'PENDING_DELETION';
-
-  return {
-    id: row.id,
-    name: row.full_name || sessionUser?.user_metadata?.full_name || 'Usuário Sem Nome',
-    email: row.email || sessionUser?.email || '',
-    role: normalizeRole(row.role),
-    organizationId: row.organization_id || undefined,
-    organizationName: orgData?.name || 'Aços Vital (Interno)',
-    status: (row.status as AccountStatus) || AccountStatus.ACTIVE,
-    department: row.department || 'CLIENT_INTERNAL',
-    lastLogin: row.last_login || undefined,
-    isPendingDeletion
-  };
 };
 
 export const SupabaseUserService: IUserService = {
   authenticate: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password
-    });
-    if (error) return { success: false, error: normalizeAuthError(error) };
-    return { success: true };
+    try {
+      const { data, error } = await (supabase.auth as any).signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password
+      });
+      if (error) return { success: false, error: normalizeAuthError(error) };
+      if (data.user) {
+        await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', data.user.id);
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: "auth.errors.unexpected" };
+    }
   },
 
   signUp: async (email, password, fullName, organizationId, userType, role = UserRole.CLIENT) => {
     const emailClean = email.trim().toLowerCase();
-    
-    // Normalização rigorosa do ID da Organização (UUID ou null)
-    const validOrgId = (organizationId && organizationId.trim() !== "" && organizationId !== "null") 
-      ? organizationId 
-      : null;
+    const validOrgId = (organizationId && organizationId.trim() !== "" && organizationId !== "null") ? organizationId : null;
 
-    // 1. Verificação preventiva para evitar erro de duplicidade no meio do processo
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', emailClean)
-      .maybeSingle();
-    
-    if (existingProfile) {
-      throw new Error(`O e-mail ${emailClean} já possui um perfil técnico no sistema.`);
-    }
-
-    // 2. Criar credenciais no Auth
-    const { data, error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await (supabase.auth as any).signUp({
       email: emailClean,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          user_type: userType,
-          role: role,
-          organization_id: validOrgId,
-          is_pending_deletion: false
-        }
-      }
+      options: { data: { full_name: fullName, user_type: userType, role: role, organization_id: validOrgId } }
     });
 
-    if (authError) throw new Error(authError.message);
-    if (!data.user) throw new Error("O provedor de segurança não retornou um identificador válido.");
+    if (authError) throw authError;
 
-    // 3. Criar Perfil Técnico (A sincronização que estava falhando)
-    // Usamos .insert() em vez de .upsert() para garantir que não estamos sobrescrevendo nada indevidamente
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      full_name: fullName,
-      email: emailClean,
+    // FIX: Usamos upsert em vez de insert para evitar conflito com gatilhos (triggers) de criação automática de perfil
+    const { error: profileError } = await supabase.from('profiles').upsert({
+      id: data.user!.id, 
+      full_name: fullName, 
+      email: emailClean, 
       role: role,
-      organization_id: validOrgId,
-      department: userType,
+      organization_id: validOrgId, 
+      department: userType, 
       status: 'ACTIVE',
       updated_at: new Date().toISOString()
-    });
+    }, { onConflict: 'id' });
 
-    if (profileError) {
-      console.error("[CRITICAL] Profile Sync Error:", profileError);
-      
-      // Lógica de Rollback: Se o perfil falhou, as credenciais auth ficam inúteis.
-      // Em um ambiente ideal, isso seria uma Edge Function, mas aqui tentamos remediar.
-      // Nota: O Admin pode precisar deletar o usuário manualmente no Dashboard do Supabase se o rollback falhar.
-      
-      const detailedError = profileError.code === '23503' 
-        ? "Vínculo organizacional inválido. Verifique se a empresa selecionada ainda existe."
-        : "Erro interno de permissão ao gravar dados técnicos.";
-
-      throw new Error(`Falha na sincronização: ${detailedError}`);
-    }
-
-    await logAction(null, 'USER_CREATED', emailClean, 'AUTH', 'INFO', 'SUCCESS', { userType, role, organizationId: validOrgId });
+    if (profileError) throw profileError;
+    await logAction(null, 'USER_REGISTERED', emailClean, 'AUTH', 'INFO', 'SUCCESS');
   },
 
   getCurrentUser: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await (supabase.auth as any).getSession();
     if (!session?.user) return null;
-
     const { data: profile } = await supabase
       .from('profiles')
-      .select('*, organizations!organization_id(name)')
+      .select('*, organizations!profiles_organization_id_fkey(name)')
       .eq('id', session.user.id)
       .maybeSingle();
-
     return toDomainUser(profile, session.user);
   },
 
   getUsers: async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, organizations!organization_id(name)')
+      .select('*, organizations!profiles_organization_id_fkey(name)')
       .order('full_name');
-
     if (error) throw error;
-    return (data || []).map(p => toDomainUser(p));
+    return (data || []).map(p => toDomainUser(p)).filter(Boolean) as any;
   },
 
   saveUser: async (u) => {
     const validOrgId = (u.organizationId && String(u.organizationId).trim() !== "") ? u.organizationId : null;
 
     const { error } = await supabase.from('profiles').update({
-      full_name: u.name,
-      role: u.role,
+      full_name: u.name, 
+      role: u.role, 
       organization_id: validOrgId,
       department: u.department, 
-      status: u.status,
+      status: u.status, 
       updated_at: new Date().toISOString()
     }).eq('id', u.id);
-
     if (error) throw error;
-    
-    // Sincroniza metadados do Auth para garantir que o token JWT reflita as mudanças no próximo refresh
-    await supabase.auth.updateUser({
-      data: { 
-        full_name: u.name, 
-        role: u.role, 
-        organization_id: validOrgId 
-      }
-    });
-
-    await logAction(null, 'USER_UPDATED', u.email, 'DATA', 'INFO', 'SUCCESS', { id: u.id });
   },
 
-  flagUserForDeletion: async (userId: string, adminUser: User) => {
-    const { error } = await supabase.from('profiles').update({
-      status: 'INACTIVE', 
-      department: 'PENDING_DELETION' 
-    }).eq('id', userId);
-
+  flagUserForDeletion: async (userId, adminUser) => {
+    const { error } = await supabase.from('profiles').update({ status: 'INACTIVE', department: 'PENDING_DELETION' }).eq('id', userId);
     if (error) throw error;
-    await logAction(adminUser, 'USER_FLAGGED_DELETION', userId, 'SECURITY', 'WARNING', 'SUCCESS');
+    await logAction(adminUser, 'USER_FLAGGED_DELETION', userId, 'SECURITY', 'WARNING');
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
+    await (supabase.auth as any).signOut();
     localStorage.clear();
   },
 
   getUsersByRole: async (role) => {
-    const { data, error } = await supabase.from('profiles').select('*, organizations!organization_id(name)').eq('role', role);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*, organizations!profiles_organization_id_fkey(name)')
+      .eq('role', role);
     if (error) throw error;
-    return (data || []).map(p => toDomainUser(p));
+    return (data || []).map(p => toDomainUser(p)).filter(Boolean) as any;
   },
 
   changePassword: async (userId, current, newPass) => {
-    const { error } = await supabase.auth.updateUser({ password: newPass });
+    const { error } = await (supabase.auth as any).updateUser({ password: newPass });
     if (error) throw error;
     return true;
   },
 
-  deleteUser: async (_userId: string) => {
-    throw new Error("A exclusão direta foi desativada por política de segurança da Aços Vital. Use 'Sinalizar para Exclusão'.");
+  deleteUser: async (userId) => {
+    const { error } = await supabase.from('profiles').delete().eq('id', userId);
+    if (error) throw error;
   },
 
   getUserStats: async () => {

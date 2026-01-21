@@ -1,40 +1,12 @@
 
 import { supabase } from '../supabaseClient.ts';
-import { User, AuditLog } from '../../types/index';
+import { User, AuditLog } from '../../types/index.ts';
 
 /**
- * Tenta obter o IP público do cliente. 
- * Nota: Em produção, isso geralmente é feito via Headers no Backend (Edge Functions),
- * mas para um MVP frontend-only, usamos um lookup externo.
+ * Registro de Auditoria B2B - Aços Vital
+ * Implementa persistência de ações críticas para conformidade técnica.
+ * O IP agora é capturado diretamente pelo banco de dados para maior precisão forense.
  */
-const getClientIp = async (): Promise<string> => {
-    try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        return data.ip;
-    } catch (e) {
-        return '0.0.0.0 (Local/Proxy)';
-    }
-};
-
-const getDeviceAndLocation = () => {
-    const userAgent = navigator.userAgent;
-    let device = 'Desktop';
-    if (/Mobi|Android/i.test(userAgent)) device = 'Mobile';
-    if (/Tablet|iPad/i.test(userAgent)) device = 'Tablet';
-    
-    // Simplificação para o MVP
-    const platform = navigator.platform;
-    const language = navigator.language;
-
-    return { 
-        userAgent, 
-        device, 
-        location: `Inferred (${language}/${platform})`,
-        details: { platform, language }
-    };
-};
-
 export const logAction = async (
     user: User | null, 
     action: string, 
@@ -45,10 +17,11 @@ export const logAction = async (
     metadata: Record<string, any> = {}
 ) => {
     try {
-        const { userAgent, device, location, details } = getDeviceAndLocation();
-        const ip = await getClientIp();
-        const requestId = crypto.randomUUID();
-
+        const userAgent = navigator.userAgent;
+        const requestId = crypto.randomUUID().split('-')[0].toUpperCase();
+        
+        // Enviamos o log sem o campo IP para que o banco utilize o valor default 
+        // ou capturado via trigger (ex: request.headers() no Supabase/Postgres)
         await supabase.from('audit_logs').insert({
             user_id: user?.id || null,
             action,
@@ -56,19 +29,39 @@ export const logAction = async (
             category,
             severity,
             status,
-            ip,
-            location,
             user_agent: userAgent,
-            device,
-            metadata: { 
-                userName: user?.name || 'Sistema/Anônimo', 
-                userRole: user?.role || 'SYSTEM', 
-                browserDetails: details,
-                ...metadata 
-            },
             request_id: requestId,
+            metadata: { 
+                userName: user?.name || 'Sistema', 
+                userRole: user?.role || 'SYSTEM',
+                ...metadata 
+            }
         });
     } catch (e) {
-        console.error("Erro crítico ao registrar log de auditoria:", e);
+        console.error("Falha crítica no sistema de auditoria:", e);
+    }
+};
+
+/**
+ * Log específico de acesso a arquivos para rastreabilidade de certificados.
+ */
+export const logFileAccess = async (user: User, fileId: string, fileName: string, type: 'VIEW' | 'DOWNLOAD') => {
+    try {
+        await supabase.from('file_access_history').insert({
+            file_id: fileId,
+            user_id: user.id,
+            access_type: type,
+            metadata: {
+                fileName,
+                userName: user.name,
+                orgId: user.organizationId,
+                userAgent: navigator.userAgent
+            }
+        });
+
+        // Também registra no log de auditoria global
+        await logAction(user, `FILE_${type}`, fileName, 'DATA', 'INFO', 'SUCCESS', { fileId });
+    } catch (e) {
+        console.error("Erro ao registrar acesso ao arquivo:", e);
     }
 };

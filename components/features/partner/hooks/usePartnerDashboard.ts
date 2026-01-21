@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../context/authContext.tsx';
 import { partnerService } from '../../../../lib/services/index.ts';
@@ -11,17 +12,21 @@ export const usePartnerDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
-    if (!user?.organizationId) return;
-    setIsLoading(true);
+    if (!user?.organizationId) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const [statsRes, filesRes] = await Promise.all([
         partnerService.getPartnerDashboardStats(user.organizationId),
         partnerService.getRecentActivity(user.organizationId)
       ]);
+      
       setStats(statsRes);
-      setRecentFiles(filesRes);
+      setRecentFiles(filesRes || []);
     } catch (error) {
-      console.error("[PartnerDashboard] Sync Error:", error);
+      console.error("Falha ao carregar dashboard do parceiro:", error);
     } finally {
       setIsLoading(false);
     }

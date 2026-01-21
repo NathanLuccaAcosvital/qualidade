@@ -1,4 +1,3 @@
-
 import { pt } from './pt.ts';
 
 export const es: typeof pt = {
@@ -128,7 +127,23 @@ export const es: typeof pt = {
     errorLoadingClients: "Error al recuperar datos de la cartera.",
     errorLoadingQualityData: "Fallo en la sincronización de indicadores de calidad.",
     noQualityLogsFound: "No se detectaron registros de auditoría técnica.",
-    invalidConfirmationCredentials: "Error en la autenticación de confirmación."
+    invalidConfirmationCredentials: "Error en la autenticación de confirmación.",
+    // Fix: Added missing properties for quality workflow
+    releaseTransmission: "Liberar Transmisión",
+    releaseTransmissionSuccess: "Transmisión liberada al cliente.",
+    contestVerdict: "Contestar Veredicto",
+    contestVerdictSuccess: "Contestación enviada al cliente.",
+    contestedBanner: "Veredito en Disputa. Contacte al analista por correo.",
+    releasedBy: "Liberado por",
+    documentalCheck: "Control Documental",
+    physicalCheck: "Control Físico",
+    technicalObservations: "Observaciones Técnicas",
+    flagsPlaceholder: "Añadir marcador...",
+    approve: "Aprobar",
+    reject: "Rechazar",
+    uploadEvidence: "Subir Evidencia",
+    dragAndDrop: "Arrastre y suelte imágenes de evidencia aquí",
+    inspectionLocked: "Esperando liberación de Calidad"
   },
   roles: {
     ADMIN: "Administrador del Sistema",

@@ -1,3 +1,4 @@
+
 import { ID, ISO8601Date, CNPJ } from './common.ts';
 import { UserRole, AccountStatus, SystemMode } from './enums.ts';
 
@@ -38,4 +39,5 @@ export interface ClientOrganization {
   lastAnalysisDate?: ISO8601Date;
   qualityAnalystId?: ID;
   qualityAnalystName?: string;
+  isPendingDeletion?: boolean;
 }

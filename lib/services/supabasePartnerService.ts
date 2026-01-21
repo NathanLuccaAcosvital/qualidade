@@ -1,36 +1,36 @@
-
-import { IPartnerService, PaginatedResponse, DashboardStatsData } from './interfaces.ts';
+import { IPartnerService, DashboardStatsData } from './interfaces.ts';
 import { supabase } from '../supabaseClient.ts';
-import { FileNode, QualityStatus, FileType, User } from '../../types/index.ts';
+import { QualityStatus, User, UserRole } from '../../types/index.ts';
 import { logAction } from './loggingService.ts';
-
-const toDomainFile = (row: any): FileNode => ({
-  id: row.id,
-  parentId: row.parent_id,
-  name: row.name,
-  type: row.type as FileType,
-  size: row.size,
-  updatedAt: row.updated_at,
-  ownerId: row.owner_id,
-  storagePath: row.storage_path,
-  isFavorite: !!row.is_favorite,
-  metadata: row.metadata 
-});
+import { toDomainFile } from '../mappers/fileMapper.ts';
 
 export const SupabasePartnerService: IPartnerService = {
   getCertificates: async (orgId, folderId, search) => {
+    if (!orgId) throw new Error("ID da Organização ausente no perfil do usuário.");
+
     let query = supabase
       .from('files')
-      .select('*', { count: 'exact' })
+      .select('*, profiles:uploaded_by(full_name)', { count: 'exact' })
       .eq('owner_id', orgId);
 
-    if (folderId) query = query.eq('parent_id', folderId);
-    else query = query.is('parent_id', null);
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    } else {
+      if (folderId) {
+        query = query.eq('parent_id', folderId);
+      } else {
+        query = query.is('parent_id', null);
+      }
+    }
 
-    if (search) query = query.ilike('name', `%${search}%`);
+    const { data, count, error } = await query
+      .order('type', { ascending: true }) // FOLDER vem antes de PDF/IMAGE
+      .order('name', { ascending: true });
 
-    const { data, count, error } = await query.order('name');
-    if (error) throw error;
+    if (error) {
+      console.error("Erro Supabase getCertificates:", error.message);
+      throw error;
+    }
 
     return {
       items: (data || []).map(toDomainFile),
@@ -40,124 +40,112 @@ export const SupabasePartnerService: IPartnerService = {
   },
 
   getComplianceOverview: async (orgId) => {
-    const { data: files, error } = await supabase
+    if (!orgId) return { approvedCount: 0, rejectedCount: 0, unviewedCount: 0, lastAnalysis: new Date().toISOString() };
+
+    const { data: stats, error } = await supabase
       .from('files')
-      .select('metadata')
+      .select('metadata->>status, updated_at')
       .eq('owner_id', orgId)
       .neq('type', 'FOLDER');
 
-    if (error) throw error;
+    if (error) return { approvedCount: 0, rejectedCount: 0, unviewedCount: 0, lastAnalysis: new Date().toISOString() };
 
-    const approvedCount = files?.filter(f => f.metadata?.status === QualityStatus.APPROVED).length || 0;
-    const rejectedCount = files?.filter(f => f.metadata?.status === QualityStatus.REJECTED).length || 0;
-    
-    // DOCUMENTOS NOVOS: Aprovados mas ainda não visualizados pelo cliente
-    const unviewedCount = files?.filter(f => 
-        f.metadata?.status === QualityStatus.APPROVED && !f.metadata?.viewedAt
-    ).length || 0;
+    const timestamps = stats.map(f => new Date(f.updated_at).getTime());
+    const latest = timestamps.length > 0 ? Math.max(...timestamps) : Date.now();
 
     return {
-      approvedCount,
-      rejectedCount,
-      unviewedCount,
-      lastAnalysis: new Date().toISOString()
+      approvedCount: stats.filter(s => s.status === QualityStatus.APPROVED).length,
+      rejectedCount: stats.filter(s => s.status === QualityStatus.REJECTED).length,
+      unviewedCount: stats.filter(s => !s.viewedAt).length,
+      lastAnalysis: new Date(latest).toISOString()
     } as any;
   },
 
   getRecentActivity: async (orgId) => {
-    // Garantindo que APENAS arquivos apareçam (exclui pastas da timeline)
+    if (!orgId) return [];
     const { data, error } = await supabase
       .from('files')
-      .select('*')
+      .select('*, profiles:uploaded_by(full_name)')
       .eq('owner_id', orgId)
       .neq('type', 'FOLDER')
       .order('updated_at', { ascending: false })
       .limit(5);
-    if (error) throw error;
+    
     return (data || []).map(toDomainFile);
   },
 
   getPartnerDashboardStats: async (orgId): Promise<DashboardStatsData> => {
-    const { data: files, error } = await supabase
+    if (!orgId) {
+      return { mainValue: 0, subValue: 0, pendingValue: 0, status: 'REGULAR', mainLabel: 'Certificados', subLabel: 'Aprovados' };
+    }
+
+    const { data, error } = await supabase
       .from('files')
-      .select('metadata')
-      .eq('owner_id', orgId)
-      .neq('type', 'FOLDER');
+      .select('id, type, metadata, updated_at')
+      .eq('owner_id', orgId);
 
-    if (error) throw error;
+    if (error || !data) {
+       return { mainValue: 0, subValue: 0, pendingValue: 0, status: 'REGULAR', mainLabel: 'Certificados', subLabel: 'Aprovados' };
+    }
 
-    const total = files?.length || 0;
-    const approved = files?.filter(f => f.metadata?.status === QualityStatus.APPROVED).length || 0;
-    const rejected = files?.filter(f => f.metadata?.status === QualityStatus.REJECTED).length || 0;
-    const unviewed = files?.filter(f => f.metadata?.status === QualityStatus.APPROVED && !f.metadata?.viewedAt).length || 0;
-
-    // Ação Requerida = Itens que precisam de atenção do cliente (Novos + Contestados)
-    const totalActions = rejected + unviewed;
+    const filesOnly = data.filter(f => f.type !== 'FOLDER');
+    const approved = filesOnly.filter(f => f.metadata?.status === QualityStatus.APPROVED).length;
+    const pending = filesOnly.filter(f => f.metadata?.status === QualityStatus.PENDING || !f.metadata?.status).length;
+    
+    // Calcula a última sincronização baseada no arquivo mais recente
+    const timestamps = data.map(f => new Date(f.updated_at).getTime());
+    const latestSync = timestamps.length > 0 ? Math.max(...timestamps) : Date.now();
 
     return {
-      mainValue: total,
+      mainValue: filesOnly.length,
       subValue: approved,
-      pendingValue: totalActions,
-      unviewedCount: unviewed,
-      rejectedCount: rejected,
-      status: totalActions > 0 ? 'CRITICAL' : 'REGULAR',
-      mainLabel: 'Certificados Recebidos',
-      subLabel: 'Aprovados em Compliance',
-      lastAnalysis: new Date().toISOString()
+      pendingValue: pending,
+      status: pending > 0 ? 'PENDING' : 'REGULAR',
+      mainLabel: 'Certificados Totais',
+      subLabel: 'Validados',
+      lastAnalysis: new Date(latestSync).toISOString()
     };
   },
 
-  logFileView: async (user: User, file: FileNode) => {
-    if (file.metadata?.viewedAt) return;
+  logFileView: async (user, file) => {
+    if (user.role === UserRole.CLIENT) {
+        try {
+            const now = new Date().toISOString();
+            const { data: currentFile } = await supabase.from('files').select('metadata').eq('id', file.id).single();
+            
+            const updatedMetadata = {
+                ...(currentFile?.metadata || {}),
+                viewedAt: now,
+                lastClientInteractionAt: now,
+                lastClientInteractionBy: user.name
+            };
 
-    const updatedMetadata = {
-      ...file.metadata,
-      viewedAt: new Date().toISOString(),
-      viewedBy: user.name
-    };
+            await supabase.from('files')
+                .update({ metadata: updatedMetadata })
+                .eq('id', file.id);
+        } catch (e) {
+            console.error("Falha ao atualizar timestamp de visualização:", e);
+        }
+    }
 
-    const { error } = await supabase.from('files').update({ metadata: updatedMetadata }).eq('id', file.id);
-    if (error) return;
-    
-    await logAction(user, 'FILE_VIEWED_BY_CLIENT', file.name, 'DATA', 'INFO', 'SUCCESS', { 
-      fileId: file.id,
-      orgId: user.organizationId
-    });
+    await logAction(user, 'CLIENT_FILE_VIEW', file.name, 'DATA', 'INFO', 'SUCCESS', { fileId: file.id });
   },
 
-  submitClientFeedback: async (user: User, file: FileNode, status: QualityStatus, observations?: string, flags?: string[], annotations?: any[]) => {
-    const updatedMetadata = {
-      ...file.metadata,
-      status,
-      clientObservations: observations,
-      clientFlags: flags,
-      lastClientInteractionAt: new Date().toISOString(),
-      lastClientInteractionBy: user.name
-    };
-
-    const { error: fileUpdateError } = await supabase.from('files').update({ metadata: updatedMetadata }).eq('id', file.id);
-    if (fileUpdateError) throw fileUpdateError;
-
-    const { error: reviewError } = await supabase.from('file_reviews').insert({
+  submitClientFeedback: async (user, file, status, observations, flags, annotations) => {
+    const { error } = await supabase.from('file_reviews').insert({
       file_id: file.id,
       author_id: user.id,
       status: status,
       annotations: {
-        drawings: annotations || [],
-        flags: flags || [],
         observations: observations || "",
+        flags: flags || [],
+        drawings: annotations || [],
         client_name: user.name,
         timestamp: new Date().toISOString()
       }
     });
 
-    if (reviewError) console.error("Falha ao registrar revisão detalhada:", reviewError);
-
-    const actionName = status === QualityStatus.APPROVED ? 'CLIENT_APPROVED_FILE' : 
-                       status === QualityStatus.REJECTED ? 'CLIENT_REJECTED_FILE' : 'CLIENT_MARKED_TO_DELETE';
-
-    await logAction(user, actionName, file.name, 'DATA', status === QualityStatus.REJECTED ? 'WARNING' : 'INFO', 'SUCCESS', {
-        review_id: !reviewError ? "ok" : "fail"
-    });
+    if (error) throw error;
+    await logAction(user, `REVIEW_SUBMITTED_${status}`, file.name, 'DATA', 'INFO', 'SUCCESS');
   }
 };

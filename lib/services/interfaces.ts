@@ -1,3 +1,4 @@
+
 import { 
   User, 
   ClientOrganization,
@@ -9,7 +10,8 @@ import {
   QualityStatus,
   BreadcrumbItem,
   UserRole,
-  AccountStatus
+  AccountStatus,
+  SteelBatchMetadata
 } from '../../types/index.ts';
 
 // Interface para estatísticas do dashboard administrativo
@@ -74,13 +76,15 @@ export interface PaginatedResponse<T> {
  * SERVIÇO DE INFRAESTRUTURA (STORAGE & BASE FILES)
  */
 export interface IFileService {
-  getRawFiles: (folderId: string | null, page?: number, pageSize?: number, searchTerm?: string) => Promise<PaginatedResponse<FileNode>>;
+  getRawFiles: (folderId: string | null, page?: number, pageSize?: number, searchTerm?: string, ownerId?: string) => Promise<PaginatedResponse<FileNode>>;
   getFiles: (user: User, folderId: string | null, page?: number, pageSize?: number, searchTerm?: string) => Promise<PaginatedResponse<FileNode>>;
+  getFile: (user: User, fileId: string) => Promise<FileNode>;
   createFolder: (user: User, parentId: string | null, name: string, ownerId?: string) => Promise<FileNode>;
   uploadFile: (user: User, fileData: any, ownerId: string) => Promise<FileNode>;
   deleteFile: (user: User, fileIds: string[]) => Promise<void>;
   deleteFiles: (fileIds: string[]) => Promise<void>;
   renameFile: (user: User, fileId: string, newName: string) => Promise<void>;
+  updateFileMetadata: (fileId: string, metadata: Partial<SteelBatchMetadata>) => Promise<void>;
   getBreadcrumbs: (user: User, folderId: string | null) => Promise<BreadcrumbItem[]>;
   getSignedUrl: (path: string) => Promise<string>;
   getFileSignedUrl: (user: User, fileId: string) => Promise<string>;
@@ -100,7 +104,8 @@ export interface IQualityService {
   getTechnicalAuditLogs: (analystId: string, filters?: { search?: string; severity?: string }) => Promise<AuditLog[]>;
   getPortfolioFileExplorer: (analystId: string, folderId: string | null) => Promise<PaginatedResponse<FileNode>>;
   getManagedClients: (analystId: string, filters: { search?: string; status?: string }, page?: number) => Promise<PaginatedResponse<ClientOrganization>>;
-  submitVeredict: (user: User, file: FileNode, status: QualityStatus, reason?: string) => Promise<void>;
+  submitVeredict: (user: User, file: FileNode, updates: Partial<SteelBatchMetadata>) => Promise<void>;
+  saveInspectionSnapshot: (fileId: string, user: User, metadata: SteelBatchMetadata) => Promise<void>;
 }
 
 /**
@@ -126,9 +131,10 @@ export interface IAdminService {
   getClients: (filters?: { search?: string; status?: string }, page?: number, pageSize?: number) => Promise<PaginatedResponse<ClientOrganization>>;
   saveClient: (user: User, data: Partial<ClientOrganization>) => Promise<ClientOrganization>;
   deleteClient: (user: User, id: string) => Promise<void>;
+  flagClientForDeletion: (user: User, clientId: string) => Promise<void>;
   scheduleMaintenance: (user: User, event: Partial<MaintenanceEvent>) => Promise<MaintenanceEvent>;
   updateGatewayMode: (user: User, mode: SystemStatus['mode']) => Promise<void>;
-  getGlobalAuditLogs: () => Promise<AuditLog[]>;
+  getGlobalAuditLogs: (user: User) => Promise<AuditLog[]>;
   manageUserAccess: (admin: User, targetUser: Partial<User>) => Promise<void>;
   getAllClients: () => Promise<ClientOrganization[]>;
   generateSystemBackup: (user: User) => Promise<{ blob: Blob, fileName: string }>;

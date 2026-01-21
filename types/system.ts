@@ -1,4 +1,3 @@
-
 export interface AuditLog {
   id: string;
   timestamp: string;
@@ -11,32 +10,33 @@ export interface AuditLog {
   severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
   status: 'SUCCESS' | 'FAILURE';
   ip: string | null;
-  location: string;
-  userAgent: string;
-  device: string;
+  location?: string;
+  userAgent?: string;
   metadata: Record<string, any>;
   requestId: string;
 }
 
-export interface AppNotification {
+export interface FileAccessRecord {
   id: string;
-  userId?: string | null; // Pode ser null para notificações globais
-  title: string;
-  message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT'; // DB tem default, então sempre será um desses
-  isRead: boolean; // DB tem default, então sempre será boolean
-  timestamp: string; // DB tem default, então sempre será string
-  link?: string;
+  fileId: string;
+  fileName: string;
+  userId: string;
+  userName: string;
+  accessType: 'VIEW' | 'DOWNLOAD' | 'ANNOTATE';
+  timestamp: string;
+  ip: string;
+  userAgent: string;
 }
 
-export interface MaintenanceEvent {
+export interface AppNotification {
   id: string;
+  userId?: string | null;
   title: string;
-  scheduledDate: string;
-  durationMinutes: number;
-  description: string;
-  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
-  createdBy: string;
+  message: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
+  isRead: boolean;
+  timestamp: string;
+  link?: string;
 }
 
 export interface SystemStatus {
@@ -47,23 +47,12 @@ export interface SystemStatus {
     updatedBy?: string;
 }
 
-export interface NetworkPort {
-  port: number;
-  service: string;
-  protocol: 'TCP' | 'UDP';
-  status: 'OPEN' | 'CLOSED' | 'FILTERED';
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  exposedTo: 'PUBLIC' | 'INTERNAL' | 'VPN';
-}
-
-export interface FirewallRule {
+export interface MaintenanceEvent {
   id: string;
-  name: string;
-  type: 'INBOUND' | 'OUTBOUND';
-  protocol: 'TCP' | 'UDP' | 'ANY';
-  port: string;
-  source: string;
-  action: 'ALLOW' | 'DENY';
-  active: boolean;
-  priority: number;
+  title: string;
+  scheduledDate: string;
+  durationMinutes: number;
+  description: string;
+  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  createdBy: string;
 }

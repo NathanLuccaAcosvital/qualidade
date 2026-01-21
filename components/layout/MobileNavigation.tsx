@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { getBottomNavItems, getUserMenuItems } from '../../config/navigation.ts';
 import { User, UserRole, normalizeRole } from '../../types/index.ts';
-import { LogoutConfirmation } from './Sidebar.tsx';
+// Fix: Corrected import source for LogoutConfirmation to its actual component file
+import { LogoutConfirmation } from './components/LogoutConfirmation.tsx';
 
 interface MobileNavProps {
   user: User | null;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -61,23 +60,12 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, title, act
           onLogout={logout}
           onOpenMobileMenu={layout.openMobileMenu} 
           onNavigateBack={handleNavigateBack} 
-          variant="blue"
         />
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 custom-scrollbar relative flex flex-col pb-20">
-          <div className="max-w-[1400px] w-full mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1">
+        <main className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
             {children}
           </div>
-
-          <footer className="max-w-[1400px] w-full mx-auto mt-12 mb-4 px-4 py-10 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16 opacity-60">
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-bold uppercase tracking-[4px] text-slate-500">{t('login.monitoring')}</span>
-              </div>
-              <div className="text-[10px] md:text-[11px] lg:text-[12px] xl:text-[13px] font-bold uppercase tracking-[4px] text-slate-500">
-                © {new Date().getFullYear()} {t('menu.brand').toUpperCase()}
-              </div>
-          </footer>
         </main>
 
         <MobileNavigation 

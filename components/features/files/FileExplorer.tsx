@@ -1,9 +1,8 @@
-
-import React, { useState, forwardRef, useImperativeHandle } from 'react'; 
-import { Loader2, FileText, Download, Trash2, Edit2, LayoutGrid, List } from 'lucide-react';
+import React, { forwardRef, useImperativeHandle } from 'react'; 
 import { useTranslation } from 'react-i18next';
-import { FileNode, FileType, BreadcrumbItem, UserRole } from '../../../types/index.ts';
+import { FileNode, BreadcrumbItem, UserRole } from '../../../types/index.ts';
 import { FileListView, FileGridView } from './components/FileViews.tsx';
+import { LoadingState, EmptyState } from './components/ExplorerStates.tsx';
 
 export interface FileExplorerHandle {
     clearSelection: () => void;
@@ -17,7 +16,7 @@ interface FileExplorerProps {
   breadcrumbs: BreadcrumbItem[];
   selectedFileIds: string[];
   viewMode: 'grid' | 'list';
-  userRole: UserRole; // Adicionada a prop userRole
+  userRole: UserRole;
   
   onNavigate: (folderId: string | null) => void; 
   onFileSelectForPreview: (file: FileNode | null) => void; 
@@ -28,10 +27,6 @@ interface FileExplorerProps {
   onDeleteFile: (fileId: string) => void;
 }
 
-/**
- * FileExplorer (Pure Display Component)
- * Responsável por renderizar a lista de arquivos e pastas, e suas ações.
- */
 export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((props, ref) => {
   const { t } = useTranslation();
   const { 
@@ -39,15 +34,15 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
     onFileSelectForPreview, 
     selectedFileIds, onToggleFileSelection,
     onDownloadFile, onRenameFile, onDeleteFile, viewMode,
-    userRole // Recebe userRole
+    userRole
   } = props;
 
   useImperativeHandle(ref, () => ({
-      clearSelection: () => {} // Implementar lógica de limpeza se necessário
+      clearSelection: () => {} 
   }));
 
-  if (loading) return <LoadingState t={t} />;
-  if (files.length === 0) return <EmptyState t={t} />;
+  if (loading && files.length === 0) return <LoadingState message="Acessando Cluster Industrial..." />;
+  if (!loading && files.length === 0) return <EmptyState t={t} />;
 
   const viewProps = {
     files,
@@ -58,33 +53,26 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>((p
     onDownload: onDownloadFile,
     onRename: onRenameFile,
     onDelete: onDeleteFile,
-    userRole: userRole, // Passa userRole para as views
+    userRole,
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-      {viewMode === 'list' ? (
-        <FileListView {...viewProps} />
-      ) : (
-        <FileGridView {...viewProps} />
-      )}
+    <div className="w-full h-full overflow-y-auto custom-scrollbar bg-slate-50/50">
+      <div className="p-4 md:p-6 lg:p-8 min-h-full">
+        <div className="max-w-[1800px] mx-auto pb-40">
+          {viewMode === 'list' ? (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <FileListView {...viewProps} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
+              <FileGridView {...viewProps} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 });
-
-const LoadingState = ({ t }: { t: any }) => (
-  <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[300px]">
-    <Loader2 size={32} className="animate-spin text-[var(--color-detail-blue)]" />
-    <span className="text-[10px] font-black uppercase tracking-[4px]">{t('common.loading')}</span>
-  </div>
-);
-
-const EmptyState = ({ t }: { t: any }) => (
-  <div className="h-full flex flex-col items-center justify-center text-slate-300 italic py-20 min-h-[300px]">
-    <FileText size={48} className="opacity-10 mb-4" />
-    <p className="font-semibold text-sm text-slate-600">{t('files.noResultsFound')}</p>
-    <p className="text-xs text-slate-400 mt-2">{t('files.typeToSearch')}</p>
-  </div>
-);
 
 FileExplorer.displayName = 'FileExplorer';

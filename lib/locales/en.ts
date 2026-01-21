@@ -1,4 +1,3 @@
-
 import { pt } from './pt.ts';
 
 export const en: typeof pt = {
@@ -128,7 +127,23 @@ export const en: typeof pt = {
     errorLoadingClients: "Failed to retrieve portfolio data.",
     errorLoadingQualityData: "Quality indicator synchronization failed.",
     noQualityLogsFound: "No technical audit logs detected.",
-    invalidConfirmationCredentials: "Authentication for confirmation failed."
+    invalidConfirmationCredentials: "Authentication for confirmation failed.",
+    // Fix: Added missing properties for quality workflow
+    releaseTransmission: "Release Transmission",
+    releaseTransmissionSuccess: "Transmission released to client.",
+    contestVerdict: "Contest Verdict",
+    contestVerdictSuccess: "Contest sent to client.",
+    contestedBanner: "Verdict under contest. Contact the analyst via email.",
+    releasedBy: "Released by",
+    documentalCheck: "Documental Check",
+    physicalCheck: "Physical Check",
+    technicalObservations: "Technical Observations",
+    flagsPlaceholder: "Add flag...",
+    approve: "Approve",
+    reject: "Reject",
+    uploadEvidence: "Upload Evidence",
+    dragAndDrop: "Drag and drop evidence images here",
+    inspectionLocked: "Awaiting Quality release"
   },
   roles: {
     ADMIN: "System Administrator",

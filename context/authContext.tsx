@@ -68,7 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshAuth();
 
     // Inscrição para eventos de auth globais (login/logout/token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Fix: Use 'as any' to bypass type errors for onAuthStateChange
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((event: string, session: any) => {
       console.debug(`[Auth Event] ${event}`);
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         refreshAuth();

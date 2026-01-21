@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +21,7 @@ const ClientPage: React.FC = () => {
 
   return (
     <ClientLayout 
-      title={activeView === 'home' ? "Dashboard do Parceiro" : "Biblioteca de Ativos"} 
+      title={activeView === 'home' ? "Dashboard do Parceiro" : "Biblioteca de arquivos"} 
       activeView={activeView} 
       onViewChange={handleViewChange}
     >

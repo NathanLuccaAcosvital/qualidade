@@ -4,6 +4,7 @@ import { fileService } from '../../../../lib/services/index.ts';
 import { useToast } from '../../../../context/notificationContext.tsx';
 import { useTranslation } from 'react-i18next';
 import { FileNode, BreadcrumbItem, UserRole, FileType } from '../../../../types/index.ts';
+import { SupabaseFileService } from '../../../../lib/services/supabaseFileService.ts';
 
 interface FileExplorerOptions {
   currentFolderId: string | null;
@@ -26,6 +27,10 @@ interface UseFileExplorerReturn {
   handleRenameFile: (fileId: string, newName: string) => Promise<void>;
 }
 
+/**
+ * useFileExplorer (Power Hook)
+ * Centraliza toda a orquestração de arquivos para qualquer perfil de usuário.
+ */
 export const useFileExplorer = (options: FileExplorerOptions): UseFileExplorerReturn => {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -49,26 +54,27 @@ export const useFileExplorer = (options: FileExplorerOptions): UseFileExplorerRe
     if (resetPage) setFiles([]); 
 
     try {
-      const [fileResult, breadcrumbResult] = await Promise.all([
-        fileService.getFiles(user, activeFolderId, currentPage, 100, options.searchTerm),
-        fileService.getBreadcrumbs(user, activeFolderId)
-      ]);
+      let fileResult;
+      
+      // Decisão de contexto: Qualidade (Global/Específico) ou Cliente
+      if (user.role !== UserRole.CLIENT && options.ownerId && options.ownerId !== 'global') {
+          fileResult = await SupabaseFileService.getRawFiles(activeFolderId, currentPage, 100, options.searchTerm, options.ownerId);
+      } else {
+          fileResult = await fileService.getFiles(user, activeFolderId, currentPage, 100, options.searchTerm);
+      }
+
+      const breadcrumbResult = await fileService.getBreadcrumbs(user, activeFolderId);
       
       if (currentFetchId !== fetchIdRef.current) return;
 
-      let items = fileResult.items;
-      
-      if (options.ownerId && options.ownerId !== 'global') {
-          items = items.filter(f => f.ownerId === options.ownerId);
-      }
-
+      const items = fileResult.items;
       setFiles(prev => resetPage ? items : [...prev, ...items]);
       setHasMore(fileResult.hasMore);
       setPage(currentPage);
       setBreadcrumbs(breadcrumbResult);
-    } catch (err: unknown) {
+    } catch (err: any) {
       if (currentFetchId === fetchIdRef.current) {
-        console.error("[useFileExplorer] Failure:", err);
+        console.error("[useFileExplorer] Sync Failure:", err.message);
         showToast(t('files.errorLoadingFiles'), 'error');
       }
     } finally {
@@ -84,28 +90,30 @@ export const useFileExplorer = (options: FileExplorerOptions): UseFileExplorerRe
   }, []);
 
   const handleUploadFile = useCallback(async (fileBlob: File, fileName: string, parentId: string | null) => {
-    // Define o owner alvo baseado na pasta atual ou contexto da página
-    const targetOwnerId = options.ownerId && options.ownerId !== 'global' ? options.ownerId : user?.organizationId;
+    const targetOwnerId = (options.ownerId && options.ownerId !== 'global') 
+      ? options.ownerId 
+      : (user?.role === UserRole.CLIENT ? user.organizationId : null);
 
     if (!user || !targetOwnerId) {
         showToast(t('files.upload.noOrgLinked'), 'error');
         return;
     }
+
     setLoading(true);
     try {
         await fileService.uploadFile(user, {
             name: fileName,
             fileBlob: fileBlob,
-            parentId: parentId, // Garante que o arquivo seja salvo na pasta de destino onde o usuário clicou
+            parentId: parentId,
             type: fileBlob.type.startsWith('image/') ? FileType.IMAGE : FileType.PDF,
             size: `${(fileBlob.size / 1024 / 1024).toFixed(2)} MB`,
             mimeType: fileBlob.type
         }, targetOwnerId);
+        
         showToast(t('files.upload.success'), 'success');
-        // Força o recarregamento da pasta atual para mostrar o novo arquivo
         await fetchFiles(true);
     } catch (err: any) {
-        showToast(err.message || t('files.errorLoadingFiles'), 'error');
+        showToast(err.message, 'error');
     } finally {
         setLoading(false);
     }
@@ -113,18 +121,19 @@ export const useFileExplorer = (options: FileExplorerOptions): UseFileExplorerRe
 
   const handleCreateFolder = useCallback(async (folderName: string, parentId: string | null) => {
     const targetOwnerId = options.ownerId && options.ownerId !== 'global' ? options.ownerId : user?.organizationId;
-
-    if (!user || !targetOwnerId) {
-      showToast(t('files.createFolder.noOrgLinked'), 'error');
-      return;
+    
+    if (!user || (!targetOwnerId && user.role === UserRole.CLIENT)) {
+        showToast(t('files.createFolder.noOrgLinked'), "error");
+        return;
     }
+
     setLoading(true);
     try {
-      await fileService.createFolder(user, parentId, folderName, targetOwnerId);
+      await fileService.createFolder(user, parentId, folderName, targetOwnerId || undefined);
       showToast(t('files.createFolder.success'), 'success');
       await fetchFiles(true);
     } catch (err: any) {
-      showToast(err.message || t('files.errorLoadingFiles'), 'error');
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -138,7 +147,7 @@ export const useFileExplorer = (options: FileExplorerOptions): UseFileExplorerRe
       showToast(t('files.delete.success'), 'success');
       await fetchFiles(true);
     } catch (err: any) {
-      showToast(err.message || t('files.errorLoadingFiles'), 'error');
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -152,14 +161,17 @@ export const useFileExplorer = (options: FileExplorerOptions): UseFileExplorerRe
       showToast(t('files.rename.success'), 'success');
       await fetchFiles(true);
     } catch (err: any) {
-      showToast(err.message || t('files.errorLoadingFiles'), 'error');
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
   }, [user, showToast, t, fetchFiles]);
 
   useEffect(() => {
-    fetchFiles(true);
+    const timer = setTimeout(() => {
+        fetchFiles(true);
+    }, 150); // Debounce de segurança
+    return () => clearTimeout(timer);
   }, [activeFolderId, options.refreshKey, options.searchTerm, fetchFiles]);
 
   return {

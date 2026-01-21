@@ -1,128 +1,109 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, ArrowLeft, Settings } from 'lucide-react'; 
+import { useLocation } from 'react-router-dom';
+import { Bell, ArrowLeft } from 'lucide-react'; 
 import { User, UserRole } from '../../types/index.ts';
 import { LanguageSelector } from '../features/auth/login/LanguageSelector.tsx'; 
 import { NotificationsDropdown } from '../features/notifications/NotificationsDropdown.tsx';
-
-const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
+import { useNotifications } from '../features/notifications/hooks/useNotifications.ts';
 
 interface HeaderProps {
   title: string;
   user: User | null;
   role: UserRole;
-  unreadCount: number;
+  unreadCount: number; // Mantido por compatibilidade, mas o hook local agora tem precedência
   onLogout: () => void;
   onOpenMobileMenu: () => void; 
   onNavigateBack: () => void; 
-  variant?: 'white' | 'blue';
 }
 
+const LOGO_URL = "https://wtydnzqianhahiiasows.supabase.co/storage/v1/object/public/public_assets/hero/logo.png";
+const CORPORATE_BLUE_FILTER = "brightness(0) saturate(100%) invert(8%) sepia(35%) saturate(5833%) hue-rotate(222deg) brightness(95%) contrast(106%)";
+
 export const Header: React.FC<HeaderProps> = ({ 
-  title, user, role, unreadCount, onLogout, onOpenMobileMenu, 
-  onNavigateBack, variant = 'white'
+  title, user, role, onOpenMobileMenu, onNavigateBack
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  
-  const [isNotificationsDropdownOpen, setIsNotificationsDropdownOpen] = useState(false);
-  const toggleNotificationsDropdown = () => setIsNotificationsDropdownOpen(prev => !prev);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { unreadCount } = useNotifications(); // Sincronia perfeita
 
-  const isDashboard = ['/admin/dashboard', '/quality/dashboard', '/client/dashboard'].includes(location.pathname.split('?')[0]);
-
-  const desktopHeaderBgClass = variant === 'blue' ? 'bg-[var(--color-primary-dark-blue)] text-white' : 'bg-white';
-  const desktopTitleClass = variant === 'blue' ? 'text-white' : 'text-slate-800';
-  const desktopSubtitleClass = variant === 'blue' ? 'text-slate-400' : 'text-slate-400';
-  const desktopRoleClass = variant === 'blue' ? 'text-[#b23c0e]' : 'text-[#b23c0e]';
-  const desktopPipeClass = variant === 'blue' ? 'opacity-30' : 'opacity-30';
-  const desktopOrgClass = variant === 'blue' ? 'text-slate-300' : 'text-slate-400';
-  const desktopNotificationClass = variant === 'blue' ? 'text-slate-300 hover:text-[#b23c0e]' : 'text-slate-400 hover:text-[#b23c0e]';
+  const isDashboard = ['/admin/dashboard', '/quality/dashboard', '/client/portal'].includes(location.pathname.split('?')[0]);
 
   return (
     <>
-      {/* Desktop Header */}
-      <header className={`hidden md:flex h-20 ${desktopHeaderBgClass} border-b ${variant === 'blue' ? 'border-slate-800' : 'border-slate-200'} items-center justify-between px-8 shrink-0 z-50`}>
-        <div className="flex items-center gap-4">
-          <div>
-            <h2 className={`text-xl font-bold ${desktopTitleClass} tracking-tight`}>{title}</h2>
-            <div className={`flex items-center gap-2 text-[10px] ${desktopSubtitleClass} font-medium uppercase tracking-widest mt-0.5`}>
-              <span className={`${desktopRoleClass} font-black`}>{t(`roles.${role}`)}</span>
-              <span className={desktopPipeClass}>|</span>
-              <span className={`truncate max-w-[200px] ${desktopOrgClass}`}>{user?.organizationName}</span>
+      <header className="hidden md:flex h-20 bg-white border-b border-slate-200 items-center justify-between px-8 shrink-0 z-50">
+        <div className="flex items-center gap-6">
+          <div className="space-y-0.5">
+            <h2 className="text-lg font-bold text-slate-800 tracking-tight">{title}</h2>
+            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+              <span className="text-blue-600">{t(`roles.${role}`)}</span>
+              <span className="opacity-30">|</span>
+              <span className="text-slate-500 font-medium">{user?.organizationName}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 relative">
-          <LanguageSelector inHeader={true} /> 
-          <NotificationTrigger 
-            count={unreadCount} 
-            className={desktopNotificationClass} 
-            onClick={toggleNotificationsDropdown}
-            aria-expanded={isNotificationsDropdownOpen}
-          />
-          <NotificationsDropdown 
-            isOpen={isNotificationsDropdownOpen} 
-            onClose={() => setIsNotificationsDropdownOpen(false)} 
-          />
+        <div className="flex items-center gap-8">
+          <LanguageSelector />
+          
+          <div className="relative">
+            <NotificationTrigger 
+              count={unreadCount} 
+              active={isNotificationsOpen}
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            />
+            <NotificationsDropdown 
+              isOpen={isNotificationsOpen} 
+              onClose={() => setIsNotificationsOpen(false)} 
+            />
+          </div>
         </div>
       </header>
 
       {/* Mobile Header */}
-      <header className="md:hidden h-16 bg-[var(--color-primary-dark-blue)] text-white flex items-center justify-between px-4 z-40 shrink-0 shadow-lg">
-        {!isDashboard && location.pathname !== '/login' ? ( 
-          <button 
-            onClick={onNavigateBack} 
-            className="p-2 text-slate-300 hover:text-white transition-colors"
-            aria-label={t('common.back')}
-          >
-            <ArrowLeft size={24} />
-          </button>
+      <header className="md:hidden h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-40 shrink-0">
+        {!isDashboard ? ( 
+          <button onClick={onNavigateBack} className="p-2 text-slate-600"><ArrowLeft size={20} /></button>
         ) : (
-          <img src={LOGO_URL} alt="Aços Vital" className="h-10" />
+          <img src={LOGO_URL} alt="Aços Vital" className="h-8" style={{ filter: CORPORATE_BLUE_FILTER }} />
         )}
 
-        <div className="flex items-center gap-2 relative">
-            <NotificationTrigger 
-              count={unreadCount} 
-              className="text-slate-300 hover:text-white" 
-              onClick={toggleNotificationsDropdown}
-              aria-expanded={isNotificationsDropdownOpen}
-            />
-            <NotificationsDropdown 
-              isOpen={isNotificationsDropdownOpen} 
-              onClose={() => setIsNotificationsDropdownOpen(false)} 
-            />
-            <button 
-              onClick={onOpenMobileMenu} 
-              className="p-2 text-slate-300 hover:text-white transition-colors"
-              title={t('menu.settings')}
-              aria-label={t('menu.settings')}
-            >
-              <Settings size={24} /> 
-            </button>
+        <div className="flex items-center gap-1 relative">
+            <NotificationTrigger count={unreadCount} active={isNotificationsOpen} onClick={() => setIsNotificationsOpen(true)} />
+            <NotificationsDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
         </div>
       </header>
     </>
   );
 };
 
-const NotificationTrigger = ({ count, className, onClick, "aria-expanded": ariaExpanded }: { count: number, className: string, onClick: () => void, "aria-expanded"?: boolean }) => (
+const NotificationTrigger = ({ count, active, onClick }: any) => (
   <button 
     onClick={onClick} 
-    className={`p-2 relative transition-colors ${className}`}
-    aria-label="Minhas Notificações"
-    id="notifications-menu-button"
-    aria-haspopup="true"
-    aria-expanded={ariaExpanded}
+    className={`p-2.5 rounded-xl transition-all relative group overflow-visible ${
+        active ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+    }`}
   >
-    <Bell size={20} />
+    <Bell size={20} strokeWidth={active ? 3 : 2.5} className={count > 0 && !active ? 'animate-swing' : ''} />
     {count > 0 && (
-      <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b23c0e] text-white text-[8px] font-black rounded-full border-2 border-[var(--color-primary-dark-blue)] flex items-center justify-center animate-in zoom-in">
+      <span className={`absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-[9px] font-black rounded-full border-2 border-white transition-all
+        ${active ? 'bg-white text-blue-600 scale-110' : 'bg-red-500 text-white animate-bounce'}
+      `}>
         {count > 9 ? '9+' : count}
       </span>
     )}
+    
+    <style>{`
+        @keyframes swing {
+            0%, 100% { transform: rotate(0); }
+            20% { transform: rotate(15deg); }
+            40% { transform: rotate(-15deg); }
+            60% { transform: rotate(10deg); }
+            80% { transform: rotate(-10deg); }
+        }
+        .animate-swing { animation: swing 2s infinite ease-in-out; }
+    `}</style>
   </button>
 );

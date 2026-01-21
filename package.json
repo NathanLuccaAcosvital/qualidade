@@ -1,8 +1,7 @@
-
 {
-  "name": "portal-da-qualidade-acos-vital",
-  "version": "1.0.0",
+  "name": "portal-da-qualidade-aços-vital",
   "private": true,
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,20 +9,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.3",
+    "react": "19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.1.5",
-    "lucide-react": "^0.474.0",
-    "i18next": "^24.2.2",
-    "react-i18next": "^15.4.0",
-    "@supabase/supabase-js": "^2.48.1"
+    "react-router-dom": "7.1.5",
+    "lucide-react": "0.474.0",
+    "react-i18next": "15.4.0",
+    "i18next": "24.2.2",
+    "@supabase/supabase-js": "2.48.1"
   },
   "devDependencies": {
-    "@types/react": "^19.2.3",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.7",
-    "tailwindcss": "^3.4.1"
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
   }
 }

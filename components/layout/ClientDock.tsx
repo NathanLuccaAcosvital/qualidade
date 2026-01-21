@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Library, Star } from 'lucide-react';
+import { LayoutDashboard, Library, ClipboardList } from 'lucide-react';
 
 interface ClientDockProps {
   activeView: string;
@@ -13,8 +12,8 @@ export const ClientDock: React.FC<ClientDockProps> = ({ activeView, onViewChange
 
   const navItems = [
     { id: 'home', label: t('menu.dashboard'), icon: LayoutDashboard },
-    { id: 'files', label: t('menu.library'), icon: Library },
-    // Removido "Favorites" e outros itens que agora estão na SidebarClient
+    { id: 'audit_flow', label: "Fluxo", icon: ClipboardList },
+    { id: 'library', label: t('menu.library'), icon: Library },
   ];
 
   return (
@@ -22,7 +21,7 @@ export const ClientDock: React.FC<ClientDockProps> = ({ activeView, onViewChange
       className="flex fixed bottom-0 md:bottom-6 left-1/2 -translate-x-1/2 z-[80] 
                  bg-white/50 backdrop-blur-xl border border-white/20 
                  p-2.5 rounded-full shadow-lg shadow-slate-900/10 
-                 animate-in slide-in-from-bottom-6 duration-500 md:hidden" // Adicionado `md:hidden` para ocultar no desktop
+                 animate-in slide-in-from-bottom-6 duration-500 md:hidden"
     >
       <nav className="flex items-center gap-2" role="navigation" aria-label="Navegação Principal do Cliente">
         {navItems.map((item) => {
@@ -40,7 +39,7 @@ export const ClientDock: React.FC<ClientDockProps> = ({ activeView, onViewChange
               `}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={18} className={isActive ? 'text-[var(--color-detail-blue)]' : 'text-slate-500'} />
+              <Icon size={18} className={isActive ? 'text-blue-400' : 'text-slate-500'} />
               {item.label}
             </button>
           );
