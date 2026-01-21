@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, Suspense, lazy } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Hand, Pencil, Highlighter, Square, Circle, 
@@ -9,10 +9,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/authContext.tsx';
 import { useFilePreview } from '../../components/features/files/hooks/useFilePreview.ts';
-import { PdfViewport } from '../../components/features/files/components/PdfViewport.tsx';
 import { DrawingCanvas, DrawingTool } from '../../components/features/files/components/DrawingCanvas.tsx';
+import { PdfPreviewLoader } from '../../components/features/files/components/PdfPreviewLoader.tsx'; // Import the new loader
 import { UserRole, normalizeRole, FileNode, DocumentAnnotations } from '../../types/index.ts';
 import { useToast } from '../../context/notificationContext.tsx';
+import { safeLazy } from '../../lib/utils/safeLazy.ts'; // Import safeLazy
+
+// Lazy load the PdfViewport component using safeLazy
+const LazyPdfViewport = safeLazy(() => import('../../components/features/files/components/PdfViewport.tsx').then(m => ({ default: m.PdfViewport })));
 
 const COLORS = [
   { name: 'Red', value: '#ef4444' },
@@ -142,25 +146,27 @@ export const FilePreviewPage: React.FC = () => {
       {/* Main Viewport */}
       <div className="flex-1 relative overflow-hidden">
         {url ? (
-          <PdfViewport 
-            url={url} 
-            pageNum={pageNum} 
-            zoom={zoom} 
-            onPdfLoad={setNumPages} 
-            onZoomChange={setZoom}
-            isHandToolActive={activeTool === 'hand'}
-            renderOverlay={(w, h) => shouldShowAnnotations ? (
-              <DrawingCanvas 
-                tool={canAnnotate ? activeTool : 'hand'} 
-                color={selectedColor} 
-                lineWidth={selectedWidth}
-                stampText={stampText}
-                width={w} height={h} 
-                pageAnnotations={annotations[pageNum] || []}
-                onAnnotationsChange={(newItems) => canAnnotate && setAnnotations(prev => ({ ...prev, [pageNum]: newItems }))}
-              />
-            ) : null}
-          />
+          <Suspense fallback={<PdfPreviewLoader />}>
+            <LazyPdfViewport 
+              url={url} 
+              pageNum={pageNum} 
+              zoom={zoom} 
+              onPdfLoad={setNumPages} 
+              onZoomChange={setZoom}
+              isHandToolActive={activeTool === 'hand'}
+              renderOverlay={(w, h) => shouldShowAnnotations ? (
+                <DrawingCanvas 
+                  tool={canAnnotate ? activeTool : 'hand'} 
+                  color={selectedColor} 
+                  lineWidth={selectedWidth}
+                  stampText={stampText}
+                  width={w} height={h} 
+                  pageAnnotations={annotations[pageNum] || []}
+                  onAnnotationsChange={(newItems) => canAnnotate && setAnnotations(prev => ({ ...prev, [pageNum]: newItems }))}
+                />
+              ) : null}
+            />
+          </Suspense>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-8 animate-in fade-in duration-1000">
              <div className="relative">
@@ -304,14 +310,14 @@ export const FilePreviewPage: React.FC = () => {
 
         {/* Zoom Engine */}
         <div className="flex items-center gap-1.5">
-          <PremiumToolBtn icon={ZoomOut} onClick={() => setZoom(Math.max(0.1, zoom - 0.2))} />
+          <PremiumToolBtn icon={ZoomOut} onClick={() => setZoom(Math.max(0.5, zoom - 0.2))} />
           <div className="px-4 py-2.5 bg-black/60 rounded-2xl min-w-[75px] text-center border border-white/5 shadow-inner">
             <span className="text-[10px] font-black text-blue-400 font-mono tracking-tighter transition-all">
               {Math.round(zoom * 100)}%
             </span>
           </div>
           <PremiumToolBtn icon={ZoomIn} onClick={() => setZoom(Math.min(5, zoom + 0.2))} />
-          <PremiumToolBtn icon={RotateCcw} onClick={() => setZoom(1.0)} title="Reset View" />
+          <PremiumToolBtn icon={RotateCcw} onClick={() => setZoom(Math.max(0.5, 1.0))} title="Reset View" />
         </div>
       </div>
     </div>

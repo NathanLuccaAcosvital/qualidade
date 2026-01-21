@@ -1,7 +1,12 @@
 
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* React-pdf-viewer styles */
+@import '@react-pdf-viewer/core/lib/styles/index.css';
+@import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
 :root {
   --color-primary-dark-blue: #132659;

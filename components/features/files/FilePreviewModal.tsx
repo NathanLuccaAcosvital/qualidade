@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { 
   X, Download, ShieldCheck, FileText, Loader2, 
   Pencil, Highlighter, Square, Circle, Eraser, Save, 
@@ -8,9 +8,13 @@ import {
 import { FileNode, UserRole, SteelBatchMetadata, DocumentAnnotations, AnnotationItem } from '../../../types/index.ts';
 import { useAuth } from '../../../context/authContext.tsx';
 import { AuditWorkflow } from '../quality/components/AuditWorkflow.tsx';
-import { PdfViewport } from './components/PdfViewport.tsx';
 import { DrawingCanvas, DrawingTool } from './components/DrawingCanvas.tsx';
+import { PdfPreviewLoader } from './components/PdfPreviewLoader.tsx'; // Import the new loader
 import { useFilePreview } from './hooks/useFilePreview.ts';
+import { safeLazy } from '../../../lib/utils/safeLazy.ts'; // Import safeLazy
+
+// Lazy load the PdfViewport component using safeLazy
+const LazyPdfViewport = safeLazy(() => import('./components/PdfViewport.tsx').then(m => ({ default: m.PdfViewport })));
 
 export const FilePreviewModal: React.FC<{ 
   initialFile: FileNode | null; 
@@ -21,6 +25,7 @@ export const FilePreviewModal: React.FC<{
   const { user } = useAuth();
   const [activeTool, setActiveTool] = useState<DrawingTool>('hand');
   const [annotations, setAnnotations] = useState<DocumentAnnotations>({});
+  const [numPages, setNumPages] = useState(0); // Para receber o número total de páginas do PdfViewport
   
   const {
     currentFile,
@@ -64,7 +69,7 @@ export const FilePreviewModal: React.FC<{
                    <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest flex items-center gap-2">
                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Protocolo Seguro Vital
                    </p>
-                   <span className="text-[8px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded">v{currentFile?.versionNumber || 1}</span>
+                   <span className="text-[8px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded">v{currentFile?.versionNumber || 1}.0</span>
                 </div>
              </div>
           </div>
@@ -81,27 +86,29 @@ export const FilePreviewModal: React.FC<{
         </header>
 
         <div className="flex-1 relative overflow-hidden bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black">
-            <PdfViewport 
-                url={url} 
-                pageNum={pageNum} 
-                zoom={zoom} 
-                onPdfLoad={() => {}} 
-                isHandToolActive={activeTool === 'hand'}
-                renderOverlay={(w, h) => (
-                    /* Fix: Added missing lineWidth prop required by DrawingCanvasProps */
-                    <DrawingCanvas 
-                        tool={activeTool} 
-                        color="#ef4444" 
-                        lineWidth={5}
-                        width={w} 
-                        height={h} 
-                        pageAnnotations={annotations[pageNum] || []}
-                        onAnnotationsChange={(newItems) => {
-                            setAnnotations(prev => ({ ...prev, [pageNum]: newItems }));
-                        }}
-                    />
-                )}
-            />
+            <Suspense fallback={<PdfPreviewLoader />}>
+                <LazyPdfViewport 
+                    url={url} 
+                    pageNum={pageNum} 
+                    zoom={zoom} 
+                    onPdfLoad={setNumPages} // Recebe o numPages aqui
+                    onZoomChange={setZoom} 
+                    isHandToolActive={activeTool === 'hand'}
+                    renderOverlay={(w, h) => (
+                        <DrawingCanvas 
+                            tool={activeTool} 
+                            color="#ef4444" 
+                            lineWidth={5}
+                            width={w} 
+                            height={h} 
+                            pageAnnotations={annotations[pageNum] || []}
+                            onAnnotationsChange={(newItems) => {
+                                setAnnotations(prev => ({ ...prev, [pageNum]: newItems }));
+                            }}
+                        />
+                    )}
+                />
+            </Suspense>
         </div>
       </div>
 
