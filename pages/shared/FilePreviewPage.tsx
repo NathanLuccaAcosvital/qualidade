@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Hand, Pencil, Highlighter, Square, Circle, 
@@ -57,6 +57,9 @@ export const FilePreviewPage: React.FC = () => {
   const [numPages, setNumPages] = useState(0);
   const [annotations, setAnnotations] = useState<DocumentAnnotations>({});
 
+  const [showPageSelector, setShowPageSelector] = useState(false);
+  const pageSelectorRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (currentFile?.metadata?.documentalDrawings) {
       try {
@@ -64,6 +67,18 @@ export const FilePreviewPage: React.FC = () => {
       } catch (e) { console.error("Erro de parse nas anotações"); }
     }
   }, [currentFile?.id, currentFile?.metadata?.documentalDrawings]);
+
+  // Fecha o seletor de páginas ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pageSelectorRef.current && !pageSelectorRef.current.contains(event.target as Node)) {
+        setShowPageSelector(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPageSelector]);
+
 
   const handleReturn = () => {
     if (isAuditMode || showNotesParam || role !== UserRole.CLIENT) navigate(`/quality/inspection/${fileId}`);
@@ -170,10 +185,48 @@ export const FilePreviewPage: React.FC = () => {
         {/* Paginador Hardware-like */}
         <div className="flex items-center gap-1 bg-black/60 p-1.5 rounded-full border border-white/5">
           <button disabled={pageNum <= 1} onClick={() => setPageNum(pageNum - 1)} className="p-3 text-slate-400 hover:text-white disabled:opacity-10 transition-all rounded-full hover:bg-white/5 active:scale-90"><ChevronLeft size={20} /></button>
-          <div className="px-5 min-w-[90px] text-center">
-            <p className="text-[11px] font-black text-blue-400 font-mono tracking-tighter">{pageNum} / {numPages || '--'}</p>
-            <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-0.5">Folha</p>
+          
+          <div className="relative" ref={pageSelectorRef}> {/* Wrapper para o seletor de páginas */}
+            <button
+              onClick={() => setShowPageSelector(!showPageSelector)}
+              className="px-5 min-w-[90px] text-center cursor-pointer hover:bg-white/5 rounded-lg py-2 transition-colors"
+              aria-expanded={showPageSelector}
+              aria-controls="page-selector-dropdown"
+              title="Ir para a página..."
+            >
+              <p className="text-[11px] font-black text-blue-400 font-mono tracking-tighter">{pageNum} / {numPages || '--'}</p>
+              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-0.5">Folha</p>
+            </button>
+
+            {showPageSelector && numPages > 0 && (
+              <div 
+                id="page-selector-dropdown"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 max-h-60 overflow-y-auto custom-scrollbar bg-[#081437]/90 backdrop-blur-2xl border border-white/10 p-2 rounded-xl shadow-xl animate-in zoom-in-95 duration-300"
+                role="listbox"
+                aria-labelledby="page-selector-button"
+              >
+                <div className="grid grid-cols-3 gap-1">
+                  {[...Array(numPages)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => {
+                        setPageNum(i + 1);
+                        setShowPageSelector(false);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                        pageNum === i + 1 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                      }`}
+                      role="option"
+                      aria-selected={pageNum === i + 1}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+          
           <button disabled={pageNum >= numPages} onClick={() => setPageNum(pageNum + 1)} className="p-3 text-slate-400 hover:text-white disabled:opacity-10 transition-all rounded-full hover:bg-white/5 active:scale-90"><ChevronRight size={20} /></button>
         </div>
 

@@ -115,6 +115,50 @@ export const PdfViewport: React.FC<PdfViewportProps> = ({
 
   useEffect(() => { renderPage(); }, [renderPage]);
 
+  // Lógica para limitar o arrasto do PDF dentro de uma "margem de segurança"
+  const clampOffset = useCallback((newX: number, newY: number) => {
+    const container = containerRef.current;
+    if (!container) return { x: newX, y: newY };
+
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    const contentWidth = dimensions.width; // Largura do PDF renderizado no zoom atual
+    const contentHeight = dimensions.height; // Altura do PDF renderizado no zoom atual
+
+    let clampedX = newX;
+    let clampedY = newY;
+
+    // Define uma margem de "overshoot" como uma porcentagem do tamanho do contêiner
+    const viewportMarginRatio = 0.2; 
+    const maxViewportMarginX = containerWidth * viewportMarginRatio;
+    const maxViewportMarginY = containerHeight * viewportMarginRatio;
+
+    // Calculo dos limites para o eixo X
+    if (contentWidth <= containerWidth) {
+      // Se o conteúdo é menor ou igual ao container, mantê-lo centralizado com overshoot
+      const centerX = (containerWidth - contentWidth) / 2;
+      clampedX = Math.max(-centerX - maxViewportMarginX, Math.min(centerX + maxViewportMarginX, newX));
+    } else {
+      // Se o conteúdo é maior que o container, permitir arrasto até as bordas do conteúdo + overshoot
+      const panLimitX = (contentWidth - containerWidth) / 2;
+      clampedX = Math.max(-panLimitX - maxViewportMarginX, Math.min(panLimitX + maxViewportMarginX, newX));
+    }
+
+    // Calculo dos limites para o eixo Y
+    if (contentHeight <= containerHeight) {
+      // Se o conteúdo é menor ou igual ao container, mantê-lo centralizado com overshoot
+      const centerY = (containerHeight - contentHeight) / 2;
+      clampedY = Math.max(-centerY - maxViewportMarginY, Math.min(centerY + maxViewportMarginY, newY));
+    } else {
+      // Se o conteúdo é maior que o container, permitir arrasto até as bordas do conteúdo + overshoot
+      const panLimitY = (contentHeight - containerHeight) / 2;
+      clampedY = Math.max(-panLimitY - maxViewportMarginY, Math.min(panLimitY + maxViewportMarginY, newY));
+    }
+
+    return { x: clampedX, y: clampedY };
+  }, [dimensions.width, dimensions.height]); // Recalcular limites quando as dimensões do conteúdo mudarem
+
+
   // LOGICA DE PANNING (Mãozinha Premium)
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isHandToolActive && e.button !== 1) return;
@@ -134,15 +178,17 @@ export const PdfViewport: React.FC<PdfViewportProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || !containerRef.current) return;
 
     const dx = e.clientX - dragStart.current.x;
     const dy = e.clientY - dragStart.current.y;
 
-    setOffset({
-      x: dragStart.current.initialOffX + dx,
-      y: dragStart.current.initialOffY + dy
-    });
+    const newOffsetX = dragStart.current.initialOffX + dx;
+    const newOffsetY = dragStart.current.initialOffY + dy;
+    
+    // Aplica o "clamping" para limitar o arrasto
+    const clamped = clampOffset(newOffsetX, newOffsetY); 
+    setOffset(clamped);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -164,7 +210,11 @@ export const PdfViewport: React.FC<PdfViewportProps> = ({
         // Scroll natural converte em movimento de Offset Y se a mão estiver ativa
         if (isHandToolActive) {
             e.preventDefault();
-            setOffset(prev => ({ ...prev, y: prev.y - e.deltaY }));
+            setOffset(prev => {
+                const newY = prev.y - e.deltaY;
+                const clamped = clampOffset(prev.x, newY);
+                return { x: clamped.x, y: clamped.y };
+            });
         }
     }
   };
@@ -177,8 +227,10 @@ export const PdfViewport: React.FC<PdfViewportProps> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className={`flex-1 overflow-hidden bg-[#020617] relative flex justify-center items-center select-none touch-none ${
-        isHandToolActive ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+      className={`flex-1 bg-[#020617] relative flex justify-center items-center select-none touch-none ${
+        isHandToolActive 
+          ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') + ' overflow-hidden' 
+          : 'cursor-default overflow-auto custom-scrollbar'
       }`}
     >
       {/* Background Decorativo Mesa de Luz */}
